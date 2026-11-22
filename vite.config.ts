@@ -6,7 +6,7 @@ export default defineConfig({
   server: { port: 5173, host: true },
   build: {
     rollupOptions: {
-      input: { main: 'index.html', goosebridge: 'goosebridge.html', styles: 'styles.html' },
+      input: { main: 'index.html', styles: 'styles.html' },
     },
   },
   test: { environment: 'node' },

@@ -3,38 +3,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f4ead8" />
-    <title>Defend the Heart</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 29 C4 20 2 12 6 7 C10 3 15 5 16 9 C17 5 22 3 26 7 C30 12 28 20 16 29Z' fill='%23c8554e' stroke='%232a1e18' stroke-width='1.6'/%3E%3C/svg%3E" />
+    <meta name="theme-color" content="#2a1d12" />
+    <title>The Last Ward: Siege of Goosebridge</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M10 30 L12 10 L8 10 L16 2 L24 10 L20 10 L22 30Z' fill='%237a2026' stroke='%232a1f17' stroke-width='1.5'/%3E%3C/svg%3E" />
   </head>
   <body>
     <div id="app">
       <header id="hud" aria-label="Status">
-        <div class="brand"><h1 id="title">Defend the Heart</h1><span id="levelName">Level 1</span></div>
+        <div class="brand">
+          <h1>The Last Ward</h1>
+          <span>Siege of Goosebridge</span>
+        </div>
         <dl class="stats">
-          <div class="stat"><dt id="hpLabel">Heart health</dt><dd><span id="hp"></span><span class="bar"><i id="hpbar"></i></span></dd></div>
+          <div class="stat" id="stat-hp"><dt>Castle</dt><dd><span id="hp"></span><span class="hpbar"><i id="hpbar"></i></span></dd></div>
           <div class="stat"><dt>Wave</dt><dd id="wave"></dd></div>
-          <div class="stat"><dt>Energy</dt><dd id="energy"></dd></div>
-          <div class="stat"><dt>White cells</dt><dd id="cells"></dd></div>
-          <div class="stat"><dt>Immune pulse</dt><dd id="pulseStat"></dd></div>
+          <div class="stat"><dt>Gold</dt><dd id="gold"></dd></div>
+          <div class="stat" id="stat-leaves"><dt>Gilded Leaves</dt><dd id="leaves"></dd></div>
         </dl>
+        <div id="phaseRes" class="phase-res" aria-live="polite"></div>
         <div class="hud-buttons">
-          <button id="btnPause" type="button" title="Pause (P)">Pause</button>
-          <button id="btnSpeed" type="button">Speed ×1</button>
-          <button id="btnRestart" type="button" class="danger">Restart</button>
+          <button id="btnPause" type="button" title="Pause (P or Space)">Pause</button>
+          <button id="btnSpeed" type="button" title="Game speed">Speed ×1</button>
+          <button id="btnMute" type="button" title="Sound on or off">Sound</button>
+          <button id="btnRestart" type="button" class="danger" title="Restart from the first wave">Restart</button>
         </div>
       </header>
-      <main id="layout">
-        <section id="field" aria-label="The organ and its vessels">
-          <canvas id="board" aria-label="Map: the organ in the centre with vessels approaching it; sites beside each vessel for lymph nodes."></canvas>
-          <div id="toast" aria-live="polite"></div>
+      <main id="spread">
+        <aside id="margin" aria-label="Page margin: controls"></aside>
+        <section id="book" aria-label="The Siege of Goosebridge battlefield">
+          <canvas id="board" aria-label="Battlefield map. Trace by dragging from the inkwell along a leyline to a tower."></canvas>
+          <div id="ribbon" class="ribbon"></div>
           <div id="popover" class="popover" hidden></div>
+          <div id="toasts" aria-live="polite"></div>
+          <div id="inspect" class="inspect" hidden aria-live="polite"></div>
           <div id="overlay" hidden></div>
         </section>
-        <aside id="panel" aria-label="Controls"></aside>
       </main>
-      <footer id="foot">Also here: <a href="./goosebridge.html">The Last Ward: Siege of Goosebridge</a> · <a href="./styles.html">art style studies</a></footer>
     </div>
-    <script type="module" src="/src/anatomy/main.ts"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
