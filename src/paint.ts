@@ -89,7 +89,7 @@ export let WINDMILL: Vec = { x: 400, y: 740 };
 function clearSpot(p: Vec, r: number, taken: Spot[]): boolean {
   if (p.x < 30 + r || p.x > MAP_W - 30 - r || p.y < 30 + r || p.y > MAP_H - 30 - r) return false;
   if (p.x > 1360 && p.y > 140 && p.y < 880) return false; // castle and garden
-  if (p.x < 360 + r && p.y > 860 - r) return false; // title cartouche
+  if (p.x < 410 + r && p.y > 860 - r) return false; // title cartouche
   if (Math.hypot(p.x - MILL.x, p.y - MILL.y) < r + 90) return false;
   if (Math.hypot(p.x - INKWELL.x, p.y - INKWELL.y) < r + 100) return false;
   if (nearRoad(p, r + 30) || nearLey(p, r + 14) || nearRiver(p, r + 14)) return false;
@@ -152,7 +152,7 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
     if (p.x > 1360 && p.y > 140 && p.y < 740) continue; // the castle
     if (Math.hypot(p.x - MILL.x, p.y - MILL.y) < 105) continue;
     if (Math.hypot(p.x - INKWELL.x, p.y - INKWELL.y) < 110) continue;
-    if (p.x < 360 && p.y > 860) continue; // title cartouche
+    if (p.x < 410 && p.y > 860) continue; // title cartouche
     if (nearRoad(p, 52) || nearLey(p, 30) || nearRiver(p, 34)) continue;
     if (FOUNDATION_IDS.some((f) => Math.hypot(NODE[f].x - p.x, NODE[f].y - p.y) < 64)) continue;
     if (trees.some((t) => Math.hypot(t.x - p.x, t.y - p.y) < 26)) continue;
@@ -183,11 +183,11 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   paperVignette(ctx);
 
   // Title plate, ruled in ink
-  ctx.fillStyle = 'rgba(239,233,218,0.92)'; roundRect(ctx, 40, 880, 300, 78, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(239,233,218,0.92)'; roundRect(ctx, 40, 880, 350, 78, 4); ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
-  ctx.lineWidth = 0.6; roundRect(ctx, 45, 885, 290, 68, 3); ctx.stroke();
-  ctx.font = `italic 600 25px ${SERIF}`; ctx.textAlign = 'left'; ctx.fillStyle = INK;
-  ctx.fillText('The Last Ward', 56, 918);
+  ctx.lineWidth = 0.6; roundRect(ctx, 45, 885, 340, 68, 3); ctx.stroke();
+  ctx.font = `italic 600 23px ${SERIF}`; ctx.textAlign = 'left'; ctx.fillStyle = INK;
+  ctx.fillText('Defence of Goosebridge Castle', 56, 918);
   ctx.font = `italic 14px ${SERIF}`; ctx.fillStyle = 'rgba(29,25,21,0.7)';
   ctx.fillText('drawn in pen and ink, with a little wash', 58, 942);
   // sheet border

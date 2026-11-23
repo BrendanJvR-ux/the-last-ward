@@ -1,4 +1,4 @@
-# The Last Ward
+# Defence of Goosebridge Castle
 
 A single-map fantasy tower defence prototype, drawn as a surreal pen-and-ink drawing on cream paper with a soft grey-sepia wash: dense hatching, gnarled trees full of knots, fynbos and protea, a turning windmill, butterflies in pen ticks, and a river that wells up from a spring among stones. An old wizard in a patterned robe and crooked hat keeps the inkwell, leaning on a quill as tall as a staff; he raises it while you trace and pulse. The page hangs like a gallery print on an indigo wall. The creatures are gentle impossible hybrids: root-walking fynbos spirits, shoals of striped air-fish, a goggled wanderer and a walking citadel-fish with a stern human face. Two roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from the wizard's inkwell in the castle garden out to thirteen tower foundations.
 
