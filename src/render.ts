@@ -1,9 +1,10 @@
-// Live drawing on top of the painted spread.
+// Live drawing on top of the ink sheet.
 import { BALANCE, phaseRule } from './balance';
-import { MAP_W, MAP_H, LANES, POND, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, GUTTER_X, routePolyline, pointAt, type Vec } from './map';
+import { MAP_W, MAP_H, LANES, POND, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, routePolyline, pointAt, type Vec } from './map';
 import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint } from './game';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
 import { P, drawTowerIcon, drawEnemy, drawNameStone, litGrad, softShadow } from './sprites';
+import { inkFoundation, inkFlame, windmillSails, airFish, grow, limbs, hatch, seed, PAPER, type Seg } from './ink';
 
 export { towerIconCanvas, enemyIconCanvas } from './sprites';
 
@@ -94,11 +95,9 @@ function drawFoundation(ctx: CanvasRenderingContext2D, f: string, selected: bool
   ctx.save(); ctx.translate(n.x, n.y);
   if (!built) {
     softShadow(ctx, 3, 3, 32, 13, 0.45);
-    ctx.fillStyle = litGrad(ctx, -30, -12, 30, 12, P.stoneLight, P.stone, P.stoneDark);
-    ctx.beginPath(); ctx.ellipse(0, 0, 30, 13, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(40,30,15,0.35)'; ctx.beginPath(); ctx.ellipse(0, 1, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(240,228,200,0.8)'; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.moveTo(0, -5); ctx.lineTo(0, 5); ctx.stroke();
+    inkFoundation(ctx, 0, 0);
+    ctx.strokeStyle = 'rgba(29,25,21,0.7)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(-6, -1); ctx.lineTo(6, -1); ctx.moveTo(0, -5); ctx.lineTo(0, 3); ctx.stroke();
   }
   if (bound) { ctx.strokeStyle = P.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, 0, 34, 15, 0, 0, Math.PI * 2); ctx.stroke(); }
   if (preview) {
@@ -106,8 +105,8 @@ function drawFoundation(ctx: CanvasRenderingContext2D, f: string, selected: bool
     ctx.beginPath(); ctx.ellipse(0, 0, 42, 20, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
   }
   if (selected || hovered) {
-    ctx.strokeStyle = selected ? P.goldLight : 'rgba(240,228,200,0.7)'; ctx.lineWidth = selected ? 3 : 2;
-    ctx.beginPath(); ctx.ellipse(0, 0, 38, 18, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = selected ? P.gold : 'rgba(29,25,21,0.55)'; ctx.lineWidth = selected ? 3 : 1.6; if (!selected) ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.ellipse(0, 0, 38, 18, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
   }
   ctx.restore();
 }
@@ -158,50 +157,53 @@ function drawTowerState(ctx: CanvasRenderingContext2D, s: GameState, t: Tower, t
   }
 }
 
+/** A thorny hedge of tangled ink limbs across the road. */
 function drawHedge(ctx: CanvasRenderingContext2D, h: GameState['hedges'][number], time: number) {
   const life = Math.min(1, h.t / 0.35, (h.dur - h.t) / 0.5);
   ctx.save(); ctx.translate(h.at.x, h.at.y); ctx.rotate(h.angle + Math.PI / 2);
   ctx.scale(1, Math.max(0.05, life));
-  softShadow(ctx, 4, 4, 34, 12, 0.5);
+  softShadow(ctx, 4, 4, 36, 12, 0.6);
+  const R = seed(h.at.x, h.at.y, 9);
+  const segs: Seg[] = [];
   for (let i = -3; i <= 3; i++) {
-    const x = i * 8, y = -2 + (i % 2) * 2;
-    ctx.fillStyle = litGrad(ctx, x - 9, y - 9, x + 9, y + 9, P.leafLight, P.leaf, P.leafDark);
-    ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fill();
+    const x = i * 9;
+    grow(segs, R, x, 4, -Math.PI / 2 + (R() - 0.5) * 0.9, 18 + R() * 6, 4, 1, 0.9);
   }
-  ctx.strokeStyle = P.leafDark; ctx.lineWidth = 1.4;
-  for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 8, -8); ctx.lineTo(i * 8 + 3, -16); ctx.stroke(); }
-  for (let i = -2; i <= 2; i++) { ctx.fillStyle = P.oxblood; ctx.beginPath(); ctx.arc(i * 10, -6 + Math.sin(time * 3 + i), 2.2, 0, Math.PI * 2); ctx.fill(); }
+  for (const sgn of [-1, 1]) grow(segs, R, 0, 0, sgn > 0 ? -0.15 : Math.PI + 0.15, 34, 5, 0, 0.6);
+  limbs(ctx, segs, R, false);
+  // thorns and a few red hips
+  ctx.strokeStyle = '#1d1915'; ctx.lineWidth = 0.8; ctx.beginPath();
+  for (const sg of segs) if (sg.w > 1.5) { const mx = (sg.x1 + sg.x2) / 2, my = (sg.y1 + sg.y2) / 2; ctx.moveTo(mx, my); ctx.lineTo(mx + 2.5, my - 2.5); }
+  ctx.stroke();
+  for (let i = -2; i <= 2; i++) { ctx.fillStyle = P.oxblood; ctx.beginPath(); ctx.arc(i * 10, -12 + Math.sin(time * 3 + i) * 1.5, 2, 0, Math.PI * 2); ctx.fill(); }
   ctx.restore();
 }
 
+/** Burning road: hatched ink flames over a warm wash, with curls of smoke. */
 function drawFire(ctx: CanvasRenderingContext2D, f: GameState['fires'][number], time: number) {
   const life = Math.min(1, f.t / 0.3, (f.dur - f.t) / 0.6);
   ctx.save();
   ctx.globalAlpha = Math.max(0, life);
-  for (let i = 0; i < f.pts.length; i++) {
+  for (let i = 0; i < f.pts.length; i += 2) {
     const p = f.pts[i];
-    const g = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 20);
-    g.addColorStop(0, 'rgba(255,200,90,0.55)'); g.addColorStop(1, 'rgba(200,70,20,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 20, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 22);
+    g.addColorStop(0, 'rgba(220,140,60,0.3)'); g.addColorStop(1, 'rgba(220,140,60,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 22, 0, Math.PI * 2); ctx.fill();
   }
   for (let i = 0; i < f.pts.length; i += 2) {
     const p = f.pts[i];
-    const fl = Math.sin(time * 12 + i * 1.7);
-    ctx.fillStyle = litGrad(ctx, p.x, p.y - 22, p.x, p.y + 4, '#fff1b0', i % 4 === 0 ? '#f08a2e' : '#f6b544', '#a3301a');
-    ctx.beginPath(); ctx.moveTo(p.x - 7, p.y + 4);
-    ctx.quadraticCurveTo(p.x - 6, p.y - 10 - fl * 3, p.x, p.y - 22 - fl * 4);
-    ctx.quadraticCurveTo(p.x + 6, p.y - 10, p.x + 7, p.y + 4); ctx.closePath(); ctx.fill();
+    const fl = Math.sin(time * 9 + i * 1.7);
+    inkFlame(ctx, p.x + ((i * 7) % 9) - 4, p.y + 5, 17 + fl * 4 + (i % 3) * 3, fl * 0.5);
   }
-  // rising embers and smoke
-  for (let i = 0; i < f.pts.length; i += 3) {
+  // smoke curls in ink
+  ctx.lineWidth = 0.7;
+  for (let i = 0; i < f.pts.length; i += 4) {
     const p = f.pts[i];
-    for (let j = 0; j < 2; j++) {
-      const t = (time * 0.8 + i * 0.37 + j * 0.5) % 1;
-      ctx.fillStyle = `rgba(110,100,92,${0.28 * (1 - t)})`;
-      ctx.beginPath(); ctx.arc(p.x + Math.sin(t * 6 + i) * 6, p.y - 24 - t * 40, 4 + t * 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = `rgba(255,200,90,${1 - t})`;
-      ctx.beginPath(); ctx.arc(p.x + Math.sin(t * 9 + i * 2) * 10, p.y - 10 - t * 34, 1.3, 0, Math.PI * 2); ctx.fill();
-    }
+    const t = (time * 0.6 + i * 0.37) % 1;
+    ctx.strokeStyle = `rgba(29,25,21,${0.6 * (1 - t)})`;
+    ctx.beginPath();
+    for (let a = 0; a < 7; a += 0.3) { const r = 1 + a * 0.8; const x = p.x + Math.cos(a) * r + Math.sin(t * 6 + i) * 4, y = p.y - 24 - t * 36 - a * 1.4 + Math.sin(a) * r * 0.5; a ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke();
   }
   ctx.restore();
 }
@@ -214,8 +216,10 @@ function drawFallen(ctx: CanvasRenderingContext2D, f: GameState['fallen'][number
   if (f.type === 'cairn') {
     for (let i = 0; i < 7; i++) {
       const x = f.x - 24 + i * 8, y = f.y - 4 + ((i * 5) % 7) - Math.max(0, 40 - f.t * 80) * ((i % 3) / 3);
-      ctx.fillStyle = litGrad(ctx, x - 8, y - 6, x + 8, y + 6, '#b6b2a4', '#7c7a70', '#3a3934');
-      ctx.beginPath(); ctx.ellipse(x, y, 8, 6, i, 0, Math.PI * 2); ctx.fill();
+      const st = () => { ctx.beginPath(); ctx.ellipse(x, y, 8, 6, i, 0, Math.PI * 2); };
+      ctx.fillStyle = P.stone; st(); ctx.fill();
+      hatch(ctx, st, [x - 8, y - 8, 16, 16], 0.9, 1.5, 0.45);
+      ctx.strokeStyle = P.ink; ctx.lineWidth = 1; st(); ctx.stroke();
     }
   } else {
     ctx.translate(f.x, f.y);
@@ -225,49 +229,46 @@ function drawFallen(ctx: CanvasRenderingContext2D, f: GameState['fallen'][number
   ctx.restore();
   // a puff of dust
   const g = ctx.createRadialGradient(f.x, f.y, 1, f.x, f.y, 10 + k * 24);
-  g.addColorStop(0, `rgba(200,180,140,${0.4 * (1 - k)})`); g.addColorStop(1, 'rgba(200,180,140,0)');
+  g.addColorStop(0, `rgba(86,68,52,${0.3 * (1 - k)})`); g.addColorStop(1, 'rgba(86,68,52,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, 10 + k * 24, 0, Math.PI * 2); ctx.fill();
   void time;
 }
 
 /** The windmill's lattice sails, turning slowly. */
 function drawSails(ctx: CanvasRenderingContext2D, time: number) {
-  const hub = { x: WINDMILL.x - 2, y: WINDMILL.y - 66 };
-  ctx.save(); ctx.translate(hub.x, hub.y); ctx.rotate(time * 0.35);
-  for (let i = 0; i < 4; i++) {
-    ctx.save(); ctx.rotate((i * Math.PI) / 2);
-    ctx.strokeStyle = '#2a1c0e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -52); ctx.stroke();
-    ctx.fillStyle = 'rgba(232,220,190,0.75)'; ctx.fillRect(1, -50, 9, 40);
-    ctx.strokeStyle = 'rgba(42,28,14,0.8)'; ctx.lineWidth = 0.7;
-    for (let y = -50; y <= -10; y += 6) { ctx.beginPath(); ctx.moveTo(1, y); ctx.lineTo(10, y); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(5.5, -50); ctx.lineTo(5.5, -10); ctx.stroke();
-    ctx.restore();
-  }
-  ctx.fillStyle = '#2a1c0e'; ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
+  windmillSails(ctx, WINDMILL.x, WINDMILL.y - 56, time * 0.35);
 }
 
-/** Slow cloud shadows drifting over the land, dust in the light, glints on the water. */
+/** Drifting washes, small ink butterflies, striped fish in the pond and glints on the water. */
 function drawAmbience(ctx: CanvasRenderingContext2D, time: number) {
   ctx.save();
   for (let i = 0; i < 3; i++) {
     const x = ((time * (9 + i * 4) + i * 700) % (MAP_W + 900)) - 450;
     const y = 220 + i * 280 + Math.sin(time * 0.05 + i) * 60;
     const g = ctx.createRadialGradient(x, y, 20, x, y, 340);
-    g.addColorStop(0, 'rgba(20,14,6,0.13)'); g.addColorStop(1, 'rgba(20,14,6,0)');
+    g.addColorStop(0, 'rgba(86,68,52,0.07)'); g.addColorStop(1, 'rgba(86,68,52,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, 340, 190, 0.2, 0, Math.PI * 2); ctx.fill();
   }
-  // dust motes in the warm light of each page
-  for (const x0 of [0, GUTTER_X]) {
-    for (let i = 0; i < 14; i++) {
-      const ph = i * 12.9898;
-      const x = x0 + 120 + ((Math.sin(ph) * 43758.5453) % 1 + 1) % 1 * 360 + Math.sin(time * 0.3 + i) * 14;
-      const y = 80 + (((time * (4 + (i % 5)) + i * 37) % 360));
-      const a = 0.25 + 0.25 * Math.sin(time * 1.3 + i);
-      ctx.fillStyle = `rgba(255,236,180,${a})`;
-      ctx.beginPath(); ctx.arc(x, y, 1.1 + (i % 3) * 0.4, 0, Math.PI * 2); ctx.fill();
-    }
+  // butterflies, a few pen ticks each
+  ctx.strokeStyle = 'rgba(29,25,21,0.75)'; ctx.lineWidth = 0.8;
+  for (let i = 0; i < 12; i++) {
+    const ph = i * 12.9898;
+    const bx = ((Math.sin(ph) * 43758.5453) % 1 + 1) % 1 * MAP_W, by = ((Math.cos(ph) * 24634.6345) % 1 + 1) % 1 * (MAP_H - 120) + 60;
+    const x = bx + Math.sin(time * 0.4 + i) * 40 + Math.sin(time * 1.7 + i * 2) * 6;
+    const y = by + Math.cos(time * 0.3 + i * 1.3) * 26;
+    const w = 1.5 + Math.abs(Math.sin(time * 14 + i)) * 2.5;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - w, y - 2.5); ctx.lineTo(x - w * 0.6, y + 0.5); ctx.closePath();
+    ctx.moveTo(x, y); ctx.lineTo(x + w, y - 2.5); ctx.lineTo(x + w * 0.6, y + 0.5); ctx.closePath(); ctx.stroke();
   }
+  // striped fish circling under the pond's surface
+  ctx.globalAlpha = 0.7;
+  for (let i = 0; i < 3; i++) {
+    const a = time * (0.25 + i * 0.07) + i * 2.1, dir = 1;
+    const fx = POND.x + Math.cos(a) * (55 - i * 12), fy = POND.y + Math.sin(a) * (32 - i * 7);
+    const heading = -Math.sin(a) * dir;
+    airFish(ctx, fx, fy, 0.9 - i * 0.12, heading >= 0 ? 1 : -1, time * 4 + i);
+  }
+  ctx.globalAlpha = 1;
   // glints on the pond and river
   const glints: Vec[] = [];
   for (let i = 0; i < 7; i++) glints.push({ x: POND.x - 60 + ((i * 37) % 110), y: POND.y - 30 + ((i * 23) % 56) });
@@ -275,7 +276,7 @@ function drawAmbience(ctx: CanvasRenderingContext2D, time: number) {
   glints.forEach((p, i) => {
     const a = Math.max(0, Math.sin(time * 1.7 + i * 2.3));
     if (a < 0.6) return;
-    ctx.strokeStyle = `rgba(255,252,235,${(a - 0.6) * 2})`; ctx.lineWidth = 1.2;
+    ctx.strokeStyle = `rgba(255,252,240,${(a - 0.6) * 2.2})`; ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.moveTo(p.x - 4, p.y); ctx.lineTo(p.x + 4, p.y); ctx.moveTo(p.x, p.y - 2.5); ctx.lineTo(p.x, p.y + 2.5); ctx.stroke();
   });
   ctx.restore();
@@ -294,11 +295,12 @@ function drawHoundWarnings(ctx: CanvasRenderingContext2D, s: GameState, time: nu
     for (let r = 22; r < 80; r += 18) { ctx.beginPath(); ctx.arc(entry.x, entry.y, r, 0, Math.PI * 2); ctx.stroke(); }
     ctx.globalAlpha = 1;
     const bx = 548, by = 722;
-    ctx.fillStyle = 'rgba(25,12,6,0.88)'; roundRect(ctx, bx, by - 24, 258, 36, 7); ctx.fill();
-    ctx.strokeStyle = P.gold; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = litGrad(ctx, bx + 8, by - 16, bx + 32, by + 2, '#f0d27a', '#b07a32', '#5e3d14');
-    ctx.beginPath(); ctx.moveTo(bx + 10, by - 2); ctx.quadraticCurveTo(bx + 18, by - 20, bx + 34, by - 16); ctx.lineTo(bx + 34, by - 4); ctx.quadraticCurveTo(bx + 20, by - 8, bx + 14, by + 2); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#f4e6c0'; ctx.font = `600 17px ${SERIF}`; ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(239,233,218,0.96)'; roundRect(ctx, bx, by - 24, 258, 36, 4); ctx.fill();
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.lineWidth = 0.6; roundRect(ctx, bx + 3, by - 21, 252, 30, 3); ctx.stroke();
+    const horn = () => { ctx.beginPath(); ctx.moveTo(bx + 10, by - 2); ctx.quadraticCurveTo(bx + 18, by - 20, bx + 34, by - 16); ctx.lineTo(bx + 34, by - 4); ctx.quadraticCurveTo(bx + 20, by - 8, bx + 14, by + 2); ctx.closePath(); };
+    ctx.fillStyle = PAPER; horn(); ctx.fill(); hatch(ctx, horn, [bx + 8, by - 20, 28, 24], 0.8, 1.6, 0.5); ctx.lineWidth = 1.1; horn(); ctx.stroke();
+    ctx.fillStyle = '#7a2826'; ctx.font = `italic 600 17px ${SERIF}`; ctx.textAlign = 'left';
     ctx.fillText('Horns! Hounds at the bridge', bx + 42, by);
     ctx.restore();
   }
@@ -321,7 +323,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   }
   if (s.phase === 'prep' && !s.pendingGrant && s.traces.length < phaseRule(s.wave).traces) {
     const k = 0.5 + 0.5 * Math.sin(time * 3);
-    ctx.save(); ctx.strokeStyle = `rgba(245,232,200,${0.35 + 0.45 * k})`; ctx.lineWidth = 3; ctx.setLineDash([3, 7]);
+    ctx.save(); ctx.strokeStyle = `rgba(29,25,21,${0.3 + 0.45 * k})`; ctx.lineWidth = 2; ctx.setLineDash([3, 7]);
     ctx.beginPath(); ctx.arc(INKWELL.x, INKWELL.y - 4, 56 + k * 6, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
 
@@ -337,7 +339,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   const ht = hf ? towerAt(s, hf) : undefined;
   if (ht) {
     const p = posOf(ht);
-    ctx.save(); ctx.strokeStyle = 'rgba(245,232,200,0.55)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1.5;
+    ctx.save(); ctx.strokeStyle = 'rgba(29,25,21,0.45)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1.3;
     ctx.beginPath(); ctx.arc(p.x, p.y, BALANCE.towers[ht.type].range, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
 
@@ -354,12 +356,12 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
           // barrow-mist clinging to the pack
           for (let i = 1; i <= 3; i++) {
             const q = pointAt(LANES[e.lane], e.s - i * 12);
-            ctx.fillStyle = `rgba(190,200,195,${0.16 / i})`;
+            ctx.fillStyle = `rgba(110,104,98,${0.12 / i})`;
             ctx.beginPath(); ctx.ellipse(q.x, q.y - 4, 12 + i * 3, 5 + i, p.angle, 0, Math.PI * 2); ctx.fill();
           }
         }
         drawEnemy(ctx, e.type, p.x, p.y, dir, e.bob, e.hit, k, { kneel: e.mode === 'kneel', alpha: e.mode === 'leave' ? e.fade ?? 1 : 1 });
-        const top = e.type === 'cairn' ? (e.mode === 'kneel' ? 70 : 84) : e.type === 'bearer' ? 70 : 36;
+        const top = e.type === 'cairn' ? (e.mode === 'kneel' ? 80 : 92) : e.type === 'bearer' ? 60 : e.type === 'hound' ? 34 : 46;
         if (e.vulnT > 0 || e.shred > 0) {
           ctx.fillStyle = e.vulnT > 0 ? 'rgba(120,220,180,0.9)' : 'rgba(120,200,170,0.6)';
           for (let i = 0; i < 4; i++) { const a = time * 3 + i * 1.6; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * 12, p.y - top / 2 + Math.sin(a) * 6, 1.8, 0, Math.PI * 2); ctx.fill(); }
@@ -370,11 +372,12 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
         }
         if (e.hp < e.maxHp && e.mode !== 'leave') {
           const w = e.type === 'cairn' ? 50 : 26;
-          ctx.fillStyle = 'rgba(20,12,6,0.75)'; ctx.fillRect(p.x - w / 2, p.y - top - 6, w, 5);
-          ctx.fillStyle = '#c0392b'; ctx.fillRect(p.x - w / 2, p.y - top - 6, w * Math.max(0, e.hp / e.maxHp), 5);
+          ctx.fillStyle = PAPER; ctx.fillRect(p.x - w / 2, p.y - top - 6, w, 5);
+          ctx.fillStyle = '#9a2e28'; ctx.fillRect(p.x - w / 2, p.y - top - 6, w * Math.max(0, e.hp / e.maxHp), 5);
+          ctx.strokeStyle = P.ink; ctx.lineWidth = 1; ctx.strokeRect(p.x - w / 2, p.y - top - 6, w, 5);
         }
         if (v.inspectId === e.id) {
-          ctx.save(); ctx.strokeStyle = P.goldLight; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.lineDashOffset = -time * 20;
+          ctx.save(); ctx.strokeStyle = P.gold; ctx.lineWidth = 2.4; ctx.setLineDash([4, 3]); ctx.lineDashOffset = -time * 20;
           const r = e.type === 'cairn' ? 40 : 18;
           ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, r, r * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
         }
@@ -393,12 +396,12 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
       ctx.strokeStyle = '#2a1a0c'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(8, 0); ctx.stroke();
-      ctx.fillStyle = '#ccc6b8'; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(4, -3); ctx.lineTo(4, 3); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#f1e3bd'; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-14, -3); ctx.moveTo(-10, 0); ctx.lineTo(-14, 3); ctx.stroke();
+      ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(4, -3); ctx.lineTo(4, 3); ctx.closePath(); ctx.fill();
+      ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-14, -3); ctx.moveTo(-10, 0); ctx.lineTo(-14, 3); ctx.stroke();
       ctx.restore();
     } else if (p.kind === 'bramble') {
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
-      ctx.fillStyle = '#2e3a1c'; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -3); ctx.lineTo(-6, 3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -3); ctx.lineTo(-6, 3); ctx.closePath(); ctx.fill();
       ctx.restore();
     } else if (p.kind === 'verdigris') {
       const g = ctx.createRadialGradient(p.x - 1, p.y - 1, 0, p.x, p.y, 6);
@@ -421,8 +424,8 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
     const k = r.t / r.dur;
     ctx.save();
     if (r.kind === 'bell' || r.kind === 'toll') {
-      ctx.strokeStyle = r.kind === 'toll' ? `rgba(240,210,122,${1 - k})` : `rgba(245,232,200,${0.45 * (1 - k)})`;
-      ctx.lineWidth = r.kind === 'toll' ? 6 : 2;
+      ctx.strokeStyle = r.kind === 'toll' ? `rgba(195,150,52,${1 - k})` : `rgba(29,25,21,${0.45 * (1 - k)})`;
+      ctx.lineWidth = r.kind === 'toll' ? 5 : 1.2;
       for (const f of [0.6, 1]) { ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (0.3 + 0.7 * k) * f, 0, Math.PI * 2); ctx.stroke(); }
     } else if (r.kind === 'splash') {
       ctx.fillStyle = `rgba(240,140,50,${0.45 * (1 - k)})`;
@@ -467,16 +470,16 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   drawGoose(ctx, BRIDGE.x + 26, BRIDGE.y - 40, 0.8, 1);
 }
 
-/** The victory plate: the battlefield as a finished, varnished painting. */
+/** The victory plate: the finished drawing, framed in gold. */
 export function renderVictory(ctx: CanvasRenderingContext2D, s: GameState, time: number) {
   base(ctx);
   for (const t of s.towers) if (t.bound) goldRoute(ctx, t.foundation, false, time);
   for (const f of FOUNDATION_IDS) drawFoundation(ctx, f, false, false, !!towerAt(s, f)?.bound, false, !!towerAt(s, f), time);
   for (const t of [...s.towers].sort((a, b) => posOf(a).y - posOf(b).y)) drawTowerIcon(ctx, t.type, posOf(t).x, posOf(t).y, 1, time);
   ctx.save();
-  ctx.fillStyle = 'rgba(200,140,50,0.16)'; ctx.fillRect(0, 0, MAP_W, MAP_H);
+  ctx.fillStyle = 'rgba(195,150,52,0.06)'; ctx.fillRect(0, 0, MAP_W, MAP_H);
   const g = ctx.createRadialGradient(800, 450, 300, 800, 500, 950);
-  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(20,10,0,0.55)');
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(86,68,52,0.35)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, MAP_W, MAP_H);
   ctx.strokeStyle = litGrad(ctx, 0, 0, MAP_W, MAP_H, '#fff0b8', P.gold, '#6b4c12'); ctx.lineWidth = 16; ctx.strokeRect(22, 22, MAP_W - 44, MAP_H - 44);
   ctx.strokeStyle = '#140c04'; ctx.lineWidth = 3; ctx.strokeRect(12, 12, MAP_W - 24, MAP_H - 24); ctx.strokeRect(34, 34, MAP_W - 68, MAP_H - 68);
@@ -487,7 +490,7 @@ export function renderVictory(ctx: CanvasRenderingContext2D, s: GameState, time:
   for (let i = 0; i < 9; i++) {
     const x = 1500 - ((time * 60 + i * 70) % 1700);
     const y = 230 + Math.abs(i - 4) * 26 + Math.sin(time * 2 + i) * 6;
-    drawGoose(ctx, x, y, 1.4, -1, true);
+    drawGoose(ctx, x, y, 1.4, -1, true, time * 7 + i);
   }
   drawSails(ctx, time);
   drawGoose(ctx, POND.x - 30, POND.y - 6, 1.2, 1);

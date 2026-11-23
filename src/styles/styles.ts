@@ -8,6 +8,7 @@ import { mangaMedical } from './mangaMedical';
 import { anim3d } from './anim3d';
 import { anatomy } from './anatomy';
 import { mangaTokyo, mangaAncient } from './mangaJapan';
+import { inkSurreal } from './inkSurreal';
 
 import { towerPath, enemyPath } from './shapes';
 
@@ -786,4 +787,4 @@ mangaAncient.featured = 'coloured manga, ancient Japan';
 anime.featured = 'pastoral anime study';
 vanGogh.featured = 'Van Gogh study';
 renaissance.featured = 'Renaissance study';
-export const STYLES: Style[] = [anatomy, anim3d, mangaMedical, mangaTokyo, mangaAncient, anime, vanGogh, renaissance, candlelit, lowPoly, darkFantasy, pixel, stainedGlass, tabletop, neon];
+export const STYLES: Style[] = [inkSurreal, anatomy, anim3d, mangaMedical, mangaTokyo, mangaAncient, anime, vanGogh, renaissance, candlelit, lowPoly, darkFantasy, pixel, stainedGlass, tabletop, neon];

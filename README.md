@@ -1,12 +1,12 @@
 # The Last Ward: Siege of Goosebridge
 
-A single-map fantasy tower defence prototype: an open storybook whose pages are painted in oils, after the Dutch landscape masters (umber ground, olive woods, dark water, warm light from the upper left, varnish and craquelure), with a turning windmill, grazing sheep and cows, haystacks, a farmhouse, drifting cloud shadows, dust in the light and glints on the water. Two painted roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from an inkwell in the castle garden out to thirteen tower foundations.
+A single-map fantasy tower defence prototype, drawn as a surreal pen-and-ink drawing on cream paper with a soft grey-sepia wash: dense hatching, gnarled trees full of knots, fynbos and protea, a turning windmill, butterflies in pen ticks and striped fish circling the pond. The page hangs like a gallery print on an indigo wall. The creatures are gentle impossible hybrids: root-walking fynbos spirits, shoals of striped air-fish, a goggled wanderer and a walking citadel-fish with a stern human face. Two roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from an inkwell in the castle garden out to thirteen tower foundations.
 
 **Play it:** https://brendanjvr-ux.github.io/the-last-ward/
 
 **Its anatomy offshoot:** *Defend the Heart* began as a conversion of this game and now lives in its own repository: [defend-the-heart](https://github.com/BrendanJvR-ux/defend-the-heart) (play at https://brendanjvr-ux.github.io/defend-the-heart/).
 
-**Art style studies:** https://brendanjvr-ux.github.io/the-last-ward/styles.html (the same battle moment in alternative art directions, led by the candlelit tabletop, with notes on what each would mean in Unity; source in `src/styles/`)
+**Art style studies:** https://brendanjvr-ux.github.io/the-last-ward/styles.html (the same battle moment in alternative art directions, led by the pen-and-ink look the game now uses, with notes on what each would mean in Unity; source in `src/styles/`)
 
 TypeScript, Vite, HTML Canvas for the battlefield and HTML/CSS for the controls. All artwork and sound are made procedurally: no image or audio files, no fonts or services from the internet, no accounts or API keys.
 
@@ -71,10 +71,10 @@ Click (or tap) any enemy during a wave to see its health, armour and speed.
 
 | Enemy | Health | Armour | Speed | Notes |
 |---|---|---|---|---|
-| **Fen Levy** | 36 | 2 | 40 | Steady infantry with reed shields marked by a white flood line. March down the Mill Road in tight files, three abreast, spaced so a Bramble hedge bunches the front ranks for the Ember Kiln's splash. |
-| **Barrow Hound** | 24 | 0 | 108 | Black hounds in bronze burial collars, in small packs on the King's Road. A double horn call sounds and a warning appears at the bridge about 3.5 s before they reach it, enough to save an Ember pulse for the crossing. |
-| **Stone-Bearer** | 130 | 0 | 26 | A marked levy (oxblood sash, gilt marker) carrying the Cairn-Born's stolen name-stone. |
-| **Cairn-Born** | 700 | 8 | 24 | A stone giant with an empty chest, following its bearer. When the bearer falls, the giant walks to the stone, kneels there for 7 s blocking everything behind it on that road (both roads if on the shared stretch), then leaves the field and the queue is released. Time a pulse against the bearer to choose where the blockade forms. If the bearer reaches the gate, the giant marches on. Cannot be knocked back. |
+| **Fen Levy** | 36 | 2 | 40 | Fynbos root-walkers: protea-bud heads, one eye, bodies of tangled roots. Steady infantry that march down the Mill Road in tight files, three abreast, spaced so a Bramble hedge bunches the front ranks for the Ember Kiln's splash. |
+| **Barrow Hound** | 24 | 0 | 108 | Striped fish loosed from the barrows, swimming through the air in small shoals on the King's Road. A double horn call sounds and a warning appears at the bridge about 3.5 s before they reach it, enough to save an Ember pulse for the crossing. |
+| **Stone-Bearer** | 130 | 0 | 26 | A goggled wanderer with a spiky crest, patterned coat and oxblood sash, carrying the Cairn-Born's stolen name-stone. |
+| **Cairn-Born** | 700 | 8 | 24 | A walking citadel-fish with a stern human face, a little town on its back and an empty socket where its stone belonged, following its bearer. When the bearer falls, the giant walks to the stone, kneels there for 7 s blocking everything behind it on that road (both roads if on the shared stretch), then leaves the field and the queue is released. Time a pulse against the bearer to choose where the blockade forms. If the bearer reaches the gate, the giant marches on. Cannot be knocked back. |
 
 Waves: Levy alone (1), Hounds join (2), both together (3), a calmer wave to try your first bind (4), the Cairn-Born and its bearer on a quiet Mill Road (5), the pair on the Mill Road while Hounds threaten the bridge (6). The bookmark gives each wave a title and a line of verse; it does not tell you what is coming, where, or how many.
 
@@ -82,10 +82,10 @@ Waves: Levy alone (1), Hounds join (2), both together (3), a calmer wave to try 
 
 | Tower | Attack | Pulse |
 |---|---|---|
-| **Bramble Tower** | Thorns, single target | **Hedge**: a hedge grows across the nearest road; enemies on that lane halt and bunch up. On the shared stretch by the gate it blocks both lanes. |
-| **Ember Kiln** | Lobbed coals, splash | **Firebrand**: the road near the kiln burns for several seconds. Burning ignores armour. The kiln at the Crossroads covers both roads. |
-| **Bell Spire** | Periodic ring around it | **Great Toll**: knocks nearby enemies back along their own road and dazes them (not the Cairn-Born). |
-| **Verdigris Font** | Copper spray that strips 2 armour per hit (up to 6, wears off after 4 s) | **Tarnish**: a green mist removes all armour from enemies nearby and makes them take 30% more damage for 6 s. |
+| **Bramble Tower** (a gnarled trunk; something watches from the knothole) | Thorns, single target | **Hedge**: a hedge grows across the nearest road; enemies on that lane halt and bunch up. On the shared stretch by the gate it blocks both lanes. |
+| **Ember Kiln** (a hollow stump breathing smoke) | Lobbed coals, splash | **Firebrand**: the road near the kiln burns for several seconds. Burning ignores armour. The kiln at the Crossroads covers both roads. |
+| **Bell Spire** (a striped spire with a crescent finial) | Periodic ring around it | **Great Toll**: knocks nearby enemies back along their own road and dazes them (not the Cairn-Born). |
+| **Verdigris Font** (the eye-flower) | Copper spray that strips 2 armour per hit (up to 6, wears off after 4 s) | **Tarnish**: a green mist removes all armour from enemies nearby and makes them take 30% more damage for 6 s. |
 
 
 ## Tuning
@@ -101,9 +101,10 @@ Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its 
 | `src/balance.ts` | All tuning values and the six waves. |
 | `src/map.ts` | Map geometry: roads, river, the inkwell, the leyline tree and its 13 foundations, snapping. |
 | `src/game.ts` | Game state, the trace / pulse / bind / build rules and the combat simulation (no DOM). |
-| `src/paint.ts` | The painted spread: ground, polder fields, trees, water, roads, buildings, varnish and craquelure (drawn once). |
-| `src/sprites.ts` | Painted towers and enemies. |
-| `src/render.ts` | Live drawing: ink threads, gold leaf, effects, warnings, inspect highlight, the victory plate. |
+| `src/ink.ts` | The pen-and-ink look: hatching, wood grain and wash helpers, every tower, creature and building, shared with the art studies. |
+| `src/paint.ts` | The static sheet: paper, roads, river, pond, trees, mill, windmill, castle, inkwell and labels (drawn once). |
+| `src/sprites.ts` | Tower and enemy sprites (walk cycles, the kneeling giant, ink spatter on hits) and margin icons. |
+| `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, pond fish, effects, warnings, inspect highlight, the victory plate. |
 | `src/audio.ts` | The synthesized double horn. |
 | `src/main.ts` | Input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |
 | `src/style.css` | Layout and look, including the phone layout. |

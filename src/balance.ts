@@ -161,10 +161,10 @@ export const BALANCE = {
   houndWarning: 3.5,
 
   enemies: {
-    levy: { name: 'Fen Levy', plural: 'Fen Levy', hp: 36, speed: 40, armour: 2, bounty: 2, castleDamage: 1, note: 'Reed shields with a white flood line. March in tight files.' },
-    bearer: { name: 'Stone-Bearer', plural: 'Stone-Bearers', hp: 130, speed: 26, armour: 0, bounty: 8, castleDamage: 1, note: 'A marked levy carrying the Cairn-Born\u2019s stolen name-stone. Where it falls, the giant kneels.' },
-    hound: { name: 'Barrow Hound', plural: 'Barrow Hounds', hp: 24, speed: 108, armour: 0, bounty: 2, castleDamage: 1, note: 'Black hounds in bronze burial collars. Hunt in packs.' },
-    cairn: { name: 'Cairn-Born', plural: 'Cairn-Born', hp: 700, speed: 24, armour: 8, bounty: 45, castleDamage: 6, note: 'A stone giant with an empty chest. Follows its name-stone; cannot be knocked back.' },
+    levy: { name: 'Fen Levy', plural: 'Fen Levy', hp: 36, speed: 40, armour: 2, bounty: 2, castleDamage: 1, note: 'Fynbos root-walkers with protea heads and a single eye. March in tight files.' },
+    bearer: { name: 'Stone-Bearer', plural: 'Stone-Bearers', hp: 130, speed: 26, armour: 0, bounty: 8, castleDamage: 1, note: 'A goggled wanderer carrying the Cairn-Born\u2019s stolen name-stone. Where it falls, the giant kneels.' },
+    hound: { name: 'Barrow Hound', plural: 'Barrow Hounds', hp: 24, speed: 108, armour: 0, bounty: 2, castleDamage: 1, note: 'Striped fish loosed from the barrows, swimming through the air. Hunt in shoals.' },
+    cairn: { name: 'Cairn-Born', plural: 'Cairn-Born', hp: 700, speed: 24, armour: 8, bounty: 45, castleDamage: 6, note: 'A walking citadel-fish with a stern face and an empty socket. Follows its name-stone; cannot be knocked back.' },
   } as Record<EnemyType, EnemyStats>,
 
   waves: [
