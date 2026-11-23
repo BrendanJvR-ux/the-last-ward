@@ -3,7 +3,7 @@ import { BALANCE, phaseRule } from './balance';
 import { MAP_W, MAP_H, LANES, POND, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, routePolyline, pointAt, type Vec } from './map';
 import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint } from './game';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
-import { P, drawTowerIcon, drawEnemy, drawNameStone, litGrad, softShadow, ENEMY_SCALE } from './sprites';
+import { P, drawTowerIcon, drawEnemy, drawNameStone, litGrad, softShadow, ENEMY_SCALE, TOWER_SCALE } from './sprites';
 import { inkFoundation, inkFlame, windmillSails, airFish, grow, limbs, hatch, seed, PAPER, type Seg } from './ink';
 
 export { towerIconCanvas, enemyIconCanvas } from './sprites';
@@ -99,6 +99,7 @@ function drawFoundation(ctx: CanvasRenderingContext2D, f: string, selected: bool
     ctx.strokeStyle = 'rgba(29,25,21,0.7)'; ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.moveTo(-6, -1); ctx.lineTo(6, -1); ctx.moveTo(0, -5); ctx.lineTo(0, 3); ctx.stroke();
   }
+  if (built) ctx.scale(TOWER_SCALE, TOWER_SCALE);
   if (bound) { ctx.strokeStyle = P.gold; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, 0, 34, 15, 0, 0, Math.PI * 2); ctx.stroke(); }
   if (preview) {
     ctx.strokeStyle = `rgba(240,210,122,${0.6 + 0.4 * Math.sin(time * 6)})`; ctx.lineWidth = 3; ctx.setLineDash([5, 4]);
@@ -115,12 +116,12 @@ function drawTowerState(ctx: CanvasRenderingContext2D, s: GameState, t: Tower, t
   const p = posOf(t);
   if (t.flash > 0) {
     ctx.save(); ctx.globalAlpha = t.flash * 0.7;
-    const g = ctx.createRadialGradient(p.x, p.y - 34, 2, p.x, p.y - 34, 50);
+    const g = ctx.createRadialGradient(p.x, p.y - 48, 2, p.x, p.y - 48, 70);
     g.addColorStop(0, P.goldLight); g.addColorStop(1, 'rgba(240,210,122,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y - 34, 50, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y - 48, 70, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
-  drawTowerIcon(ctx, t.type, p.x, p.y, 1, time + p.x);
-  const markX = p.x + 24, markY = p.y - 66;
+  drawTowerIcon(ctx, t.type, p.x, p.y, TOWER_SCALE, time + p.x);
+  const markX = p.x + 34, markY = p.y - 92;
   if (t.traced) {
     const ready = s.phase === 'combat' && !t.committed && s.pulsesLeft > 0;
     ctx.save(); ctx.translate(markX, markY);
@@ -150,7 +151,7 @@ function drawTowerState(ctx: CanvasRenderingContext2D, s: GameState, t: Tower, t
     ctx.restore();
   }
   if (t.royal) {
-    ctx.save(); ctx.translate(p.x - 26, p.y - 60);
+    ctx.save(); ctx.translate(p.x - 36, p.y - 84);
     ctx.fillStyle = litGrad(ctx, -8, -6, 8, 4, '#fff0b8', P.gold, '#6b4c12');
     ctx.beginPath(); ctx.moveTo(-8, 4); ctx.lineTo(-8, -4); ctx.lineTo(-4, 0); ctx.lineTo(0, -6); ctx.lineTo(4, 0); ctx.lineTo(8, -4); ctx.lineTo(8, 4); ctx.closePath(); ctx.fill();
     ctx.restore();
@@ -475,7 +476,7 @@ export function renderVictory(ctx: CanvasRenderingContext2D, s: GameState, time:
   base(ctx);
   for (const t of s.towers) if (t.bound) goldRoute(ctx, t.foundation, false, time);
   for (const f of FOUNDATION_IDS) drawFoundation(ctx, f, false, false, !!towerAt(s, f)?.bound, false, !!towerAt(s, f), time);
-  for (const t of [...s.towers].sort((a, b) => posOf(a).y - posOf(b).y)) drawTowerIcon(ctx, t.type, posOf(t).x, posOf(t).y, 1, time);
+  for (const t of [...s.towers].sort((a, b) => posOf(a).y - posOf(b).y)) drawTowerIcon(ctx, t.type, posOf(t).x, posOf(t).y, TOWER_SCALE, time);
   ctx.save();
   ctx.fillStyle = 'rgba(195,150,52,0.06)'; ctx.fillRect(0, 0, MAP_W, MAP_H);
   const g = ctx.createRadialGradient(800, 450, 300, 800, 500, 950);
