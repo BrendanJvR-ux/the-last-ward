@@ -417,7 +417,7 @@ function renderOverlay() {
   if (s.phase === 'victory') {
     overlay.hidden = false;
     overlay.className = 'victory';
-    overlay.innerHTML = `<div class="plate"><p class="kicker">The End</p><h2>The Siege of Goosebridge</h2><p class="caption">“And so Goosebridge stood, though the geese claimed most of the credit.”</p><p class="sub">Castle ${s.castleHp}/${BALANCE.castleHp} · ${s.kills} foes turned back · ${s.towers.filter((t) => t.bound).length} tower${s.towers.filter((t) => t.bound).length === 1 ? '' : 's'} bound in gold</p><button data-act="restart" class="primary">Read it again</button></div>`;
+    overlay.innerHTML = `<div class="plate"><p class="kicker">The End</p><h2>The Last Ward</h2><p class="caption">“And so the last ward held, and the old wizard let the ink dry on the final page.”</p><p class="sub">Castle ${s.castleHp}/${BALANCE.castleHp} · ${s.kills} foes turned back · ${s.towers.filter((t) => t.bound).length} tower${s.towers.filter((t) => t.bound).length === 1 ? '' : 's'} bound in gold</p><button data-act="restart" class="primary">Read it again</button></div>`;
   } else if (s.phase === 'defeat') {
     overlay.hidden = false;
     overlay.className = 'defeat';

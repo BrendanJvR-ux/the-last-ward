@@ -1,10 +1,10 @@
 // Live drawing on top of the ink sheet.
 import { BALANCE, phaseRule } from './balance';
-import { MAP_W, MAP_H, LANES, POND, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, routePolyline, pointAt, type Vec } from './map';
+import { MAP_W, MAP_H, LANES, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, routePolyline, pointAt, type Vec } from './map';
 import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint } from './game';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
 import { P, drawTowerIcon, drawEnemy, drawNameStone, litGrad, softShadow, ENEMY_SCALE, TOWER_SCALE } from './sprites';
-import { inkFoundation, inkFlame, windmillSails, airFish, grow, limbs, hatch, seed, PAPER, type Seg } from './ink';
+import { inkFoundation, inkFlame, windmillSails, wizard, grow, limbs, hatch, seed, PAPER, type Seg } from './ink';
 
 export { towerIconCanvas, enemyIconCanvas } from './sprites';
 
@@ -27,6 +27,8 @@ export interface ViewState {
 }
 
 const INK = '#15131f';
+/** The keeper of the inkwell stands just east of it. */
+const WIZARD = { x: INKWELL.x + 62, y: INKWELL.y + 26 };
 let staticLayer: HTMLCanvasElement | null = null;
 function base(ctx: CanvasRenderingContext2D) {
   if (!staticLayer) staticLayer = buildStatic(2);
@@ -240,7 +242,7 @@ function drawSails(ctx: CanvasRenderingContext2D, time: number) {
   windmillSails(ctx, WINDMILL.x, WINDMILL.y - 56, time * 0.35);
 }
 
-/** Drifting washes, small ink butterflies, striped fish in the pond and glints on the water. */
+/** Drifting washes, small ink butterflies and glints on the river. */
 function drawAmbience(ctx: CanvasRenderingContext2D, time: number) {
   ctx.save();
   for (let i = 0; i < 3; i++) {
@@ -261,18 +263,8 @@ function drawAmbience(ctx: CanvasRenderingContext2D, time: number) {
     ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - w, y - 2.5); ctx.lineTo(x - w * 0.6, y + 0.5); ctx.closePath();
     ctx.moveTo(x, y); ctx.lineTo(x + w, y - 2.5); ctx.lineTo(x + w * 0.6, y + 0.5); ctx.closePath(); ctx.stroke();
   }
-  // striped fish circling under the pond's surface
-  ctx.globalAlpha = 0.7;
-  for (let i = 0; i < 3; i++) {
-    const a = time * (0.25 + i * 0.07) + i * 2.1, dir = 1;
-    const fx = POND.x + Math.cos(a) * (55 - i * 12), fy = POND.y + Math.sin(a) * (32 - i * 7);
-    const heading = -Math.sin(a) * dir;
-    airFish(ctx, fx, fy, 0.9 - i * 0.12, heading >= 0 ? 1 : -1, time * 4 + i);
-  }
-  ctx.globalAlpha = 1;
-  // glints on the pond and river
+  // glints on the river
   const glints: Vec[] = [];
-  for (let i = 0; i < 7; i++) glints.push({ x: POND.x - 60 + ((i * 37) % 110), y: POND.y - 30 + ((i * 23) % 56) });
   for (let i = 1; i < RIVER.length; i++) for (let t = 0.3; t < 1; t += 0.4) glints.push({ x: RIVER[i - 1].x + (RIVER[i].x - RIVER[i - 1].x) * t, y: RIVER[i - 1].y + (RIVER[i].y - RIVER[i - 1].y) * t });
   glints.forEach((p, i) => {
     const a = Math.max(0, Math.sin(time * 1.7 + i * 2.3));
@@ -388,6 +380,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   for (const h of s.hedges) sprites.push({ y: h.at.y + 1, draw: () => drawHedge(ctx, h, time) });
   for (const f of s.fallen) sprites.push({ y: f.y - 1, draw: () => drawFallen(ctx, f, time) });
   sprites.push({ y: WINDMILL.y, draw: () => drawSails(ctx, time) });
+  sprites.push({ y: WIZARD.y, draw: () => wizard(ctx, WIZARD.x, WIZARD.y, -1, time, v.gesture.active || s.flights.length > 0) });
   sprites.sort((a, b) => a.y - b.y);
   for (const sp of sprites) sp.draw();
 
@@ -466,8 +459,6 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
 
   drawAmbience(ctx, time);
   drawHoundWarnings(ctx, s, time);
-  drawGoose(ctx, POND.x - 30 + Math.sin(time * 0.4) * 10, POND.y - 6, 1, 1);
-  drawGoose(ctx, POND.x + 26 + Math.sin(time * 0.3 + 2) * 8, POND.y + 14, 0.9, -1);
   drawGoose(ctx, BRIDGE.x + 26, BRIDGE.y - 40, 0.8, 1);
 }
 
@@ -494,8 +485,7 @@ export function renderVictory(ctx: CanvasRenderingContext2D, s: GameState, time:
     drawGoose(ctx, x, y, 1.4, -1, true, time * 7 + i);
   }
   drawSails(ctx, time);
-  drawGoose(ctx, POND.x - 30, POND.y - 6, 1.2, 1);
-  drawGoose(ctx, POND.x + 26, POND.y + 14, 1.1, -1);
+  wizard(ctx, WIZARD.x, WIZARD.y, -1, time, false);
   drawGoose(ctx, 1380, 520, 1.6, -1);
   drawGoose(ctx, 1330, 540, 1.4, 1);
 }

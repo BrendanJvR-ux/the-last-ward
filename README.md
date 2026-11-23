@@ -1,6 +1,6 @@
-# The Last Ward: Siege of Goosebridge
+# The Last Ward
 
-A single-map fantasy tower defence prototype, drawn as a surreal pen-and-ink drawing on cream paper with a soft grey-sepia wash: dense hatching, gnarled trees full of knots, fynbos and protea, a turning windmill, butterflies in pen ticks and striped fish circling the pond. The page hangs like a gallery print on an indigo wall. The creatures are gentle impossible hybrids: root-walking fynbos spirits, shoals of striped air-fish, a goggled wanderer and a walking citadel-fish with a stern human face. Two roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from an inkwell in the castle garden out to thirteen tower foundations.
+A single-map fantasy tower defence prototype, drawn as a surreal pen-and-ink drawing on cream paper with a soft grey-sepia wash: dense hatching, gnarled trees full of knots, fynbos and protea, a turning windmill, butterflies in pen ticks, and a river that wells up from a spring among stones. An old wizard in a patterned robe and crooked hat keeps the inkwell, leaning on a quill as tall as a staff; he raises it while you trace and pulse. The page hangs like a gallery print on an indigo wall. The creatures are gentle impossible hybrids: root-walking fynbos spirits, shoals of striped air-fish, a goggled wanderer and a walking citadel-fish with a stern human face. Two roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from the wizard's inkwell in the castle garden out to thirteen tower foundations.
 
 **Play it:** https://brendanjvr-ux.github.io/the-last-ward/
 
@@ -101,10 +101,10 @@ Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its 
 | `src/balance.ts` | All tuning values and the six waves. |
 | `src/map.ts` | Map geometry: roads, river, the inkwell, the leyline tree and its 13 foundations, snapping. |
 | `src/game.ts` | Game state, the trace / pulse / bind / build rules and the combat simulation (no DOM). |
-| `src/ink.ts` | The pen-and-ink look: hatching, wood grain and wash helpers, every tower, creature and building, shared with the art studies. |
-| `src/paint.ts` | The static sheet: paper, roads, river, pond, trees, mill, windmill, castle, inkwell and labels (drawn once). |
+| `src/ink.ts` | The pen-and-ink look: hatching, wood grain and wash helpers, every tower, creature and building, the wizard, shared with the art studies. |
+| `src/paint.ts` | The static sheet: paper, roads, river and spring, trees, mill, windmill, castle, inkwell and labels (drawn once). |
 | `src/sprites.ts` | Tower and enemy sprites (walk cycles, the kneeling giant, ink spatter on hits) and margin icons. |
-| `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, pond fish, effects, warnings, inspect highlight, the victory plate. |
+| `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, the wizard, effects, warnings, inspect highlight, the victory plate. |
 | `src/audio.ts` | The synthesized double horn. |
 | `src/main.ts` | Input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |
 | `src/style.css` | Layout and look, including the phone layout. |

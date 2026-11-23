@@ -1,12 +1,12 @@
 // The static sheet: a pen-and-ink drawing on cream paper with a grey-sepia wash.
-// Roads, river and pond, gnarled trees and fynbos, the mill, the windmill, the castle
+// Roads, the river and its spring, gnarled trees and fynbos, the mill, the windmill, the castle
 // and the inkwell are drawn once; everything that moves is drawn live in render.ts.
 import {
   MAP_W, MAP_H, GUTTER_X, LANES, LANE_IDS, RIVER, POND, MILL, BRIDGE, INKWELL, CASTLE,
   LEY_EDGES, NODE, FOUNDATION_IDS, pointAt, type Vec,
 } from './map';
 import {
-  inkSurreal, inkOpts, inkCastle, inkInkwell, windmillBody, turret, paperVignette, groundWash, goose,
+  inkSurreal, inkCastle, inkInkwell, windmillBody, turret, paperVignette, groundWash, goose,
   INK, INK2, PAPER,
 } from './ink';
 
@@ -66,7 +66,7 @@ function nearRiver(p: Vec, margin: number): boolean {
       if (Math.hypot(q.x - p.x, q.y - p.y) < margin) return true;
     }
   }
-  return Math.hypot(POND.x - p.x, (POND.y - p.y) * 1.4) < margin + 70;
+  return Math.hypot(RIVER[0].x - p.x, RIVER[0].y - p.y) < margin + 30;
 }
 
 /** Handwritten-style italic lettering in ink. */
@@ -134,7 +134,6 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   ctx.scale(scale, scale);
   const R = rng(11);
   const st = inkSurreal;
-  inkOpts.pondFish = false; // the live renderer swims its own
 
   st.ground(ctx, R);
   st.water(ctx, RIVER, POND);
@@ -178,7 +177,6 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
 
   label(ctx, 'The Mill Road', 300, 112, 17);
   label(ctx, 'The King’s Road', 1000, 772, 17, -0.33);
-  label(ctx, 'Goosebridge Pond', POND.x, POND.y + 84, 15);
   label(ctx, 'Goosebridge Castle', CASTLE.x - 6, CASTLE.y + 196, 15);
   label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
 
@@ -189,7 +187,7 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
   ctx.lineWidth = 0.6; roundRect(ctx, 45, 885, 290, 68, 3); ctx.stroke();
   ctx.font = `italic 600 25px ${SERIF}`; ctx.textAlign = 'left'; ctx.fillStyle = INK;
-  ctx.fillText('The Siege of Goosebridge', 56, 918);
+  ctx.fillText('The Last Ward', 56, 918);
   ctx.font = `italic 14px ${SERIF}`; ctx.fillStyle = 'rgba(29,25,21,0.7)';
   ctx.fillText('drawn in pen and ink, with a little wash', 58, 942);
   // sheet border

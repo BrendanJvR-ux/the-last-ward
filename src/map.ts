@@ -127,7 +127,7 @@ export const LEY_NODES: LeyNode[] = [
   { id: 'p1', x: 1060, y: 562, parent: 'c1', bow: 10 },
   { id: 'f_bridge', x: 985, y: 625, parent: 'p1', bow: 6, foundation: { name: 'Goosebridge' } },
   { id: 'p2', x: 880, y: 560, parent: 'p1', bow: -8 },
-  { id: 'f_bend', x: 838, y: 478, parent: 'p2', bow: 6, foundation: { name: 'Pond Bend' } },
+  { id: 'f_bend', x: 838, y: 478, parent: 'p2', bow: 6, foundation: { name: 'Spring Bend' } },
   { id: 'p3', x: 735, y: 700, parent: 'p2', bow: 12 },
   { id: 'p4', x: 470, y: 600, parent: 'p3', bow: -14 },
   { id: 'f_mill', x: 560, y: 340, parent: 'p4', bow: 14, foundation: { name: 'Mill Yard' } },

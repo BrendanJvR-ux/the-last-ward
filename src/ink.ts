@@ -599,9 +599,6 @@ export function nameStone(ctx: C, x: number, y: number, time: number) {
   ctx.stroke();
 }
 
-/** The game animates its own pond fish, so it turns the static ones off. */
-export const inkOpts = { pondFish: true };
-
 export const inkSurreal: Style = {
   id: 'ink',
   name: 'Pen-and-ink surreal',
@@ -639,14 +636,34 @@ export const inkSurreal: Style = {
       ctx.moveTo(ox, oy); ctx.quadraticCurveTo(ox + Math.cos(p.a) * L * 0.5 + 1.5, oy + Math.sin(p.a) * L * 0.5 - 1.5, ox + Math.cos(p.a) * L, oy + Math.sin(p.a) * L);
     }
     ctx.stroke();
-    // the pond
-    ctx.fillStyle = 'rgba(52,48,46,0.26)'; ctx.beginPath(); ctx.ellipse(pond.x, pond.y, 88, 55, -0.15, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(pond.x, pond.y, 88, 55, -0.15, 0, Math.PI * 2); ctx.stroke();
-    ctx.lineWidth = 0.6;
-    for (let k = 1; k <= 4; k++) { ctx.setLineDash([10 + k * 4, 6 + k * 2]); ctx.beginPath(); ctx.ellipse(pond.x + 6, pond.y + 2, 80 - k * 16, 48 - k * 10, -0.15, 0, Math.PI * 2); ctx.stroke(); }
+    // the river wells up from a spring: a small rocky pool with rushes
+    const h = river[0], a0 = Math.atan2(river[1].y - h.y, river[1].x - h.x);
+    const px = h.x - Math.cos(a0) * 22, py = h.y - Math.sin(a0) * 22;
+    ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(px, py, 40, 31, a0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(52,48,46,0.3)'; ctx.beginPath(); ctx.ellipse(px, py, 40, 31, a0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.6;
+    for (let k = 1; k <= 4; k++) { ctx.setLineDash([6 + k * 3, 4 + k]); ctx.beginPath(); ctx.ellipse(px, py, k * 8, k * 6, a0, 0, Math.PI * 2); ctx.stroke(); }
     ctx.setLineDash([]);
-    // two striped fish below the surface (the game animates its own)
-    if (inkOpts.pondFish) { ctx.globalAlpha = 0.75; airFish(ctx, pond.x - 30, pond.y - 8, 1.1, 1); airFish(ctx, pond.x + 34, pond.y + 16, 0.9, -1); ctx.globalAlpha = 1; }
+    const RS = rng(43);
+    for (let i = 0; i < 15; i++) {
+      // a ring of stones round the pool, open where the river flows out
+      const t = -2.45 + (i / 14) * 4.9, a = a0 + Math.PI + t, r = 6 + RS() * 6;
+      const sx = px + Math.cos(a0) * Math.cos(t + Math.PI) * 44 - Math.sin(a0) * Math.sin(t + Math.PI) * 35;
+      const sy = py + Math.sin(a0) * Math.cos(t + Math.PI) * 44 + Math.cos(a0) * Math.sin(t + Math.PI) * 35;
+      const st = () => { ctx.beginPath(); ctx.ellipse(sx, sy, r, r * 0.68, a + RS() * 0.3, 0, Math.PI * 2); };
+      groundWash(ctx, sx + 3, sy + 3, r * 1.3, r * 0.6, 0.35);
+      ctx.fillStyle = '#e6dfcf'; st(); ctx.fill();
+      hatch(ctx, st, [sx - r, sy - r, r * 2, r * 2], 0.7 + i * 0.3, 1.6, 0.45);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.1; st(); ctx.stroke();
+    }
+    // rushes at either side of the outflow
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.7; ctx.beginPath();
+    for (const sgn of [-1, 1]) for (let i = 0; i < 6; i++) {
+      const bx = h.x + Math.cos(a0) * (8 + i * 3) - Math.sin(a0) * sgn * (24 + (i % 2) * 3), by = h.y + Math.sin(a0) * (8 + i * 3) + Math.cos(a0) * sgn * (24 + (i % 2) * 3);
+      ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + (i - 3) * 0.6, by - 7, bx + (i - 3) * 1.4, by - 13 - (i % 3) * 2);
+    }
+    ctx.stroke();
+    void pond;
   },
   road(ctx, pts, kind) {
     const P = chaikin(pts, 2), R = rng(kind === 'mill' ? 11 : 12);
@@ -838,4 +855,99 @@ export function paperVignette(ctx: C) {
   g.addColorStop(0, 'rgba(120,96,64,0)'); g.addColorStop(1, 'rgba(120,96,64,0.22)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, MAP_W, MAP_H);
   for (let i = 0; i < 14; i++) { const x = R() * MAP_W, y = R() * MAP_H, r = 2 + R() * 6; const f = ctx.createRadialGradient(x, y, 0, x, y, r); f.addColorStop(0, 'rgba(150,110,60,0.18)'); f.addColorStop(1, 'rgba(150,110,60,0)'); ctx.fillStyle = f; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+}
+
+/**
+ * The keeper of the inkwell: a tall wizard in a patterned robe and a crooked hat,
+ * leaning on a quill as long as a staff. Feet at (x, y), facing `dir` (towards the inkwell).
+ * While `casting`, the quill is raised and ink drips from its nib.
+ */
+export function wizard(ctx: C, x: number, y: number, dir: number, time: number, casting: boolean) {
+  const R = seed(0, 0, 77);
+  groundWash(ctx, x, y + 2, 30, 7, 0.45);
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+  const sway = Math.sin(time * 0.9) * 1.5;
+  const lift = casting ? 1 : 0;
+  // the quill-staff, behind the front arm
+  const qa = -Math.PI / 2 + (casting ? -0.55 + Math.sin(time * 6) * 0.05 : -0.08);
+  const qx = 20, qy = casting ? -54 : -40;
+  const tipX = qx + Math.cos(qa + Math.PI) * 44, tipY = qy + Math.sin(qa + Math.PI) * 44;
+  const topX = qx + Math.cos(qa) * 52, topY = qy + Math.sin(qa) * 52;
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(tipX, tipY); ctx.lineTo(topX, topY); ctx.stroke();
+  // feather vanes on the upper half
+  ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let t = 0.35; t <= 1; t += 0.04) {
+    const px = qx + Math.cos(qa) * 52 * t, py = qy + Math.sin(qa) * 52 * t, w = Math.sin(((t - 0.35) / 0.65) * Math.PI) * 9 + 1;
+    const nx = -Math.sin(qa), ny = Math.cos(qa);
+    ctx.moveTo(px, py); ctx.quadraticCurveTo(px + nx * w * 0.6 - Math.cos(qa) * 2, py + ny * w * 0.6 - Math.sin(qa) * 2, px + nx * w - Math.cos(qa) * 4, py + ny * w - Math.sin(qa) * 4);
+    ctx.moveTo(px, py); ctx.quadraticCurveTo(px - nx * w * 0.6 - Math.cos(qa) * 2, py - ny * w * 0.6 - Math.sin(qa) * 2, px - nx * w - Math.cos(qa) * 4, py - ny * w - Math.sin(qa) * 4);
+  }
+  ctx.stroke();
+  // nib, and drops of ink while casting
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(tipX, tipY); ctx.lineTo(tipX + Math.cos(qa) * 6 - 1.5, tipY + Math.sin(qa) * 6); ctx.lineTo(tipX + Math.cos(qa) * 6 + 1.5, tipY + Math.sin(qa) * 6); ctx.fill();
+  if (casting) for (let i = 0; i < 3; i++) { const t = (time * 1.4 + i / 3) % 1; ctx.beginPath(); ctx.ellipse(tipX, tipY + t * 26, 1.4, 2.2, 0, 0, Math.PI * 2); ctx.globalAlpha = 1 - t; ctx.fill(); ctx.globalAlpha = 1; }
+
+  // robe
+  const robe = () => { ctx.beginPath(); ctx.moveTo(-9, -64); ctx.quadraticCurveTo(-16, -30, -20 + sway, 0); ctx.lineTo(20 + sway, 0); ctx.quadraticCurveTo(15, -30, 9, -64); ctx.closePath(); };
+  ctx.fillStyle = PAPER; robe(); ctx.fill();
+  ctx.save(); robe(); ctx.clip();
+  // fold lines
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let i = -3; i <= 3; i++) { ctx.moveTo(i * 2.2, -60); ctx.quadraticCurveTo(i * 4 + sway * 0.5, -30, i * 5.5 + sway, 0); }
+  ctx.stroke();
+  // patterned bands at the hem: dots on black, a zigzag, crescent moons
+  ctx.fillStyle = INK; ctx.fillRect(-24, -11, 48, 5);
+  ctx.fillStyle = PAPER; for (let i = -20; i <= 20; i += 4) { ctx.beginPath(); ctx.arc(i + sway, -8.5, 0.9, 0, Math.PI * 2); ctx.fill(); }
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.6; ctx.beginPath(); for (let i = -22; i <= 22; i += 3) { ctx.lineTo(i + sway, -15); ctx.lineTo(i + 1.5 + sway, -18); } ctx.stroke();
+  ctx.fillStyle = INK;
+  for (let i = -16; i <= 16; i += 8) { ctx.beginPath(); ctx.arc(i + sway * 0.7, -25, 2, 0.6, Math.PI * 2 - 0.6); ctx.arc(i + 0.9 + sway * 0.7, -25.5, 1.6, Math.PI * 2 - 0.6, 0.6, true); ctx.fill(); }
+  // a few stars scattered up the robe
+  ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let i = 0; i < 7; i++) { const sx = (R() - 0.5) * 20, sy = -34 - R() * 24; ctx.moveTo(sx - 1.6, sy); ctx.lineTo(sx + 1.6, sy); ctx.moveTo(sx, sy - 1.6); ctx.lineTo(sx, sy + 1.6); }
+  ctx.stroke();
+  ctx.restore();
+  ctx.save(); robe(); ctx.clip(); hatch(ctx, () => { ctx.beginPath(); ctx.rect(-30, -70, 18, 72); }, [-30, -70, 18, 72], -1.1, 1.8, 0.45); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; robe(); ctx.stroke();
+  // shoes peeping out, curled at the toe
+  ctx.lineWidth = 1; ctx.fillStyle = INK;
+  ctx.beginPath(); ctx.moveTo(6 + sway, 0); ctx.quadraticCurveTo(16 + sway, 1, 19 + sway, -3); ctx.lineTo(18 + sway, 1); ctx.lineTo(6 + sway, 2); ctx.fill();
+
+  // the reaching arm and sleeve
+  const hx = qx - 2, hy = qy + 2;
+  const sleeve = () => { ctx.beginPath(); ctx.moveTo(4, -60); ctx.quadraticCurveTo(14, -58 + lift * -4, hx + 2, hy - 4); ctx.lineTo(hx + 4, hy + 6); ctx.quadraticCurveTo(10, -46 + lift * -4, 2, -48); ctx.closePath(); };
+  ctx.fillStyle = PAPER; sleeve(); ctx.fill(); hatch(ctx, sleeve, [0, -66, 30, 30], 0.9, 1.7, 0.45); ctx.strokeStyle = INK; ctx.lineWidth = 1; sleeve(); ctx.stroke();
+  ctx.fillStyle = '#f4eee2'; ctx.beginPath(); ctx.arc(hx + 2, hy, 3, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 0.8; ctx.stroke();
+
+  // face, nose, spectacle and beard
+  ctx.fillStyle = '#f4eee2'; ctx.beginPath(); ctx.ellipse(1, -72, 7, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#f4eee2'; ctx.beginPath(); ctx.moveTo(6, -75); ctx.quadraticCurveTo(15, -72, 14, -66); ctx.quadraticCurveTo(10, -67, 6, -69); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#d8d0c0'; ctx.beginPath(); ctx.arc(4, -75, 2.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(4.6, -75, 1.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(4.1, -75.6, 0.45, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(1.2, -75); ctx.lineTo(-4, -74); ctx.stroke();
+  // bushy brow
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (let i = 0; i < 7; i++) { ctx.moveTo(1 + i, -78.5); ctx.lineTo(2 + i * 1.3, -81 - (i % 2)); } ctx.stroke();
+  // beard: many flowing lines from cheek to chest
+  const bs = Math.sin(time * 1.2) * 1.2;
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.moveTo(-5, -70); ctx.quadraticCurveTo(-4, -50, 2 + bs, -36); ctx.quadraticCurveTo(10, -50, 11, -66); ctx.quadraticCurveTo(4, -64, -5, -70); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.45; ctx.beginPath();
+  for (let i = 0; i < 14; i++) { const sx = -5 + i * 1.15, sy = -70 + Math.abs(i - 7) * 0.5; ctx.moveTo(sx, sy); ctx.bezierCurveTo(sx - 2, sy + 10, sx + 3 + bs, sy + 20, 2 + bs + (i - 7) * 0.4, -36 + Math.abs(i - 7) * 0.6); }
+  ctx.stroke();
+  ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-5, -70); ctx.quadraticCurveTo(-4, -50, 2 + bs, -36); ctx.quadraticCurveTo(10, -50, 11, -66); ctx.stroke();
+
+  // the tall, crooked hat
+  const tip = Math.sin(time * 0.8) * 3;
+  const hat = () => { ctx.beginPath(); ctx.moveTo(-10, -80); ctx.quadraticCurveTo(-6, -100, -10 + tip * 0.4, -112); ctx.quadraticCurveTo(-16 + tip, -122, -24 + tip, -120); ctx.quadraticCurveTo(-12 + tip * 0.5, -114, -4, -104); ctx.quadraticCurveTo(4, -92, 10, -80); ctx.closePath(); };
+  ctx.fillStyle = PAPER; hat(); ctx.fill();
+  hatch(ctx, hat, [-26, -124, 38, 46], -0.9, 1.7, 0.45);
+  ctx.save(); hat(); ctx.clip();
+  ctx.fillStyle = INK; ctx.fillRect(-14, -86, 30, 4);
+  ctx.beginPath(); ctx.arc(-1, -96, 3.4, 0.5, Math.PI * 2 - 0.5); ctx.arc(0.4, -96.8, 2.7, Math.PI * 2 - 0.5, 0.5, true); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; hat(); ctx.stroke();
+  // brim
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(0, -80, 16, 3.6, -0.05, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 0.5; ctx.beginPath(); ctx.ellipse(0, -80, 11, 2.2, -0.05, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
 }
