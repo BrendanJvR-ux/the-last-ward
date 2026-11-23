@@ -64,9 +64,9 @@ function hitFoundation(p: Vec, slack = 0): string | null {
     const n = NODE[f];
     const built = !!towerAt(s, f);
     const inRing = Math.hypot((p.x - n.x) / 40, (p.y - n.y) / 24) <= 1 + slack / 40;
-    const inBody = built && Math.abs(p.x - n.x) <= 36 + slack && p.y <= n.y + 14 && p.y >= n.y - 130 - slack;
+    const inBody = built && Math.abs(p.x - n.x) <= 40 + slack && p.y <= n.y + 15 && p.y >= n.y - 145 - slack;
     if (inRing || inBody) {
-      const d = dist(p, { x: n.x, y: n.y - (built ? 45 : 0) });
+      const d = dist(p, { x: n.x, y: n.y - (built ? 50 : 0) });
       if (d < bd) { bd = d; best = f; }
     }
   }

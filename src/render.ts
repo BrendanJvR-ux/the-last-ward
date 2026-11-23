@@ -118,12 +118,12 @@ function drawTowerState(ctx: CanvasRenderingContext2D, s: GameState, t: Tower, t
   const p = posOf(t);
   if (t.flash > 0) {
     ctx.save(); ctx.globalAlpha = t.flash * 0.7;
-    const g = ctx.createRadialGradient(p.x, p.y - 48, 2, p.x, p.y - 48, 70);
+    const g = ctx.createRadialGradient(p.x, p.y - 54, 2, p.x, p.y - 54, 76);
     g.addColorStop(0, P.goldLight); g.addColorStop(1, 'rgba(240,210,122,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y - 48, 70, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y - 54, 76, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
   drawTowerIcon(ctx, t.type, p.x, p.y, TOWER_SCALE, time + p.x);
-  const markX = p.x + 34, markY = p.y - 92;
+  const markX = p.x + 38, markY = p.y - 102;
   if (t.traced) {
     const ready = s.phase === 'combat' && !t.committed && s.pulsesLeft > 0;
     ctx.save(); ctx.translate(markX, markY);
@@ -153,7 +153,7 @@ function drawTowerState(ctx: CanvasRenderingContext2D, s: GameState, t: Tower, t
     ctx.restore();
   }
   if (t.royal) {
-    ctx.save(); ctx.translate(p.x - 36, p.y - 84);
+    ctx.save(); ctx.translate(p.x - 40, p.y - 93);
     ctx.fillStyle = litGrad(ctx, -8, -6, 8, 4, '#fff0b8', P.gold, '#6b4c12');
     ctx.beginPath(); ctx.moveTo(-8, 4); ctx.lineTo(-8, -4); ctx.lineTo(-4, 0); ctx.lineTo(0, -6); ctx.lineTo(4, 0); ctx.lineTo(8, -4); ctx.lineTo(8, 4); ctx.closePath(); ctx.fill();
     ctx.restore();
@@ -302,6 +302,14 @@ function drawHoundWarnings(ctx: CanvasRenderingContext2D, s: GameState, time: nu
 export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState, time: number) {
   base(ctx);
 
+  // a bolder leyline from the inkwell to every tower you own, so your towers are easy to find
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const t of s.towers) {
+    const path = routePolyline(t.foundation);
+    ctx.strokeStyle = 'rgba(29,25,21,0.16)'; ctx.lineWidth = 7; stroke(ctx, path);
+    ctx.strokeStyle = 'rgba(29,25,21,0.7)'; ctx.lineWidth = 2.4; ctx.setLineDash([6, 5]); stroke(ctx, path); ctx.setLineDash([]);
+  }
+  ctx.restore();
   for (const t of s.towers) if (t.bound) goldRoute(ctx, t.foundation, false, time);
   if (v.bindPreview && !towerAt(s, v.bindPreview)?.bound) goldRoute(ctx, v.bindPreview, true, time);
   for (const f of s.fading) inkThread(ctx, f.path, time, 1 - f.t / f.dur, 'fading');
