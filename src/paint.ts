@@ -10,6 +10,9 @@ import {
   INK, INK2, PAPER,
 } from './ink';
 
+/** How much larger than its study the castle is drawn. */
+const CASTLE_SCALE = 1.35;
+
 export const SERIF = 'Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif';
 
 export function rng(seed: number) {
@@ -85,7 +88,7 @@ export let WINDMILL: Vec = { x: 400, y: 740 };
 
 function clearSpot(p: Vec, r: number, taken: Spot[]): boolean {
   if (p.x < 30 + r || p.x > MAP_W - 30 - r || p.y < 30 + r || p.y > MAP_H - 30 - r) return false;
-  if (p.x > 1380 && p.y > 330 && p.y < 880) return false; // castle and garden
+  if (p.x > 1360 && p.y > 140 && p.y < 880) return false; // castle and garden
   if (p.x < 360 + r && p.y > 860 - r) return false; // title cartouche
   if (Math.hypot(p.x - MILL.x, p.y - MILL.y) < r + 90) return false;
   if (Math.hypot(p.x - INKWELL.x, p.y - INKWELL.y) < r + 100) return false;
@@ -147,7 +150,7 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   const trees: { x: number; y: number; r: number; k: number }[] = [];
   for (let i = 0; i < 1400 && trees.length < 175; i++) {
     const p = { x: 20 + R() * (MAP_W - 40), y: 20 + R() * (MAP_H - 40) };
-    if (p.x > 1400 && p.y > 330 && p.y < 720) continue;
+    if (p.x > 1360 && p.y > 140 && p.y < 740) continue; // the castle
     if (Math.hypot(p.x - MILL.x, p.y - MILL.y) < 105) continue;
     if (Math.hypot(p.x - INKWELL.x, p.y - INKWELL.y) < 110) continue;
     if (p.x < 360 && p.y > 860) continue; // title cartouche
@@ -162,7 +165,13 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   const items: Item[] = trees.map((t) => ({ y: t.y, draw: () => st.tree(ctx, t.x, t.y, t.r, t.k) }));
   items.push({ y: MILL.y + 22, draw: () => drawMill(ctx) });
   if (wm) items.push({ y: WINDMILL.y, draw: () => windmillBody(ctx, WINDMILL.x, WINDMILL.y) });
-  items.push({ y: CASTLE.y + 130, draw: () => inkCastle(ctx, CASTLE) });
+  items.push({ y: CASTLE.y + 160, draw: () => {
+    // drawn larger, anchored at its gate so the road still meets the arch
+    const ax = CASTLE.x - 50, ay = CASTLE.y + 25;
+    ctx.save(); ctx.translate(ax, ay); ctx.scale(CASTLE_SCALE, CASTLE_SCALE); ctx.translate(-ax, -ay);
+    inkCastle(ctx, CASTLE);
+    ctx.restore();
+  } });
   items.push({ y: INKWELL.y + 22, draw: () => inkInkwell(ctx, INKWELL) });
   items.sort((a, b) => a.y - b.y);
   for (const it of items) it.draw();
@@ -170,7 +179,7 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   label(ctx, 'The Mill Road', 300, 112, 17);
   label(ctx, 'The King’s Road', 1000, 772, 17, -0.33);
   label(ctx, 'Goosebridge Pond', POND.x, POND.y + 84, 15);
-  label(ctx, 'Goosebridge Castle', CASTLE.x - 4, CASTLE.y + 168, 15);
+  label(ctx, 'Goosebridge Castle', CASTLE.x - 6, CASTLE.y + 196, 15);
   label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
 
   paperVignette(ctx);

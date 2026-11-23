@@ -780,24 +780,25 @@ export function inkCastle(ctx: C, at: Vec) {
   groundWash(ctx, x, y + 40, 120, 160, 0.25);
   type T = { x: number; base: number; w: number; h: number; roof: number; fin: string; stripe: boolean };
   const parts: (T | 'wall')[] = [
-    { x: x + 55, base: y - 90, w: 28, h: 110, roof: 46, fin: 'orb', stripe: false },
-    { x: x - 23, base: y - 65, w: 24, h: 80, roof: 38, fin: 'crescent', stripe: true },
-    { x: x + 25, base: y - 20, w: 52, h: 150, roof: 60, fin: 'ring', stripe: false },
+    // a tall, tight citadel: everything stays within x + 35 so it can be drawn larger at the page edge
+    { x: x + 18, base: y - 70, w: 26, h: 120, roof: 50, fin: 'orb', stripe: false },
+    { x: x - 28, base: y - 55, w: 22, h: 80, roof: 38, fin: 'crescent', stripe: true },
+    { x: x + 2, base: y - 10, w: 46, h: 160, roof: 62, fin: 'ring', stripe: false },
     'wall',
     { x: x - 50, base: y + 25, w: 34, h: 70, roof: 0, fin: 'bars', stripe: false },
-    { x: x + 70, base: y + 40, w: 30, h: 120, roof: 44, fin: 'bars', stripe: true },
-    { x: x - 15, base: y + 90, w: 30, h: 95, roof: 40, fin: 'crescent', stripe: false },
-    { x: x + 40, base: y + 130, w: 40, h: 70, roof: 34, fin: 'orb', stripe: false },
+    { x: x + 22, base: y + 45, w: 26, h: 120, roof: 44, fin: 'bars', stripe: true },
+    { x: x - 18, base: y + 90, w: 28, h: 95, roof: 40, fin: 'crescent', stripe: false },
+    { x: x + 18, base: y + 125, w: 30, h: 70, roof: 34, fin: 'orb', stripe: false },
   ];
   for (const p of parts) {
     if (p === 'wall') {
       const top = y - 6, bot = y + 24;
-      ctx.fillStyle = PAPER; ctx.fillRect(x - 66, top, 150, bot - top);
+      ctx.fillStyle = PAPER; ctx.fillRect(x - 66, top, 101, bot - top);
       ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
-      for (let yy = top + 5; yy < bot; yy += 5) for (let xx = x - 64 + R() * 6; xx < x + 82; xx += 8 + R() * 4) { ctx.moveTo(xx, yy); ctx.lineTo(xx + 4, yy); }
+      for (let yy = top + 5; yy < bot; yy += 5) for (let xx = x - 64 + R() * 6; xx < x + 32; xx += 8 + R() * 4) { ctx.moveTo(xx, yy); ctx.lineTo(xx + 4, yy); }
       ctx.stroke();
-      ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(x - 66, top, 150, bot - top);
-      ctx.fillStyle = PAPER; for (let xx = x - 66; xx < x + 82; xx += 9) { ctx.fillRect(xx, top - 5, 5, 5); ctx.strokeRect(xx, top - 5, 5, 5); }
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(x - 66, top, 101, bot - top);
+      ctx.fillStyle = PAPER; for (let xx = x - 66; xx < x + 32; xx += 9) { ctx.fillRect(xx, top - 5, 5, 5); ctx.strokeRect(xx, top - 5, 5, 5); }
       continue;
     }
     turret(ctx, p.x, p.base, p.w, p.h, p.roof, p.fin, p.stripe, R);
