@@ -80,9 +80,9 @@ function hitEnemy(p: Vec, r: number) {
   for (const e of s.enemies) {
     if (e.mode === 'leave') continue;
     const q = enemyPos(e);
-    const h = e.type === 'cairn' ? 40 : 14;
+    const h = e.type === 'cairn' ? 52 : 22;
     const d = Math.hypot(p.x - q.x, (p.y - (q.y - h)) * (e.type === 'cairn' ? 0.6 : 1));
-    const rr = e.type === 'cairn' ? r + 22 : r;
+    const rr = e.type === 'cairn' ? r + 32 : r + 6;
     if (d < rr && d < bd) { bd = d; best = e; }
   }
   return best;

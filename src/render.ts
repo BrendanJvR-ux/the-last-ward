@@ -3,7 +3,7 @@ import { BALANCE, phaseRule } from './balance';
 import { MAP_W, MAP_H, LANES, POND, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, routePolyline, pointAt, type Vec } from './map';
 import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint } from './game';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
-import { P, drawTowerIcon, drawEnemy, drawNameStone, litGrad, softShadow } from './sprites';
+import { P, drawTowerIcon, drawEnemy, drawNameStone, litGrad, softShadow, ENEMY_SCALE } from './sprites';
 import { inkFoundation, inkFlame, windmillSails, airFish, grow, limbs, hatch, seed, PAPER, type Seg } from './ink';
 
 export { towerIconCanvas, enemyIconCanvas } from './sprites';
@@ -224,7 +224,7 @@ function drawFallen(ctx: CanvasRenderingContext2D, f: GameState['fallen'][number
   } else {
     ctx.translate(f.x, f.y);
     ctx.rotate(f.dir * Math.min(Math.PI / 2, f.t * 6));
-    drawEnemy(ctx, f.type, 0, 0, f.dir, 0, 0, f.type === 'hound' ? 1.05 : 1.15);
+    drawEnemy(ctx, f.type, 0, 0, f.dir, 0, 0, ENEMY_SCALE[f.type]);
   }
   ctx.restore();
   // a puff of dust
@@ -349,7 +349,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   for (const e of s.enemies) {
     const p = enemyPos(e);
     const dir = Math.cos(p.angle) >= -0.1 ? 1 : -1;
-    const k = e.type === 'cairn' ? 1 : e.type === 'hound' ? 1.05 : 1.15;
+    const k = ENEMY_SCALE[e.type];
     sprites.push({
       y: p.y, draw: () => {
         if (e.type === 'hound') {
@@ -361,7 +361,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
           }
         }
         drawEnemy(ctx, e.type, p.x, p.y, dir, e.bob, e.hit, k, { kneel: e.mode === 'kneel', alpha: e.mode === 'leave' ? e.fade ?? 1 : 1 });
-        const top = e.type === 'cairn' ? (e.mode === 'kneel' ? 80 : 92) : e.type === 'bearer' ? 60 : e.type === 'hound' ? 34 : 46;
+        const top = e.type === 'cairn' ? (e.mode === 'kneel' ? 104 : 120) : e.type === 'bearer' ? 78 : e.type === 'hound' ? 52 : 64;
         if (e.vulnT > 0 || e.shred > 0) {
           ctx.fillStyle = e.vulnT > 0 ? 'rgba(120,220,180,0.9)' : 'rgba(120,200,170,0.6)';
           for (let i = 0; i < 4; i++) { const a = time * 3 + i * 1.6; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * 12, p.y - top / 2 + Math.sin(a) * 6, 1.8, 0, Math.PI * 2); ctx.fill(); }
@@ -371,14 +371,14 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
           for (let i = 0; i < 3; i++) { const a = time * 6 + i * 2.1; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * 10, p.y - top + 4 + Math.sin(a) * 3, 2.2, 0, Math.PI * 2); ctx.fill(); }
         }
         if (e.hp < e.maxHp && e.mode !== 'leave') {
-          const w = e.type === 'cairn' ? 50 : 26;
+          const w = e.type === 'cairn' ? 64 : 34;
           ctx.fillStyle = PAPER; ctx.fillRect(p.x - w / 2, p.y - top - 6, w, 5);
           ctx.fillStyle = '#9a2e28'; ctx.fillRect(p.x - w / 2, p.y - top - 6, w * Math.max(0, e.hp / e.maxHp), 5);
           ctx.strokeStyle = P.ink; ctx.lineWidth = 1; ctx.strokeRect(p.x - w / 2, p.y - top - 6, w, 5);
         }
         if (v.inspectId === e.id) {
           ctx.save(); ctx.strokeStyle = P.gold; ctx.lineWidth = 2.4; ctx.setLineDash([4, 3]); ctx.lineDashOffset = -time * 20;
-          const r = e.type === 'cairn' ? 40 : 18;
+          const r = e.type === 'cairn' ? 52 : 24;
           ctx.beginPath(); ctx.ellipse(p.x, p.y + 2, r, r * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
         }
       },

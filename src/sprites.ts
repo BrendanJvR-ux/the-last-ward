@@ -48,6 +48,9 @@ export function drawTowerIcon(ctx: CanvasRenderingContext2D, type: TowerType, x:
 
 export interface EnemyLook { kneel?: boolean; alpha?: number; marked?: boolean }
 
+/** How large each kind is drawn on the battlefield. */
+export const ENEMY_SCALE: Record<EnemyType, number> = { levy: 1.6, bearer: 1.5, hound: 1.6, cairn: 1.3 };
+
 /** The Cairn-Born is drawn a little smaller than its study so it fits the road. */
 const SIZE: Record<EnemyType, number> = { levy: 1, bearer: 1, hound: 1, cairn: 0.78 };
 
