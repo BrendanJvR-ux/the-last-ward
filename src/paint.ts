@@ -199,7 +199,7 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   ctx.font = `italic 600 23px ${SERIF}`; ctx.textAlign = 'left'; ctx.fillStyle = INK;
   ctx.fillText('Defence of Goosebridge Castle', 56, 918);
   ctx.font = `italic 14px ${SERIF}`; ctx.fillStyle = 'rgba(58,34,18,0.7)';
-  ctx.fillText('in sepia ink, from an old notebook of studies', 58, 942);
+  ctx.fillText('drawn in pen and ink', 58, 942);
   // sheet border
   ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(14, 14, MAP_W - 28, MAP_H - 28);
   ctx.lineWidth = 0.6; ctx.strokeRect(19, 19, MAP_W - 38, MAP_H - 38);
