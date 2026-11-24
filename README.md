@@ -62,7 +62,7 @@ Every tower attacks on its own, traced or not. Shared pulse charges never rechar
 
 Level 1, wave 1 teaches the core rule through play. The margin opens with *"All towers attack. Trace two. During the wave, choose one to pulse."* above the towers, the towers still to be traced are ringed on the map, and the Build and Bind sections start folded (they open with a click; from wave 2 the usual panels return). Both freehand tracing and the Trace buttons work.
 
-**Previewing a pulse is free.** Hover or keyboard-focus a tower's Pulse button, or hover the tower on the map, and its pulse is previewed: the tower is ringed, its area (a circle, a stretch of road, the spot a hedge would grow, the crowd a mangonel would aim at, or the towers a banner would rally) is marked in a light ink line, and the enemies it could affect are outlined: a solid ring for those affected now, a dashed ring for those it should catch by the time the ink arrives or the effect has run. A short label says what it would do. Nothing is spent, nothing pauses, and clicks, taps and number keys work as before.
+**Previewing a pulse is free.** Hover or keyboard-focus a tower's Pulse button, or hover the tower on the map, and its pulse is previewed: the tower is ringed, its area (a circle, a stretch of road, the spot a hedge would grow, the crowd a mangonel would aim at, or the towers a banner would rally) is marked in a light ink line, and the enemies it could affect are outlined: a solid ring for those affected now, a dashed ring for those it should catch by the time the ink arrives or the effect has run. A short label says what it would do. On a touch screen, **press and hold** a tower (or its Pulse button) for about half a second to see the same preview; it lingers a moment after you lift your finger. A quick tap still pulses, or opens the tower between waves, exactly as before, and sliding your finger away before the hold completes cancels it. Nothing is spent, nothing pauses, and clicks, taps and number keys work as before.
 
 **Every pulse reports what it did**, beside its tower, from what actually happened: "3 enemies knocked back and dazed", "2 enemies set burning", "No enemies in range", "5 towers shoot twice as fast for 8 s". Lasting effects add a closing line when they end ("The hedge held 9 enemies", "The fire burned 4 enemies"). When the shared charge is spent, the label says so, a dashed thread runs to the other prepared towers with "Thread dry: the shared pulse is spent · still attacking on its own", their ink drop dries, and the margin explains that every tower keeps attacking.
 
@@ -90,7 +90,7 @@ Then open http://localhost:5173/ (the game) or http://localhost:5173/styles.html
 | Build | Click an empty foundation, pick a tower | Pick a foundation in the margin's **Build** list |
 | Bind | Click a tower → **Bind in gold**, or margin → **Bind a tower**; hover to preview, confirm | Tab to a tower in **Bind a tower** (focus previews it), Enter |
 | Start wave | **Start wave** (active once the exact number of threads is drawn) | `Enter` |
-| Pulse | Click / tap a tower with a wet ink drop or a gold seal | `1`–`9` pulse ready towers in margin order (gilded first) |
+| Pulse | Click / tap a tower with a wet ink drop or a gold seal. Hover (or press and hold on touch) to preview first | `1`–`9` pulse ready towers in margin order (gilded first); focus a Pulse button to preview |
 | Pause | **Pause** | `P` or `Space` |
 | Speed | **Speed ×1 / ×2** | |
 | Inspect an enemy | Click / tap it during a wave | |

@@ -727,7 +727,7 @@ function drawPulsePreview(ctx: CanvasRenderingContext2D, s: GameState, pv: Pulse
   ctx.restore();
   for (const id of pv.now) outlineEnemy(ctx, s, id, false);
   for (const id of pv.later) outlineEnemy(ctx, s, id, true);
-  const legend = pv.later.length ? 'solid ring: affected now · dashed: by the time it takes effect' : pv.type === 'banner' ? 'gold ring: towers it would quicken' : 'preview only: nothing is spent until you click';
+  const legend = pv.later.length ? 'solid ring: affected now · dashed: by the time it takes effect' : pv.type === 'banner' ? 'gold ring: towers it would quicken' : 'preview only: nothing is spent until you click or tap';
   // the label sits below the tower, clear of the hedge spot, the road and the tower itself
   const side: 1 | -1 = p.x > MAP_W * 0.62 ? -1 : 1;
   inkChip(ctx, p.x + side * 36, p.y + 62, pv.summary, legend, 1, side, 14, 300);

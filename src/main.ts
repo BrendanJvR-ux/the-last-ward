@@ -105,9 +105,50 @@ function cancelGesture(reason?: string) {
   view.gesture = { active: false, path: [], pointer: { x: 0, y: 0 }, slipping: 0 };
 }
 
+// ── Touch: press and hold to preview a pulse ────────────────────────────────
+// A quick tap still does what it always did (pulse in battle, open a tower between waves).
+// Holding a finger on a tower, or on its Pulse button, previews its pulse instead and fires nothing.
+const HOLD_MS = 420;
+const HOLD_LINGER_MS = 2600;
+interface Hold { pointerId: number; towerId: string; at: Vec; timer: number; long: boolean }
+let hold: Hold | null = null;
+let lingerTimer = 0;
+function startHold(e: PointerEvent, towerId: string, at: Vec) {
+  endHold(false);
+  const h: Hold = { pointerId: e.pointerId, towerId, at, long: false, timer: 0 };
+  h.timer = window.setTimeout(() => {
+    h.long = true;
+    window.clearTimeout(lingerTimer);
+    previewFrom('touch', towerId);
+    try { navigator.vibrate?.(12); } catch { /* not supported */ }
+  }, HOLD_MS);
+  hold = h;
+}
+/** Finish a hold. After a long press the preview lingers a moment so it can be read. */
+function endHold(linger: boolean) {
+  if (!hold) return;
+  window.clearTimeout(hold.timer);
+  if (hold.long && linger) {
+    window.clearTimeout(lingerTimer);
+    lingerTimer = window.setTimeout(() => { if (previewSource === 'touch') previewFrom(null, null); }, HOLD_LINGER_MS);
+  } else if (hold.long && previewSource === 'touch') previewFrom(null, null);
+  hold = null;
+}
+const isTouch = (e: PointerEvent) => e.pointerType === 'touch' || e.pointerType === 'pen';
+
 canvas.addEventListener('pointerdown', (e) => {
   const p = toMap(e);
   closePopover();
+  if (isTouch(e) && (s.phase === 'combat' || s.phase === 'prep')) {
+    const f = hitFoundation(p, 14);
+    const t = f ? towerAt(s, f) : undefined;
+    if (previewable(t)) {
+      // decide on release: a tap acts as before, a hold only previews
+      startHold(e, t!.id, p);
+      if (s.phase === 'prep') downAt = p;
+      return;
+    }
+  }
   if (s.phase === 'combat') {
     const f = hitFoundation(p, view.touch ? 14 : 4);
     const t = f ? towerAt(s, f) : undefined;
@@ -134,6 +175,12 @@ let downAt: Vec | null = null;
 
 canvas.addEventListener('pointermove', (e) => {
   const p = toMap(e);
+  if (hold && e.pointerId === hold.pointerId) {
+    // sliding away before the hold completes cancels it (nothing fires); after, the preview stays
+    if (!hold.long && dist(p, hold.at) > 26) endHold(false);
+    return;
+  }
+  if (isTouch(e)) return; // fingers do not hover: previews come from pressing and holding
   if (view.gesture.active) {
     view.gesture.pointer = p;
     const snap = snapToNetwork(p);
@@ -158,6 +205,22 @@ canvas.addEventListener('pointermove', (e) => {
 
 canvas.addEventListener('pointerup', (e) => {
   const p = toMap(e);
+  if (hold && e.pointerId === hold.pointerId) {
+    const h = hold;
+    endHold(true);
+    downAt = null;
+    if (h.long) return; // a hold only previews
+    // a tap: exactly what a tap did before
+    if (s.phase === 'combat') {
+      const t = towerById(s, h.towerId);
+      if (t && pulseCheck(s, t.id).ok) pulseTower(s, t.id);
+      else if (t) pulseTower(s, t.id); // lets the rules explain why not
+    } else if (s.phase === 'prep') {
+      const f = towerById(s, h.towerId)?.foundation;
+      if (f) { view.selectedFoundation = f; openPopover(f); }
+    }
+    return;
+  }
   if (view.gesture.active) {
     const f = hitFoundation(p, 22);
     if (!f) cancelGesture('Released before reaching a tower — nothing spent.');
@@ -178,7 +241,9 @@ canvas.addEventListener('pointerup', (e) => {
   }
   downAt = null;
 });
-canvas.addEventListener('pointercancel', () => { cancelGesture(); downAt = null; });
+canvas.addEventListener('pointercancel', () => { cancelGesture(); downAt = null; endHold(false); });
+// no callout or selection menu on a long press
+canvas.addEventListener('contextmenu', (e) => { if (hold || previewSource === 'touch') e.preventDefault(); });
 canvas.addEventListener('pointerleave', () => { if (!view.gesture.active) view.hoverFoundation = null; if (previewSource === 'canvas') previewFrom(null, null); });
 
 // ── Popover (build / tower info) ────────────────────────────────────────────
@@ -235,6 +300,7 @@ function handleAction(e: Event) {
   const el = (e.target as HTMLElement).closest('[data-act]') as HTMLElement | null;
   if (!el || (el as HTMLButtonElement).disabled) return;
   const a = el.dataset.act!;
+  if (a === 'pulse' && swallowPulseClick) { swallowPulseClick = false; return; } // that was a long press: preview only
   const id = el.dataset.id!;
   const f = el.dataset.f!;
   const ty = el.dataset.type as TowerType;
@@ -277,6 +343,23 @@ function handleAction(e: Event) {
   lastSig = '';
 }
 margin.addEventListener('click', handleAction);
+/** Set by a long press on a Pulse button so that the click following it does not fire. */
+let swallowPulseClick = false;
+margin.addEventListener('pointerdown', (e) => {
+  if (!isTouch(e)) return;
+  const b = (e.target as HTMLElement).closest('[data-act="pulse"]') as HTMLButtonElement | null;
+  if (!b || b.disabled) return;
+  startHold(e, b.dataset.id!, { x: e.clientX, y: e.clientY });
+});
+const marginRelease = (e: PointerEvent) => {
+  if (!hold || e.pointerId !== hold.pointerId) return;
+  if (hold.long) swallowPulseClick = true;
+  endHold(true);
+};
+margin.addEventListener('pointerup', marginRelease);
+margin.addEventListener('pointercancel', (e) => { if (hold && e.pointerId === hold.pointerId) endHold(false); });
+margin.addEventListener('pointermove', (e) => { if (hold && e.pointerId === hold.pointerId && !hold.long && Math.hypot(e.clientX - hold.at.x, e.clientY - hold.at.y) > 18) endHold(false); });
+margin.addEventListener('contextmenu', (e) => { if ((e.target as HTMLElement).closest('[data-act="pulse"]')) e.preventDefault(); });
 margin.addEventListener('toggle', (e) => {
   const d = e.target as HTMLDetailsElement;
   const k = d.dataset?.fold as 'build' | 'bind' | undefined;
@@ -305,8 +388,8 @@ margin.addEventListener('focusin', (e) => {
 margin.addEventListener('focusout', () => { if (!bindConfirm) view.bindPreview = null; if (previewSource === 'margin') previewFrom(null, null); });
 
 /** Who is asking for a pulse preview: a Pulse control in the margin, or the pointer over a tower on the map. */
-let previewSource: 'margin' | 'canvas' | null = null;
-function previewFrom(src: 'margin' | 'canvas' | null, towerId: string | null) {
+let previewSource: 'margin' | 'canvas' | 'touch' | null = null;
+function previewFrom(src: 'margin' | 'canvas' | 'touch' | null, towerId: string | null) {
   previewSource = towerId ? src : null;
   view.pulsePreview = towerId;
 }
@@ -481,7 +564,7 @@ function renderMargin() {
       <section class="card pulses"><h3>Pulses <span class="need">${s.pulsesLeft} of ${r.pulses}</span></h3>
       <div class="beads" aria-hidden="true">${Array.from({ length: r.pulses }, (_, i) => `<i class="${i < s.pulsesLeft ? 'on' : ''}"></i>`).join('')}</div>
       ${sharedNote()}
-      <p class="hint" id="pulse-help">Hover or focus a Pulse button (or the tower on the map) to preview what it would do; nothing is spent until you click. Click a tower with a wet ink drop, or press its number, to send the pulse. Shared charges never recharge and vanish at wave end. Gilded towers fire their own free pulse. Every tower keeps attacking on its own.</p>
+      <p class="hint" id="pulse-help">Hover or focus a Pulse button (or the tower on the map), or press and hold on a touch screen, to preview what it would do; nothing is spent until you click or tap. Click a tower with a wet ink drop, or press its number, to send the pulse. Shared charges never recharge and vanish at wave end. Gilded towers fire their own free pulse. Every tower keeps attacking on its own.</p>
       <ul class="towers">${pulseable().map((t, i) => towerRow(t, 'combat').replace('<span class="ico"', `<kbd>${i + 1}</kbd><span class="ico"`)).join('')}</ul></section>
       <section class="card"><h3>Unthreaded towers</h3><ul class="towers dim">${s.towers.filter((t) => !t.traced && !t.bound).map((t) => `<li class="tower-row"><span class="ico" data-tower="${t.type}"></span><span class="tw"><b>${esc(tname(t.type))}</b><small>${esc(fname(t.foundation))} · attacking</small></span></li>`).join('') || '<li class="sub">None</li>'}</ul></section>`;
   }
