@@ -204,6 +204,24 @@ function drawHedge(ctx: CanvasRenderingContext2D, h: GameState['hedges'][number]
   ctx.scale(1, Math.max(0.05, life));
   softShadow(ctx, 4, 4, 36, 12, 0.6);
   const R = seed(h.at.x, h.at.y, 9);
+  if (h.kind === 'eels') {
+    // eels risen out of the water, coiled and knotted across the causeway
+    for (let i = -3; i <= 3; i++) {
+      const ph = time * 3 + i * 1.3, x0 = i * 9;
+      ctx.strokeStyle = P.ink; ctx.lineWidth = 4.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x0, 6);
+      for (let k = 1; k <= 8; k++) ctx.lineTo(x0 + Math.sin(ph + k * 0.9) * 5, 6 - k * 4.2);
+      ctx.stroke();
+      ctx.strokeStyle = PAPER; ctx.lineWidth = 1.4; ctx.stroke();
+      const hx = x0 + Math.sin(ph + 7.2) * 5, hy = 6 - 8 * 4.2;
+      ctx.fillStyle = P.ink; ctx.beginPath(); ctx.ellipse(hx, hy - 2, 3.2, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = PAPER; ctx.beginPath(); ctx.arc(hx + 1, hy - 3, 0.9, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(58,34,18,0.5)'; ctx.lineWidth = 0.7;
+    for (let k = 0; k < 2; k++) { ctx.beginPath(); ctx.ellipse(0, 6, 34 + k * 8, 6 + k * 2, 0, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore();
+    return;
+  }
   if (h.kind === 'shield') {
     // the armour's shield wall: round shields locked rim to rim, spears over them
     ctx.strokeStyle = P.ink;
@@ -355,7 +373,7 @@ function drawHoundWarnings(ctx: CanvasRenderingContext2D, s: GameState, time: nu
     ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4;
     for (let r = 22; r < 80; r += 18) { ctx.beginPath(); ctx.arc(entry.x, entry.y, r, 0, Math.PI * 2); ctx.stroke(); }
     ctx.globalAlpha = 1;
-    const bx = LEVEL === 'fields' ? 548 : LEVEL === 'keep' ? 1100 : 1060, by = LEVEL === 'fields' ? 722 : LEVEL === 'keep' ? 966 : 82;
+    const [bx, by] = ({ fields: [548, 722], courtyard: [1060, 82], keep: [1100, 966], fen: [1000, 966], barrows: [560, 966] } as Record<LevelId, [number, number]>)[LEVEL];
     ctx.fillStyle = 'rgba(228,211,182,0.96)'; roundRect(ctx, bx, by - 24, 258, 36, 4); ctx.fill();
     ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6; ctx.stroke();
     ctx.lineWidth = 0.6; roundRect(ctx, bx + 3, by - 21, 252, 30, 3); ctx.stroke();
@@ -558,6 +576,53 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
       ctx.fillStyle = P.stone; rock(); ctx.fill();
       hatch(ctx, rock, [p.x - 8, p.y - lift - 8, 16, 16], 0.9, 1.5, 0.5);
       ctx.strokeStyle = P.ink; ctx.lineWidth = 1.2; rock(); ctx.stroke();
+    } else if (p.kind === 'wheel') {
+      // a bucketful of water flung in an arc, breaking into drops
+      const k = Math.min(1, p.t / p.dur);
+      const lift = Math.sin(k * Math.PI) * (p.arc ?? 70);
+      softShadow(ctx, p.x, p.y + 2, 8, 3, 0.4);
+      ctx.fillStyle = 'rgba(92,120,130,0.55)'; ctx.strokeStyle = P.ink; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.ellipse(p.x, p.y - lift, 7, 5, a, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(p.x - Math.cos(a) * (8 + i * 4), p.y - lift - Math.sin(a) * (8 + i * 4) + (i % 2 ? 3 : -3), 1.6 - i * 0.3, 0, Math.PI * 2); ctx.fill(); }
+    } else if (p.kind === 'heron' && p.volley !== undefined) {
+      // a heron stooping out of the sky, bill first
+      const k = Math.min(1, p.t / p.dur);
+      const lift = (1 - k) * (p.arc ?? 90);
+      softShadow(ctx, p.x, p.y + 2, 10, 3, 0.5);
+      ctx.save(); ctx.translate(p.x, p.y - lift); ctx.rotate(Math.atan2(p.ty - p.sy + (p.arc ?? 90), p.tx - p.sx));
+      ctx.fillStyle = PAPER; ctx.strokeStyle = P.ink; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(4, -2); ctx.quadraticCurveTo(-4, -4, -10, 0); ctx.quadraticCurveTo(-4, 4, 4, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-2, 0); ctx.quadraticCurveTo(-8, sd * 12, -16, sd * 14); ctx.lineTo(-8, sd * 3); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      ctx.restore();
+    } else if (p.kind === 'heron') {
+      // a quick dart of a bill
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
+      ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-5, -2); ctx.lineTo(-5, 2); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(58,34,18,0.5)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-14, 0); ctx.stroke();
+      ctx.restore();
+    } else if (p.kind === 'eeltrap') {
+      // an eel thrown wriggling
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
+      ctx.strokeStyle = P.ink; ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let i = 0; i <= 6; i++) { const xx = 6 - i * 3, yy = Math.sin(p.t * 30 + i) * 2.5; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); }
+      ctx.stroke(); ctx.restore();
+    } else if (p.kind === 'lantern') {
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 7);
+      g.addColorStop(0, 'rgba(255,248,210,0.95)'); g.addColorStop(1, 'rgba(210,230,190,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI * 2); ctx.fill();
+    } else if (p.kind === 'menhir') {
+      // a chip of rune-stone, faintly lit
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a + p.t * 8);
+      ctx.fillStyle = '#d8c7a8'; ctx.strokeStyle = P.ink; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(0, -5); ctx.lineTo(-6, -1); ctx.lineTo(-2, 5); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = P.gold; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI * 1.5); ctx.stroke();
+      ctx.restore();
+    } else if (p.kind === 'warden') {
+      // a thrown javelin
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
+      ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(8, 0); ctx.stroke();
+      ctx.fillStyle = PAPER; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(6, -3); ctx.lineTo(6, 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
     } else if (p.kind === 'verdigris') {
       const g = ctx.createRadialGradient(p.x - 1, p.y - 1, 0, p.x, p.y, 6);
       g.addColorStop(0, '#d8fff0'); g.addColorStop(0.5, P.verdigris); g.addColorStop(1, 'rgba(40,90,75,0)');
@@ -619,6 +684,37 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
     } else if (r.kind === 'ink') {
       ctx.strokeStyle = `rgba(29,25,21,${0.6 * (1 - k)})`; ctx.lineWidth = 1.5;
       for (const f of [0.55, 0.8, 1]) { ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r * k * f, r.r * k * f * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); }
+    } else if (r.kind === 'sleep') {
+      // the stone's old words: a slow golden spiral unwinding outwards
+      const rr = r.r * (0.25 + 0.75 * k);
+      ctx.strokeStyle = `rgba(150,120,60,${0.8 * (1 - k)})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(r.x, r.y + 50, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 1.2; ctx.beginPath();
+      for (let t = 0; t < 18; t += 0.15) { const q = (t / 18) * rr, px = r.x + Math.cos(t + k * 3) * q, py = r.y + 50 + Math.sin(t + k * 3) * q * 0.6; t ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+      ctx.stroke();
+    } else if (r.kind === 'dirge') {
+      // a low dirge: slow rings and drifting notes
+      ctx.strokeStyle = `rgba(58,34,18,${0.6 * (1 - k)})`; ctx.lineWidth = 1.4; ctx.setLineDash([3, 7]);
+      for (const f of [0.45, 0.75, 1]) { ctx.beginPath(); ctx.arc(r.x, r.y + 40, r.r * k * f, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(58,34,18,${0.8 * (1 - k)})`;
+      for (let i = 0; i < 10; i++) { const a = i * 0.63, d = r.r * k * (0.5 + (i % 3) * 0.2); const nx = r.x + Math.cos(a) * d, ny = r.y + 40 + Math.sin(a) * d * 0.7 - k * 20; ctx.beginPath(); ctx.ellipse(nx, ny, 2.6, 2, -0.4, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(nx + 2, ny - 9, 0.9, 9); }
+    } else if (r.kind === 'wisp') {
+      // will-o'-wisps spilling out of the lantern
+      for (let i = 0; i < 14; i++) {
+        const a = i * 0.45 + k * 2.5, d = r.r * (0.15 + 0.85 * k) * (0.6 + (i % 4) * 0.12);
+        const wx = r.x + Math.cos(a) * d, wy = r.y + 30 + Math.sin(a) * d * 0.7;
+        const g = ctx.createRadialGradient(wx, wy, 0, wx, wy, 8);
+        g.addColorStop(0, `rgba(255,248,210,${0.95 * (1 - k)})`); g.addColorStop(1, 'rgba(210,230,190,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(wx, wy, 8, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (r.kind === 'surge') {
+      // a wall of water rolling outwards
+      const rr = r.r * (0.3 + 0.7 * k);
+      ctx.strokeStyle = `rgba(70,96,108,${0.8 * (1 - k)})`; ctx.lineWidth = 4;
+      ctx.beginPath(); for (let i = 0; i <= 60; i++) { const a = (i / 60) * Math.PI * 2, q = rr + Math.sin(a * 9 + k * 12) * 5; const px = r.x + Math.cos(a) * q, py = r.y + Math.sin(a) * q * 0.7; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke();
+      ctx.strokeStyle = `rgba(58,34,18,${0.5 * (1 - k)})`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(r.x, r.y, rr * 0.75, rr * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
     } else if (r.kind === 'corrode') {
       ctx.fillStyle = `rgba(120,220,180,${0.7 * (1 - k)})`;
       for (let i = 0; i < 5; i++) { const a = i * 1.3; ctx.beginPath(); ctx.arc(r.x + Math.cos(a) * r.r * k, r.y + Math.sin(a) * r.r * k * 0.6, 1.8, 0, Math.PI * 2); ctx.fill(); }

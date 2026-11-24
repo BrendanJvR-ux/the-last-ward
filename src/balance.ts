@@ -9,8 +9,12 @@ export type FieldTowerType = 'bramble' | 'ember' | 'bell' | 'verdigris';
 export type CourtTowerType = 'gargoyle' | 'mangonel' | 'fountain' | 'banner';
 /** The four towers of the keep (level 3). */
 export type KeepTowerType = 'armour' | 'books' | 'chandelier' | 'hearth';
-export type TowerType = FieldTowerType | CourtTowerType | KeepTowerType;
-export type LevelId = 'fields' | 'courtyard' | 'keep';
+/** The four towers of the flooded fen (level 4). */
+export type FenTowerType = 'wheel' | 'heron' | 'eeltrap' | 'lantern';
+/** The four towers of the barrows (level 5). */
+export type BarrowTowerType = 'menhir' | 'chimes' | 'beacon' | 'warden';
+export type TowerType = FieldTowerType | CourtTowerType | KeepTowerType | FenTowerType | BarrowTowerType;
+export type LevelId = 'fields' | 'courtyard' | 'keep' | 'fen' | 'barrows';
 /** `bearer` is the marked Fen Levy carrying the Cairn-Born's name-stone; it is spawned with every `cairn`. */
 /** The enemies every wave is made of. The art-style studies draw only these. */
 export type FieldEnemyType = 'levy' | 'bearer' | 'hound' | 'cairn';
@@ -177,6 +181,48 @@ export const BALANCE = {
       projectileSpeed: 340, splash: 40,
       pulseName: 'Back-draught', pulseText: 'The fire roars out across the nearby floor: everything on it burns for a few seconds. Burning ignores armour.',
     },
+    // ── The flooded fen ──
+    wheel: {
+      name: 'Waterwheel', cost: 80, damage: 16, cooldown: 1.2, range: 180,
+      projectileSpeed: 360, splash: 42,
+      pulseName: 'Sluice Surge', pulseText: 'The wheel throws open the sluice: a wall of water washes everything nearby back down the causeway. Giants stand firm.',
+    },
+    heron: {
+      name: 'Heron Roost', cost: 70, damage: 11, cooldown: 0.55, range: 205,
+      projectileSpeed: 700, splash: 0,
+      pulseName: 'Stoop', pulseText: 'Every heron on the roost dives at once, stabbing into the thickest crowd in reach.',
+    },
+    eeltrap: {
+      name: 'Eel Trap', cost: 70, damage: 8, cooldown: 0.8, range: 170,
+      projectileSpeed: 420, splash: 0, slow: 1.6,
+      pulseName: 'Eel Snare', pulseText: 'The traps open and eels coil across the nearest causeway: enemies on that way halt behind them and are bitten.',
+    },
+    lantern: {
+      name: 'Marsh Lantern', cost: 80, damage: 9, cooldown: 0.6, range: 195,
+      projectileSpeed: 520, splash: 0,
+      pulseName: 'Marsh Lights', pulseText: 'Will-o\u2019-wisps pour out of the lantern: everything nearby is lit up, loses its armour and takes extra damage for a while.',
+    },
+    // ── The barrows ──
+    menhir: {
+      name: 'Standing Stone', cost: 90, damage: 20, cooldown: 1.2, range: 175,
+      projectileSpeed: 800, splash: 0,
+      pulseName: 'Stone Sleep', pulseText: 'The old words on the stone wake: everything nearby falls into a stone sleep. Giants only stiffen.',
+    },
+    chimes: {
+      name: 'Bone Chimes', cost: 70, damage: 8, cooldown: 1.4, range: 140,
+      projectileSpeed: 0, splash: 0,
+      pulseName: 'Dirge', pulseText: 'The chimes ring a long, low dirge: enemies nearby lose heart, are slowed for a while and hurt.',
+    },
+    beacon: {
+      name: 'Barrow Beacon', cost: 90, damage: 14, cooldown: 1.4, range: 180,
+      projectileSpeed: 340, splash: 40,
+      pulseName: 'Beacon Blaze', pulseText: 'The beacon is fed: burning brands rain on the nearby road and it burns for a few seconds. Burning ignores armour.',
+    },
+    warden: {
+      name: 'Barrow Warden', cost: 80, damage: 10, cooldown: 0.7, range: 185,
+      projectileSpeed: 600, splash: 0,
+      pulseName: 'The Old Watch', pulseText: 'The warden calls up the old watch: every tower nearby shoots twice as fast for a while. Towers beside a warden always shoot a little faster.',
+    },
     banner: {
       name: 'Banner Tower', cost: 80, damage: 7, cooldown: 0.8, range: 175,
       projectileSpeed: 560, splash: 0,
@@ -239,6 +285,29 @@ export const BALANCE = {
     fallSplash: 80,
     /** Great Hearth pulse: the floor nearby burns (as the Ember Kiln's road fire). */
     draughtRadius: 150,
+    /** Waterwheel pulse: a surge that washes enemies back (as the Bell's toll). */
+    surgeRadius: 180,
+    surgeKnockback: 160,
+    surgeDamage: 12,
+    surgeStun: 1.0,
+    /** Heron Roost pulse: herons dive on the thickest crowd. */
+    stoopCount: 5,
+    stoopRadius: 260,
+    stoopDamage: 32,
+    stoopSplash: 42,
+    /** Eel Trap pulse: eels across the nearest way (works like a hedge). */
+    snareDuration: 6,
+    snareDamage: 10,
+    /** Marsh Lantern pulse: lit enemies lose their armour (as the Verdigris Tarnish). */
+    lightsRadius: 200,
+    /** Standing Stone pulse: stone sleep (as the Gargoyle's gaze). */
+    sleepRadius: 180,
+    /** Bone Chimes pulse: a dirge that slows and hurts. */
+    dirgeRadius: 190,
+    dirgeSlow: 5,
+    dirgeDamage: 9,
+    /** Barrow Beacon pulse: the road nearby burns. */
+    blazeRadius: 145,
   },
 
   cairn: {
@@ -508,7 +577,162 @@ const KEEP: LevelBalance = {
   ],
 };
 
-export const LEVEL_BALANCE: Record<LevelId, LevelBalance> = { fields: FIELDS, courtyard: COURTYARD, keep: KEEP };
+/** Level 4: the water meadows below Goosebridge in flood, the levy's own home ground. */
+const FEN: LevelBalance = {
+  startGold: 75,
+  towerTypes: ['wheel', 'heron', 'eeltrap', 'lantern'],
+  startingTowers: [
+    { foundation: 'f_weir', type: 'wheel' },
+    { foundation: 'f_withy', type: 'heron' },
+    { foundation: 'f_island', type: 'eeltrap' },
+  ],
+  houndWarnText: 'Dogs at the sluice!',
+  waves: [
+    {
+      title: 'High Water',
+      lesson: 'The levy wade home through their own reeds. They know every causeway.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 5, abreast: 3, start: 1, interval: 1.6 },
+        { type: 'levy', lane: 'king', count: 2, abreast: 2, start: 18, interval: 1.6 },
+      ],
+    },
+    {
+      title: 'Dogs on the Dyke',
+      lesson: 'Paws on the planking. Watch for the warning at the sluice.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 8, abreast: 3, start: 1, interval: 1.3 },
+        { type: 'hound', lane: 'king', count: 10, start: 12, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'Mist on the Meadows',
+      lesson: 'You hear them before you see them.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 9, abreast: 3, start: 1, interval: 1.2 },
+        { type: 'hound', lane: 'king', count: 9, start: 8, interval: 0.4 },
+        { type: 'levy', lane: 'king', count: 6, abreast: 2, start: 14, interval: 1.4 },
+        { type: 'hound', lane: 'mill', count: 8, start: 28, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'The Eel Moon',
+      lesson: 'Gold on the water. Bind what you can trust.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 22, abreast: 3, start: 1, interval: 0.95 },
+        { type: 'levy', lane: 'king', count: 14, abreast: 2, start: 5, interval: 1.1 },
+        { type: 'hound', lane: 'king', count: 24, start: 16, interval: 0.3 },
+        { type: 'hound', lane: 'mill', count: 19, start: 30, interval: 0.32 },
+      ],
+    },
+    {
+      title: 'Stone in the Shallows',
+      lesson: 'Something huge is wading the dyke. Where will it kneel?',
+      groups: [
+        { type: 'cairn', lane: 'king', count: 1, start: 1, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 23, abreast: 3, start: 6, interval: 0.9 },
+        { type: 'hound', lane: 'king', count: 22, start: 14, interval: 0.3 },
+        { type: 'levy', lane: 'king', count: 13, abreast: 2, start: 20, interval: 1.1 },
+        { type: 'cairn', lane: 'mill', count: 1, start: 26, interval: 0 },
+        { type: 'hound', lane: 'mill', count: 22, start: 34, interval: 0.3 },
+      ],
+    },
+    {
+      title: 'The Weir Breaks',
+      lesson: 'All the fen at once. Hold the weir house.',
+      groups: [
+        { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
+        { type: 'cairn', lane: 'king', count: 1, start: 10, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 26, abreast: 3, start: 6, interval: 0.85 },
+        { type: 'hound', lane: 'king', count: 31, start: 14, interval: 0.26 },
+        { type: 'levy', lane: 'king', count: 16, abreast: 2, start: 22, interval: 1.0 },
+        { type: 'cairn', lane: 'king', count: 1, start: 30, interval: 0 },
+        { type: 'hound', lane: 'king', count: 43, start: 40, interval: 0.22 },
+        { type: 'hound', lane: 'mill', count: 28, start: 46, interval: 0.26 },
+      ],
+    },
+  ],
+};
+
+/** Level 5: the barrows on the downs, where the dogs are kennelled and the giants sleep. The last stand. */
+const BARROWS: LevelBalance = {
+  startGold: 70,
+  towerTypes: ['menhir', 'chimes', 'beacon', 'warden'],
+  startingTowers: [
+    { foundation: 'f_kingstone', type: 'menhir' },
+    { foundation: 'f_longbarrow', type: 'chimes' },
+    { foundation: 'f_ring', type: 'beacon' },
+  ],
+  houndWarnText: 'Dogs from the mound door!',
+  waves: [
+    {
+      title: 'Dusk on the Downs',
+      lesson: 'The old road to the barrows. Nobody walks it after dark, except tonight.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 5, abreast: 3, start: 1, interval: 1.6 },
+        { type: 'levy', lane: 'king', count: 3, abreast: 2, start: 16, interval: 1.6 },
+      ],
+    },
+    {
+      title: 'The Kennels Open',
+      lesson: 'Scratching under the turf. Watch for the warning at the mound door.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 9, abreast: 3, start: 1, interval: 1.2 },
+        { type: 'hound', lane: 'king', count: 16, start: 10, interval: 0.34 },
+      ],
+    },
+    {
+      title: 'Owl Light',
+      lesson: 'Both ways at once, and the stones listening.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 14, abreast: 3, start: 1, interval: 1.0 },
+        { type: 'hound', lane: 'king', count: 16, start: 7, interval: 0.32 },
+        { type: 'levy', lane: 'king', count: 10, abreast: 2, start: 13, interval: 1.2 },
+        { type: 'hound', lane: 'mill', count: 16, start: 26, interval: 0.32 },
+      ],
+    },
+    {
+      title: 'The Grave Goods',
+      lesson: 'Gold in the barrows. Bind what you can trust.',
+      groups: [
+        { type: 'cairn', lane: 'king', count: 1, start: 1, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 34, abreast: 3, start: 1, interval: 0.9 },
+        { type: 'levy', lane: 'king', count: 23, abreast: 2, start: 5, interval: 1.0 },
+        { type: 'hound', lane: 'king', count: 40, start: 14, interval: 0.28 },
+        { type: 'hound', lane: 'mill', count: 34, start: 28, interval: 0.3 },
+      ],
+    },
+    {
+      title: 'The Sleepers Wake',
+      lesson: 'The long barrow cracks open. The giants walk.',
+      groups: [
+        { type: 'cairn', lane: 'king', count: 1, start: 1, interval: 0 },
+        { type: 'cairn', lane: 'mill', count: 1, start: 8, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 50, abreast: 3, start: 6, interval: 0.85 },
+        { type: 'hound', lane: 'king', count: 50, start: 12, interval: 0.28 },
+        { type: 'levy', lane: 'king', count: 32, abreast: 2, start: 20, interval: 1.0 },
+        { type: 'cairn', lane: 'king', count: 1, start: 28, interval: 0 },
+        { type: 'hound', lane: 'mill', count: 50, start: 34, interval: 0.28 },
+      ],
+    },
+    {
+      title: 'The Last Ward',
+      lesson: 'Everything the hunt-master has left. Hold the ring until dawn.',
+      groups: [
+        { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
+        { type: 'cairn', lane: 'king', count: 1, start: 8, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 59, abreast: 3, start: 5, interval: 0.8 },
+        { type: 'hound', lane: 'king', count: 69, start: 12, interval: 0.24 },
+        { type: 'levy', lane: 'king', count: 38, abreast: 2, start: 20, interval: 0.95 },
+        { type: 'cairn', lane: 'mill', count: 1, start: 26, interval: 0 },
+        { type: 'cairn', lane: 'king', count: 1, start: 34, interval: 0 },
+        { type: 'hound', lane: 'king', count: 92, start: 40, interval: 0.2 },
+        { type: 'hound', lane: 'mill', count: 64, start: 46, interval: 0.24 },
+      ],
+    },
+  ],
+};
+
+export const LEVEL_BALANCE: Record<LevelId, LevelBalance> = { fields: FIELDS, courtyard: COURTYARD, keep: KEEP, fen: FEN, barrows: BARROWS };
 
 /** Swap in a level's towers, waves and purse. Every level has the same number of waves. */
 export function applyBalanceLevel(id: LevelId) {

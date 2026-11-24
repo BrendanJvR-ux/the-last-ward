@@ -98,7 +98,7 @@ export function towerIconCanvas(type: TowerType, size = 48): HTMLCanvasElement {
   cv.width = size * dpr; cv.height = size * dpr; cv.style.width = cv.style.height = `${size}px`;
   const ctx = cv.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  const k = size / (type === 'bell' ? 128 : 112);
+  const k = size / (type === 'bell' || type === 'heron' || type === 'beacon' || type === 'warden' ? 128 : 112);
   drawTowerIcon(ctx, type, size / 2, size - 14 * k, k);
   return cv;
 }

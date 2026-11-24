@@ -12,7 +12,7 @@ A three-level fantasy tower defence prototype, drawn as a sheet from an old note
 
 The game opens on a **menu** (the **Menu** button returns to it at any time):
 
-- **Start** chooses a level: **Level 1: Gate Defence**, **Level 2: The Castle Courtyard** or **Level 3: The Keep**, each with a drawn thumbnail, its four towers and your best result.
+- **Start** chooses a level: **Level 1: Gate Defence**, **Level 2: The Castle Courtyard**, **Level 3: The Keep**, **Level 4: The Flooded Fen** or **Level 5: The Barrows**, each with a drawn thumbnail, its four towers and your best result.
 - **Resume** returns to the game in progress.
 - **Redeem rewards** spends **Wizard's Seals**. You earn 1 seal for every wave held, 5 for winning a level, 5 more the first time you win it, and 3 more for a flawless defence (no castle health lost). Seals buy lasting rewards, kept in this browser:
 
@@ -32,8 +32,10 @@ The game opens on a **menu** (the **Menu** button returns to it at any time):
 2. **The Castle Courtyard**: the outer wall has fallen. The levy pour through the ruined gatehouse in the west wall (the Gatehouse Passage); the war dogs leap the breach in the north wall (the Breach, announced by a warning at the stable yard). Both meet at the gate stair before the east gate, beside its guard tower. Curtain walls enclose the whole yard, and the yard is full of life: a well, chapel, smithy, stables, beehives, a kitchen garden, a market stall, a washing line, archery butts, a weapon rack, a dovecote, a founder's statue, hens, woodpiles, ivy and torches on the walls. Four different towers defend it: the Gargoyle Perch, the Mangonel, the Ink Fountain and the Banner Tower. Same rules, same enemies, six new waves; 60 starting gold.
 
 3. **The Keep**: inside the keep itself, drawn in cut-away like an architect's section: four floors from the cellars to the roof. The levy come in at the broken west door and climb the **Great Stair**; the dogs come up from the cellars by the **Cellar Stair** (a warning shows there). The two stairs meet on the landing of the Great Hall, and one grand stair climbs to the top floor and along it to the **study door**, where the wizard keeps his inkwell. Towers stand on the floors and on stone ledges and landings between them: the Suit of Armour, the Flapping Library, the Chandelier and the Great Hearth. Kitchen, library, Great Hall with its long table, tapestries, chandeliers, cellar casks and the wizard's study fill the rooms. Six new waves; 70 starting gold.
+4. **The Flooded Fen**: the water meadows in flood, the levy's own home ground. Two raised causeways cross the water: the levy wade in along the **Reed Causeway**, and the dogs run the **Eel Dyke** past the sluice (a warning shows there). They meet at the Withy Bed, and one causeway runs east to the **Weir House**, where the wizard keeps his inkwell. Every foundation is a little island of firm ground. Reed beds, punts, herons, drowned roofs, half-sunk hedgerows and bands of mist fill the flood. Towers: the Waterwheel, the Heron Roost, the Eel Trap and the Marsh Lantern. Six new waves; 75 starting gold.
+5. **The Barrows**: the chalk downs at dusk, where the dogs are kennelled in the old burial mounds and the giants sleep. The levy come over the hill by the **Corpse Road**; the dogs break out of the **Kennel Barrow** and up the sunken **Hollow Way**. Both meet below the **Ward Ring**, a henge of great stones where the wizard makes his last stand. Long barrows, standing stones, yews and a white horse cut in the chalk cover the downs. Towers: the Standing Stone, the Bone Chimes, the Barrow Beacon and the Barrow Warden. Six new waves, the hardest in the game; 70 starting gold.
 
-Winning Gate Defence offers the courtyard straight away, and winning the courtyard offers the keep. Each level remembers your best result (castle health) in the browser.
+Winning each level offers the next one straight away (the fields, the courtyard, the keep, the fen, the barrows), and the barrows end the story. Each level remembers your best result (castle health) in the browser.
 
 TypeScript, Vite, HTML Canvas for the battlefield and HTML/CSS for the controls. All artwork is made procedurally: no image files, no fonts or services from the internet, no accounts or API keys.
 
@@ -155,21 +157,39 @@ The **Rare creature casebook** in the menu keeps a page for each: a silhouette u
 | **Chandelier** (an iron wheel of candles on a gibbet post) | Drips of hot wax that splash | **The Fall**: the chain is cut and the chandelier crashes onto the thickest crowd in reach. |
 | **Great Hearth** (a stone fireplace with a hooded chimney) | Embers that splash | **Back-draught**: fire roars across the nearby floor; everything on it burns, ignoring armour. |
 
+### Fen towers
+
+| Tower | Attack | Pulse |
+|---|---|---|
+| **Waterwheel** (a timber wheel-house on piles, its wheel turning) | Buckets of water flung in an arc, splashing | **Sluice Surge**: a wall of water washes everything nearby back down the causeway and dazes it. Giants stand firm. |
+| **Heron Roost** (a stilted reed platform with herons on guard) | Fast stabs of the bill | **Stoop**: every heron dives at once onto the thickest crowd in reach. |
+| **Eel Trap** (wicker traps hung on a post, eels curling out) | Thrown eels that slow what they hit | **Eel Snare**: eels coil across the nearest causeway for 6 s; enemies on that way halt behind them, and those right at it are bitten. |
+| **Marsh Lantern** (a horn lantern on a crooked pole, wisps circling) | Wisps of light | **Marsh Lights**: everything nearby is lit up, loses its armour and takes 30% more damage for 6 s. |
+
+### Barrow towers
+
+| Tower | Attack | Pulse |
+|---|---|---|
+| **Standing Stone** (a carved menhir whose rune glows) | Heavy chips of rune-stone | **Stone Sleep**: everything nearby is turned to stone for 4 s; giants only stiffen. |
+| **Bone Chimes** (a dead thorn hung with bone chimes) | A ring that hurts everything in reach | **Dirge**: a low dirge slows everything nearby for 5 s and hurts it. |
+| **Barrow Beacon** (an iron fire-basket on a cairn) | Firebrands that splash | **Beacon Blaze**: burning brands set the nearby road alight; everything on it burns, ignoring armour. |
+| **Barrow Warden** (a hooded warden of the dead with a spear) | Javelins | **The Old Watch**: every tower nearby shoots twice as fast for 8 s. Towers beside a warden always shoot a little faster. |
+
 ## Tuning
 
 Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its volley, rewards, tower costs and damage, pulse durations and strengths, bind cost, the trace/pulse table, the reinforcement wave, and for each sheet its starting gold, towers and six hand-authored waves (`LEVEL_BALANCE`).
 
-`tests/balance.test.ts` (Gate Defence), `tests/courtyard.test.ts` (the courtyard) and `tests/keep.test.ts` (the keep) play each level headlessly with a scripted player and check that a sensible strategy wins, that the same towers without pulses lose, and that pulses without building lose. The scripted player uses a fixed random seed, so the results repeat exactly. Rerun `npm test` after tuning.
+`tests/balance.test.ts` (Gate Defence), `tests/courtyard.test.ts`, `tests/keep.test.ts`, `tests/fen.test.ts` and `tests/barrows.test.ts` play each level headlessly with a scripted player and check that a sensible strategy wins, that the same towers without pulses lose, and that pulses without building lose. The scripted player uses a fixed random seed, so the results repeat exactly. Rerun `npm test` after tuning.
 
 ## Files
 
 | File | What it is |
 |---|---|
-| `src/balance.ts` | All tuning values, the eight tower types, and each sheet's towers, purse and six waves. |
+| `src/balance.ts` | All tuning values, the twenty tower types, and each sheet's towers, purse and six waves. |
 | `src/map.ts` | Each sheet's geometry: roads, river, the inkwell, the leyline tree and its 13 foundations, snapping. `setMapLevel` swaps them. |
-| `src/game.ts` | Game state, the trace / pulse / bind / build rules and the combat simulation (no DOM). |
+| `src/game.ts` | Game state, the trace / pulse / bind / build rules, the pulse families every tower's pulse belongs to (block, road, pool, stun, slow, weaken, knockback, volley, rally) and the combat simulation (no DOM). |
 | `src/ink.ts` | The pen-and-ink look: hatching, wood grain and wash helpers, every tower, creature and building, the wizard, shared with the art studies. |
-| `src/paint.ts` | The static sheets, drawn once each: the fields (roads, river and spring, trees, mill, windmill, castle) the courtyard (flagstones, walls all round, fallen gatehouse, breach, east gate and guard tower, and the life of the yard) and the keep in cut-away (floors, stairs, rooms, cellars and the study). |
+| `src/paint.ts` | The static sheets, drawn once each: the fields (roads, river and spring, trees, mill, windmill, castle) the courtyard (flagstones, walls all round, fallen gatehouse, breach, east gate and guard tower, and the life of the yard) the keep in cut-away (floors, stairs, rooms, cellars and the study), the flooded fen (causeways on banks, islands, reeds, the sluice and the weir house) and the barrows (downs, mounds, standing stones, the kennel barrow and the Ward Ring). |
 | `src/sprites.ts` | Tower and enemy sprites (walk cycles, the kneeling giant, ink spatter on hits) and margin icons. |
 | `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, the wizard, effects, warnings, inspect highlight, the victory plate. |
 | `src/casebook.ts` | The rare creature casebook: first sighting, times seen, caught and slipped away (saved in localStorage). |

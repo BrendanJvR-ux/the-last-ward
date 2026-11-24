@@ -86,6 +86,16 @@ function botPulse(s: GameState) {
     if (t.type === 'books') fire = near(BALANCE.pulses.stormRadius).length >= 5;
     if (t.type === 'chandelier') fire = near(BALANCE.pulses.fallRadius).length >= 6;
     if (t.type === 'hearth') fire = near(BALANCE.pulses.draughtRadius).length >= 5;
+    const P = BALANCE.pulses;
+    const giant = (r: number) => near(r).some((e) => e.type === 'cairn' && e.hp > 100);
+    if (t.type === 'wheel') fire = near(P.surgeRadius).length >= 5;
+    if (t.type === 'heron') fire = near(P.stoopRadius).length >= 6;
+    if (t.type === 'eeltrap') fire = near(170).length >= 5;
+    if (t.type === 'lantern') fire = near(P.lightsRadius).length >= 6 || giant(P.lightsRadius);
+    if (t.type === 'menhir') fire = near(P.sleepRadius).length >= 5 || giant(P.sleepRadius);
+    if (t.type === 'chimes') fire = near(P.dirgeRadius).length >= 5;
+    if (t.type === 'beacon') fire = near(P.blazeRadius).length >= 5;
+    if (t.type === 'warden') fire = near(P.rallyRadius).length >= 8;
     if (fire) pulseTower(s, t.id);
   }
 }

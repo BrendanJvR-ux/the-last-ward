@@ -305,6 +305,30 @@ export function towerInk(ctx: C, type: TowerType, x: number, y: number, m: 'trac
   } else if (type === 'hearth') {
     keepHearth(ctx, x, y, time, R);
     mark(ctx, x, y - 112, m);
+  } else if (type === 'wheel') {
+    fenWheel(ctx, x, y, time, R);
+    mark(ctx, x, y - 112, m);
+  } else if (type === 'heron') {
+    fenHeron(ctx, x, y, time, R);
+    mark(ctx, x, y - 124, m);
+  } else if (type === 'eeltrap') {
+    fenEelTrap(ctx, x, y, time, R);
+    mark(ctx, x, y - 104, m);
+  } else if (type === 'lantern') {
+    fenLantern(ctx, x, y, time, R);
+    mark(ctx, x, y - 120, m);
+  } else if (type === 'menhir') {
+    barrowMenhir(ctx, x, y, time, R);
+    mark(ctx, x, y - 118, m);
+  } else if (type === 'chimes') {
+    barrowChimes(ctx, x, y, time, R);
+    mark(ctx, x, y - 118, m);
+  } else if (type === 'beacon') {
+    barrowBeacon(ctx, x, y, time, R);
+    mark(ctx, x, y - 124, m);
+  } else if (type === 'warden') {
+    barrowWarden(ctx, x, y, time, R);
+    mark(ctx, x, y - 124, m);
   } else {
     // the eye-flower: a crooked stalk carrying a great watching eye in a crown of filaments
     ctx.lineCap = 'round';
@@ -1505,4 +1529,243 @@ function keepHearth(ctx: C, x: number, y: number, time: number, R: R) {
   // sparks rising from the chimney
   ctx.fillStyle = 'rgba(214,130,58,0.9)';
   for (let k = 0; k < 4; k++) { const t = (time * 0.8 + k * 0.25) % 1; ctx.beginPath(); ctx.arc(x - 4 + Math.sin(t * 7 + k) * 6, y - 108 - t * 30, 1.4 * (1 - t) + 0.4, 0, Math.PI * 2); ctx.fill(); }
+}
+
+
+// ── Fen towers ──────────────────────────────────────────────────────────────
+
+/** A little ripple of water at a tower's foot. */
+function ripples(ctx: C, x: number, y: number, w: number, time: number) {
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.6;
+  for (let i = 0; i < 3; i++) {
+    const k = ((time * 0.4 + i / 3) % 1);
+    ctx.globalAlpha = 1 - k;
+    ctx.beginPath(); ctx.ellipse(x, y, w * (0.5 + k * 0.6), 4 + k * 3, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** A timber wheel-house on piles, its great undershot wheel turning in the race. */
+function fenWheel(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 36, 8, 0.4);
+  ripples(ctx, x - 14, y, 30, time);
+  // the house: planked, with a hatched pent roof
+  const L = x - 4, top = y - 66;
+  ctx.fillStyle = PAPER; ctx.fillRect(L, top, 34, 62);
+  ctx.save(); ctx.beginPath(); ctx.rect(L, top, 34, 62); ctx.clip();
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let k = 4; k < 34; k += 4.5) { ctx.moveTo(L + k, top); ctx.lineTo(L + k + (R() - 0.5), y - 4); }
+  ctx.stroke(); ctx.fillStyle = sepia(0.3); ctx.fillRect(L + 22, top, 12, 62); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.strokeRect(L, top, 34, 62);
+  const roof = () => { ctx.beginPath(); ctx.moveTo(L - 8, top + 2); ctx.lineTo(L + 17, top - 26); ctx.lineTo(L + 42, top + 2); ctx.closePath(); };
+  ctx.fillStyle = PAPER; roof(); ctx.fill(); hatch(ctx, roof, [L - 8, top - 26, 50, 28], 0.6, 2, 0.5, INK, R); ctx.lineWidth = 1.3; roof(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.fillRect(L + 12, top + 14, 9, 11);
+  // piles
+  ctx.lineWidth = 2; ctx.beginPath(); for (const px of [L + 3, L + 31]) { ctx.moveTo(px, y - 4); ctx.lineTo(px, y + 4); } ctx.stroke();
+  // the wheel, turning
+  const wx = x - 22, wy = y - 34, r = 30, rot = time * 1.4;
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(wx, wy, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(wx, wy, r - 7, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) { const a = rot + (i / 8) * Math.PI * 2; ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * (r - 7), wy + Math.sin(a) * (r - 7)); }
+  ctx.stroke();
+  // paddles
+  ctx.lineWidth = 2.2; ctx.beginPath();
+  for (let i = 0; i < 16; i++) { const a = rot + (i / 16) * Math.PI * 2; ctx.moveTo(wx + Math.cos(a) * (r - 7), wy + Math.sin(a) * (r - 7)); ctx.lineTo(wx + Math.cos(a) * (r + 3), wy + Math.sin(a) * (r + 3)); }
+  ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(wx, wy, 3.5, 0, Math.PI * 2); ctx.fill();
+  // water spilling off the paddles
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.7;
+  for (let k = 0; k < 4; k++) { const d = (time * 1.2 + k / 4) % 1; ctx.beginPath(); ctx.moveTo(wx - r + 4 + k * 3, wy + 6 + d * 24); ctx.lineTo(wx - r + 2 + k * 3, wy + 10 + d * 24); ctx.stroke(); }
+}
+
+/** A stilted reed platform: a heronry with herons standing guard on it. */
+function fenHeron(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 30, 7, 0.35);
+  ripples(ctx, x, y, 26, time);
+  // three stilts, slightly splayed
+  limbs(ctx, [{ x1: x - 16, y1: y + 2, x2: x - 10, y2: y - 64, w: 3 }, { x1: x + 16, y1: y + 2, x2: x + 10, y2: y - 64, w: 3 }, { x1: x + 2, y1: y + 4, x2: x, y2: y - 64, w: 2.6 }], R, false);
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x - 14, y - 20); ctx.lineTo(x + 14, y - 40); ctx.moveTo(x + 14, y - 20); ctx.lineTo(x - 14, y - 40); ctx.stroke();
+  // the reed nest platform
+  const nest = () => { ctx.beginPath(); ctx.ellipse(x, y - 66, 26, 7, 0, 0, Math.PI * 2); };
+  ctx.fillStyle = PAPER; nest(); ctx.fill(); hatch(ctx, nest, [x - 26, y - 73, 52, 14], 0.3, 1.8, 0.45, INK, R); ctx.lineWidth = 1.2; nest(); ctx.stroke();
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; ctx.moveTo(x + Math.cos(a) * 22, y - 66 + Math.sin(a) * 5); ctx.lineTo(x + Math.cos(a) * 30, y - 68 + Math.sin(a) * 6); } ctx.stroke();
+  // two herons
+  const bird = (bx: number, dir: number, dip: number) => {
+    ctx.save(); ctx.translate(bx, y - 70); ctx.scale(dir, 1);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-2, 0); ctx.lineTo(-2, -12); ctx.moveTo(2, 0); ctx.lineTo(1, -12); ctx.stroke();
+    const body = () => { ctx.beginPath(); ctx.moveTo(-10, -12); ctx.quadraticCurveTo(-4, -26, 6, -22); ctx.quadraticCurveTo(10, -16, 2, -11); ctx.closePath(); };
+    ctx.fillStyle = PAPER; body(); ctx.fill(); hatch(ctx, body, [-10, -26, 20, 16], -0.8, 1.6, 0.4); ctx.lineWidth = 1; body(); ctx.stroke();
+    // s-curved neck, bobbing
+    const hx = 9 + dip * 6, hy = -40 + dip * 14;
+    ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(5, -21); ctx.bezierCurveTo(14, -28, 2, -34, hx, hy); ctx.stroke();
+    ctx.fillStyle = PAPER; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(hx + 1, hy, 3.4, 2.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(hx + 3, hy - 1); ctx.lineTo(hx + 14, hy + 1 + dip * 3); ctx.lineTo(hx + 3, hy + 1.4); ctx.closePath(); ctx.fill();
+    ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(hx - 1, hy - 1); ctx.quadraticCurveTo(hx - 6, hy - 4, hx - 9, hy - 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx + 1.5, hy - 0.6, 0.7, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  };
+  bird(x - 8, 1, Math.max(0, Math.sin(time * 1.3)) * 0.8);
+  bird(x + 10, -1, Math.max(0, Math.sin(time * 1.1 + 2)) * 0.5);
+}
+
+/** A post in the water hung with wicker eel traps; eels curl out of the mouths. */
+function fenEelTrap(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 30, 7, 0.35);
+  ripples(ctx, x, y, 28, time);
+  limbs(ctx, [{ x1: x, y1: y + 2, x2: x, y2: y - 92, w: 5 }, { x1: x - 30, y1: y - 82, x2: x + 30, y2: y - 86, w: 3 }], R, false);
+  // three conical traps on cords
+  const trap = (tx: number, ty: number, sw: number) => {
+    ctx.save(); ctx.translate(tx, ty); ctx.rotate(sw);
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 10); ctx.stroke();
+    const body = () => { ctx.beginPath(); ctx.moveTo(-3, 10); ctx.lineTo(-9, 44); ctx.quadraticCurveTo(0, 49, 9, 44); ctx.lineTo(3, 10); ctx.closePath(); };
+    ctx.fillStyle = PAPER; body(); ctx.fill();
+    ctx.save(); body(); ctx.clip(); ctx.strokeStyle = INK; ctx.lineWidth = 0.5; ctx.beginPath();
+    for (let k = -12; k < 12; k += 2.6) { ctx.moveTo(k, 10); ctx.lineTo(k * 1.6, 48); }
+    for (let k = 14; k < 48; k += 5) { ctx.moveTo(-12, k); ctx.quadraticCurveTo(0, k + 2, 12, k); }
+    ctx.stroke(); ctx.restore();
+    ctx.lineWidth = 1.1; body(); ctx.stroke();
+    // an eel wriggling from the mouth
+    const w = Math.sin(time * 4 + tx) * 4;
+    ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(0, 46); ctx.bezierCurveTo(6 + w, 54, -6 - w, 60, 2 + w, 68); ctx.stroke();
+    ctx.strokeStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 47); ctx.bezierCurveTo(6 + w, 54, -6 - w, 60, 2 + w, 67); ctx.stroke();
+    ctx.restore();
+  };
+  trap(x - 22, y - 82, Math.sin(time * 0.9) * 0.06);
+  trap(x + 22, y - 86, Math.sin(time * 0.8 + 1) * 0.06);
+  trap(x, y - 92 + 6, Math.sin(time * 1.1 + 2) * 0.05);
+}
+
+/** A crooked pole with a horn lantern, will-o'-wisps circling it. */
+function fenLantern(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 26, 7, 0.35);
+  ripples(ctx, x, y, 22, time);
+  limbs(ctx, [{ x1: x, y1: y + 2, x2: x - 4, y2: y - 70, w: 5 }, { x1: x - 4, y1: y - 70, x2: x + 4, y2: y - 104, w: 4 }, { x1: x + 2, y1: y - 98, x2: x + 24, y2: y - 100, w: 3 }], R, false);
+  // reeds round the foot
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.7; ctx.beginPath();
+  for (let i = 0; i < 9; i++) { const bx = x - 14 + i * 3.5; ctx.moveTo(bx, y); ctx.quadraticCurveTo(bx + (i - 4) * 0.8, y - 14, bx + (i - 4) * 1.6, y - 22 - (i % 3) * 5); }
+  ctx.stroke();
+  // the lantern swinging on its hook
+  ctx.save(); ctx.translate(x + 22, y - 100); ctx.rotate(Math.sin(time * 1.3) * 0.12);
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 8); ctx.stroke();
+  const glow = ctx.createRadialGradient(0, 20, 0, 0, 20, 22);
+  glow.addColorStop(0, `rgba(240,210,120,${0.55 + 0.2 * Math.sin(time * 5)})`); glow.addColorStop(1, 'rgba(240,210,120,0)');
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, 20, 22, 0, Math.PI * 2); ctx.fill();
+  const box = () => { ctx.beginPath(); ctx.moveTo(-7, 10); ctx.lineTo(7, 10); ctx.lineTo(8, 30); ctx.lineTo(-8, 30); ctx.closePath(); };
+  ctx.fillStyle = 'rgba(248,226,160,0.85)'; box(); ctx.fill();
+  ctx.lineWidth = 1.1; box(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-7, 10); ctx.lineTo(0, 4); ctx.lineTo(7, 10); ctx.moveTo(0, 10); ctx.lineTo(0, 30); ctx.stroke();
+  inkFlame(ctx, 0, 26, 9 + Math.sin(time * 9), 0);
+  ctx.restore();
+  // wisps
+  for (let k = 0; k < 3; k++) {
+    const a = time * (0.9 + k * 0.3) + k * 2.1, wx = x + 22 + Math.cos(a) * (24 + k * 6), wy = y - 76 + Math.sin(a * 1.3) * 14;
+    const g = ctx.createRadialGradient(wx, wy, 0, wx, wy, 6);
+    g.addColorStop(0, 'rgba(255,248,210,0.95)'); g.addColorStop(1, 'rgba(210,230,190,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(wx, wy, 6, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ── Barrow towers ───────────────────────────────────────────────────────────
+
+/** A tall standing stone carved with spirals; one rune glows when it is about to speak. */
+function barrowMenhir(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 6, y + 2, 32, 8, 0.45);
+  const stone = () => { ctx.beginPath(); ctx.moveTo(x - 18, y); ctx.quadraticCurveTo(x - 22, y - 50, x - 12, y - 96); ctx.quadraticCurveTo(x - 2, y - 110, x + 10, y - 100); ctx.quadraticCurveTo(x + 22, y - 60, x + 18, y); ctx.closePath(); };
+  ctx.fillStyle = '#d8c7a8'; stone(); ctx.fill();
+  hatch(ctx, stone, [x - 24, y - 110, 48, 110], 0.9, 2.2, 0.45, INK, R);
+  ctx.save(); stone(); ctx.clip(); ctx.fillStyle = sepia(0.35); ctx.fillRect(x + 6, y - 112, 20, 112); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.6; stone(); ctx.stroke();
+  // cracks and lichen
+  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x - 6, y - 92); ctx.lineTo(x - 2, y - 80); ctx.lineTo(x - 6, y - 70); ctx.stroke();
+  ctx.fillStyle = PAPER; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(x - 12 + R() * 22, y - 20 - R() * 70, 1.5 + R() * 2, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 0.4; ctx.stroke(); }
+  // carved spirals
+  const spiral = (cx: number, cy: number, r: number, lw: number, col: string) => {
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath();
+    for (let t = 0; t < 12; t += 0.2) { const rr = (t / 12) * r, px = cx + Math.cos(t) * rr, py = cy + Math.sin(t) * rr; t ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    ctx.stroke();
+  };
+  spiral(x - 2, y - 58, 9, 1, INK);
+  spiral(x + 4, y - 34, 6, 0.9, INK);
+  const g = 0.5 + 0.5 * Math.sin(time * 2);
+  spiral(x - 4, y - 80, 6, 1.6, `rgba(195,150,52,${0.5 + 0.5 * g})`);
+  // a ring of small stones at its foot
+  for (const [sx, sr] of [[-26, 5], [24, 6], [-14, 4], [14, 4]] as [number, number][]) { ctx.fillStyle = '#d8c7a8'; ctx.beginPath(); ctx.ellipse(x + sx, y + 1, sr, sr * 0.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 0.9; ctx.stroke(); }
+}
+
+/** A dead thorn tree hung with bone chimes that swing and knock together. */
+function barrowChimes(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 30, 7, 0.4);
+  const segs: Seg[] = [{ x1: x, y1: y, x2: x - 2, y2: y - 70, w: 6 }];
+  segs.push({ x1: x - 2, y1: y - 70, x2: x - 30, y2: y - 92, w: 3.6 }, { x1: x - 2, y1: y - 70, x2: x + 30, y2: y - 96, w: 3.6 }, { x1: x - 2, y1: y - 70, x2: x + 2, y2: y - 108, w: 3 });
+  segs.push({ x1: x - 30, y1: y - 92, x2: x - 38, y2: y - 104, w: 1.6 }, { x1: x + 30, y1: y - 96, x2: x + 40, y2: y - 106, w: 1.6 });
+  limbs(ctx, segs, R, true);
+  // chimes: bones on threads, swaying
+  const hang = (hx: number, hy: number, len: number, k: number) => {
+    const sw = Math.sin(time * 1.7 + k) * 0.18;
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(sw);
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, len); ctx.stroke();
+    const bone = () => { ctx.beginPath(); ctx.ellipse(0, len + 7, 1.8, 7, 0, 0, Math.PI * 2); };
+    ctx.fillStyle = '#efe6d2'; bone(); ctx.fill(); ctx.lineWidth = 0.9; bone(); ctx.stroke();
+    for (const e of [len, len + 14]) { ctx.beginPath(); ctx.arc(-1.6, e, 1.8, 0, Math.PI * 2); ctx.arc(1.6, e, 1.8, 0, Math.PI * 2); ctx.fillStyle = '#efe6d2'; ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+  };
+  hang(x - 26, y - 89, 10, 0); hang(x - 16, y - 82, 18, 1.3); hang(x + 14, y - 84, 14, 2.4); hang(x + 26, y - 92, 9, 3.1); hang(x - 34, y - 98, 16, 4.2);
+  // a small skull wedged in the fork
+  ctx.fillStyle = '#efe6d2'; ctx.strokeStyle = INK; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x - 2, y - 74, 6, Math.PI, 0); ctx.lineTo(x + 3, y - 68); ctx.lineTo(x - 7, y - 68); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x - 4.5, y - 73, 1.4, 0, Math.PI * 2); ctx.arc(x + 0.5, y - 73, 1.4, 0, Math.PI * 2); ctx.fill();
+}
+
+/** An iron fire-basket on a tall pole, set in a cairn, burning. */
+function barrowBeacon(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 32, 8, 0.45);
+  // the cairn
+  for (let i = 0; i < 14; i++) {
+    const row = i < 6 ? 0 : i < 10 ? 1 : i < 13 ? 2 : 3, col = i - [0, 6, 10, 13][row], n = [6, 4, 3, 1][row];
+    const sx = x - (n - 1) * 7 + col * 14 + (R() - 0.5) * 3, sy = y - 4 - row * 9, r = 7 - row * 0.6;
+    const st = () => { ctx.beginPath(); ctx.ellipse(sx, sy, r, r * 0.7, R() * 0.4, 0, Math.PI * 2); };
+    ctx.fillStyle = '#d8c7a8'; st(); ctx.fill(); hatch(ctx, st, [sx - r, sy - r, r * 2, r * 2], 0.8, 1.7, 0.4); ctx.strokeStyle = INK; ctx.lineWidth = 1; st(); ctx.stroke();
+  }
+  // the pole and its iron basket
+  ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y - 34); ctx.lineTo(x, y - 86); ctx.stroke();
+  const basket = () => { ctx.beginPath(); ctx.moveTo(x - 14, y - 100); ctx.lineTo(x + 14, y - 100); ctx.lineTo(x + 7, y - 86); ctx.lineTo(x - 7, y - 86); ctx.closePath(); };
+  ctx.fillStyle = 'rgba(29,25,21,0.85)'; basket(); ctx.fill();
+  ctx.lineWidth = 1.2; basket(); ctx.stroke();
+  ctx.strokeStyle = PAPER; ctx.lineWidth = 0.6; ctx.beginPath(); for (let k = -10; k <= 10; k += 5) { ctx.moveTo(x + k, y - 100); ctx.lineTo(x + k * 0.5, y - 86); } ctx.stroke();
+  // flames and sparks
+  const g = ctx.createRadialGradient(x, y - 106, 2, x, y - 106, 30);
+  g.addColorStop(0, `rgba(250,200,100,${0.5 + 0.15 * Math.sin(time * 7)})`); g.addColorStop(1, 'rgba(200,90,40,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 106, 30, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 4; i++) { const f = Math.sin(time * 10 + i * 1.7); inkFlame(ctx, x - 9 + i * 6, y - 99, 16 + f * 4 + (i % 2) * 5, f * 0.3); }
+  ctx.fillStyle = 'rgba(214,130,58,0.9)';
+  for (let k = 0; k < 4; k++) { const t = (time * 0.8 + k * 0.25) % 1; ctx.beginPath(); ctx.arc(x - 4 + Math.sin(t * 7 + k) * 8, y - 118 - t * 30, 1.4 * (1 - t) + 0.4, 0, Math.PI * 2); ctx.fill(); }
+}
+
+/** A tall hooded warden of the old barrows, leaning on a spear, eyes catching the light. */
+function barrowWarden(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 32, 8, 0.45);
+  // the little turf mound it stands on
+  const mound = () => { ctx.beginPath(); ctx.moveTo(x - 30, y); ctx.quadraticCurveTo(x, y - 18, x + 30, y); ctx.closePath(); };
+  ctx.fillStyle = PAPER; mound(); ctx.fill(); hatch(ctx, mound, [x - 30, y - 18, 60, 18], 0.2, 2.4, 0.45, INK, R); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; mound(); ctx.stroke();
+  // cloak
+  const sway = Math.sin(time * 0.8) * 1.5;
+  const cloak = () => { ctx.beginPath(); ctx.moveTo(x - 16 + sway, y - 10); ctx.quadraticCurveTo(x - 18, y - 60, x - 10, y - 86); ctx.quadraticCurveTo(x, y - 100, x + 10, y - 86); ctx.quadraticCurveTo(x + 18, y - 60, x + 16 + sway, y - 10); ctx.closePath(); };
+  ctx.fillStyle = PAPER; cloak(); ctx.fill();
+  ctx.save(); cloak(); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath();
+  for (let k = -14; k <= 14; k += 3) { ctx.moveTo(x + k * 0.4, y - 90); ctx.quadraticCurveTo(x + k * 0.9, y - 50, x + k + sway, y - 10); }
+  ctx.stroke(); ctx.fillStyle = sepia(0.35); ctx.fillRect(x + 4, y - 100, 20, 92); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4; cloak(); ctx.stroke();
+  // the hood: dark inside, two eyes
+  const hood = () => { ctx.beginPath(); ctx.ellipse(x, y - 84, 7, 9, 0, 0, Math.PI * 2); };
+  ctx.fillStyle = 'rgba(29,25,21,0.92)'; hood(); ctx.fill();
+  const blink = time % 4.7 < 0.15;
+  if (!blink) { ctx.fillStyle = `rgba(240,220,150,${0.8 + 0.2 * Math.sin(time * 3)})`; ctx.beginPath(); ctx.arc(x - 2.6, y - 85, 1.3, 0, Math.PI * 2); ctx.arc(x + 2.6, y - 85, 1.3, 0, Math.PI * 2); ctx.fill(); }
+  // gold torc at the throat
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 74, 6, 0.2, Math.PI - 0.2); ctx.stroke();
+  // the spear
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(x + 20, y - 6); ctx.lineTo(x + 22, y - 116); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 22, y - 128); ctx.lineTo(x + 26, y - 114); ctx.lineTo(x + 22, y - 110); ctx.lineTo(x + 18, y - 114); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(x + 17, y - 60, 4, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 }

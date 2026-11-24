@@ -2,12 +2,12 @@
 // Roads, the river and its spring, gnarled trees and fynbos, the mill, the windmill, the castle
 // and the inkwell are drawn once; everything that moves is drawn live in render.ts.
 import {
-  KEEP_FLOORS, MAP_W, MAP_H, GUTTER_X, LANES, LANE_IDS, RIVER, POND, MILL, BRIDGE, INKWELL, CASTLE, LEVEL,
+  KEEP_FLOORS, MAP_W, MAP_H, GUTTER_X, LANES, LANE_IDS, RIVER, POND, MILL, BRIDGE, INKWELL, CASTLE, LEVEL, GATE,
   LEY_EDGES, NODE, FOUNDATION_IDS, pointAt, type Vec,
 } from './map';
 import {
   inkSurreal, scribble, inkSmudge, foldCrease, inkCastle, inkInkwell, windmillBody, turret, paperVignette, groundWash, goose,
-  hatch, grow, limbs, proteaHead, seed, INK, INK2, PAPER, GOLD, type Seg,
+  hatch, grow, limbs, proteaHead, seed, sepia, INK, INK2, PAPER, GOLD, type Seg,
 } from './ink';
 
 /** How much larger than its study the castle is drawn. */
@@ -130,6 +130,8 @@ function drawMill(ctx: CanvasRenderingContext2D) {
 export function buildStatic(scale = 2): HTMLCanvasElement {
   if (LEVEL === 'courtyard') return buildCourtyard(scale);
   if (LEVEL === 'keep') return buildKeep(scale);
+  if (LEVEL === 'fen') return buildFen(scale);
+  if (LEVEL === 'barrows') return buildBarrows(scale);
   const cv = document.createElement('canvas');
   cv.width = MAP_W * scale; cv.height = MAP_H * scale;
   const ctx = cv.getContext('2d')!;
@@ -194,20 +196,20 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
 }
 
 /** Folds, browning, the title plate and the ruled border: the same on every sheet. */
-function finishSheet(ctx: CanvasRenderingContext2D, R: () => number, title: string, subtitle: string, plateY = 880) {
+function finishSheet(ctx: CanvasRenderingContext2D, R: () => number, title: string, subtitle: string, plateY = 880, plateX = 40) {
   // the sheet was folded once across and once down
   foldCrease(ctx, true, MAP_H * 0.54, R);
   foldCrease(ctx, false, GUTTER_X, R);
   paperVignette(ctx);
   // Title plate, ruled in ink
-  const py = plateY;
-  ctx.fillStyle = 'rgba(228,211,182,0.92)'; roundRect(ctx, 40, py, 350, 78, 4); ctx.fill();
+  const py = plateY, px = plateX;
+  ctx.fillStyle = 'rgba(228,211,182,0.92)'; roundRect(ctx, px, py, 350, 78, 4); ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
-  ctx.lineWidth = 0.6; roundRect(ctx, 45, py + 5, 340, 68, 3); ctx.stroke();
+  ctx.lineWidth = 0.6; roundRect(ctx, px + 5, py + 5, 340, 68, 3); ctx.stroke();
   ctx.font = `italic 600 23px ${SERIF}`; ctx.textAlign = 'left'; ctx.fillStyle = INK;
-  ctx.fillText(title, 56, py + 38);
+  ctx.fillText(title, px + 16, py + 38);
   ctx.font = `italic 14px ${SERIF}`; ctx.fillStyle = 'rgba(58,34,18,0.7)';
-  ctx.fillText(subtitle, 58, py + 62);
+  ctx.fillText(subtitle, px + 18, py + 62);
   // sheet border
   ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(14, 14, MAP_W - 28, MAP_H - 28);
   ctx.lineWidth = 0.6; ctx.strokeRect(19, 19, MAP_W - 38, MAP_H - 38);
@@ -930,4 +932,316 @@ function buildKeep(scale: number): HTMLCanvasElement {
 /** Leylines on the keep sheet (the same dotted ink as elsewhere). */
 function st_ley(ctx: Ctx) {
   inkSurreal.ley(ctx, LEY_EDGES.map((e) => e.pts), Object.values(NODE).filter((n) => !n.foundation && n.id !== 'ink').map((n) => ({ x: n.x, y: n.y })));
+}
+
+
+// ── Shared helpers for the open-country sheets (levels 4 and 5) ─────────────
+
+/** Room for scenery: off the roads, leylines, foundations, inkwell, gate and title plate. */
+function openGround(p: Vec, r: number, plate: [number, number, number, number], taken: Spot[] = []): boolean {
+  if (p.x < 30 + r || p.x > MAP_W - 30 - r || p.y < 30 + r || p.y > MAP_H - 30 - r) return false;
+  const [px, py, pw, ph] = plate;
+  if (p.x > px - r - 6 && p.x < px + pw + r + 6 && p.y > py - r - 6 && p.y < py + ph + r + 6) return false;
+  if (Math.hypot(p.x - INKWELL.x, p.y - INKWELL.y) < r + 100) return false;
+  if (Math.hypot(p.x - GATE.x, p.y - GATE.y) < r + 120) return false;
+  if (nearRoad(p, r + 30) || nearLey(p, r + 12)) return false;
+  if (FOUNDATION_IDS.some((f) => Math.hypot(NODE[f].x - p.x, NODE[f].y - p.y) < r + 62)) return false;
+  return !taken.some((t) => Math.hypot(t.x - p.x, t.y - p.y) < t.r + r + 6);
+}
+function scatter(R: () => number, n: number, r: number, plate: [number, number, number, number], taken: Spot[], tries = 1500): Spot[] {
+  const out: Spot[] = [];
+  for (let i = 0; i < tries && out.length < n; i++) {
+    const p = { x: R() * MAP_W, y: R() * MAP_H };
+    if (openGround(p, r, plate, taken)) { const sp = { ...p, r }; taken.push(sp); out.push(sp); }
+  }
+  return out;
+}
+function paperGround(ctx: Ctx, R: () => number, mottles = 50) {
+  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, MAP_W, MAP_H);
+  for (let i = 0; i < 9000; i++) { ctx.fillStyle = R() < 0.5 ? 'rgba(110,90,60,0.07)' : 'rgba(255,244,222,0.2)'; ctx.fillRect(R() * MAP_W, R() * MAP_H, 1.2, 1.2); }
+  for (let i = 0; i < mottles; i++) {
+    const x = R() * MAP_W, y = R() * MAP_H, r = 40 + R() * 220;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(120,78,38,${0.02 + R() * 0.05})`); g.addColorStop(1, 'rgba(120,78,38,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+}
+/** A clump of reeds with bulrush heads. */
+function reeds(ctx: Ctx, x: number, y: number, n: number, R: () => number) {
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.6; ctx.beginPath();
+  for (let i = 0; i < n; i++) { const bx = x + (i - n / 2) * 2.6 + (R() - 0.5) * 2, h = 12 + R() * 14, lean = (R() - 0.5) * 6; ctx.moveTo(bx, y); ctx.quadraticCurveTo(bx + lean * 0.3, y - h * 0.6, bx + lean, y - h); }
+  ctx.stroke();
+  ctx.fillStyle = INK;
+  for (let i = 0; i < Math.ceil(n / 4); i++) { const bx = x + (R() - 0.5) * n * 2.4, h = 16 + R() * 10; ctx.beginPath(); ctx.ellipse(bx, y - h, 1.6, 4, 0, 0, Math.PI * 2); ctx.fill(); }
+}
+/** A raised bank under a road: a wide paper band with hatched slopes. */
+function embankment(ctx: Ctx, pts: Vec[], R: () => number, half = 34) {
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(86,68,52,0.18)'; ctx.lineWidth = half * 2 + 10; smoothPath(ctx, pts, 50); ctx.stroke();
+  ctx.strokeStyle = PAPER; ctx.lineWidth = half * 2; smoothPath(ctx, pts, 50); ctx.stroke();
+  // slope hatching along both sides
+  ctx.strokeStyle = 'rgba(58,34,18,0.45)'; ctx.lineWidth = 0.6;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], L = Math.hypot(b.x - a.x, b.y - a.y), ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;
+    ctx.beginPath();
+    for (let d = 0; d < L; d += 5) for (const sd of [-1, 1]) {
+      const cx = a.x + ux * d, cy = a.y + uy * d, nx = -uy * sd, ny = ux * sd;
+      const o0 = half - 12 - R() * 2, o1 = half;
+      ctx.moveTo(cx + nx * o0, cy + ny * o0); ctx.lineTo(cx + nx * o1 + ux * 2, cy + ny * o1 + uy * 2);
+    }
+    ctx.stroke();
+  }
+}
+
+// ── Level 4: the flooded fen ────────────────────────────────────────────────
+
+/** A half-drowned cottage roof standing out of the flood. */
+function drownedRoof(ctx: Ctx, x: number, y: number, R: () => number) {
+  const roof = () => { ctx.beginPath(); ctx.moveTo(x - 30, y); ctx.lineTo(x - 16, y - 26); ctx.lineTo(x + 22, y - 26); ctx.lineTo(x + 34, y); ctx.closePath(); };
+  ctx.fillStyle = PAPER; roof(); ctx.fill(); hatch(ctx, roof, [x - 30, y - 26, 64, 26], 0.6, 2.2, 0.5, INK, R); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; roof(); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.fillRect(x + 8, y - 40, 8, 16); ctx.strokeRect(x + 8, y - 40, 8, 16);
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(x + 2, y + 1, 36 + k * 7, 4 + k * 2, 0, 0, Math.PI); ctx.stroke(); }
+}
+/** A punt moored by a pole. */
+function punt(ctx: Ctx, x: number, y: number, a: number) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.moveTo(-26, -5); ctx.lineTo(26, -5); ctx.lineTo(30, 0); ctx.lineTo(26, 5); ctx.lineTo(-26, 5); ctx.lineTo(-30, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = -20; k <= 20; k += 8) { ctx.moveTo(k, -5); ctx.lineTo(k, 5); } ctx.stroke();
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-34, -14); ctx.lineTo(18, 10); ctx.stroke();
+  ctx.restore();
+}
+/** A heron standing in the shallows. */
+function standingHeron(ctx: Ctx, x: number, y: number, dir: number) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(-1, -14); ctx.moveTo(2, 0); ctx.lineTo(1, -14); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-10, -14); ctx.quadraticCurveTo(-2, -30, 7, -24); ctx.quadraticCurveTo(9, -17, 2, -13); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(6, -23); ctx.bezierCurveTo(13, -30, 2, -36, 8, -42); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(9, -43); ctx.lineTo(20, -41); ctx.lineTo(9, -40); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.ellipse(0, 1, 12, 2.5, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+/** The weir house: a tall timber mill over the weir, with the race foaming beneath. */
+function weirHouse(ctx: Ctx, gate: Vec, R: () => number) {
+  const x = gate.x + 20, base = gate.y + 50;
+  // the weir: a stepped stone sill across the water, below the house
+  ctx.fillStyle = PAPER; ctx.fillRect(x - 10, base, 150, 22);
+  hatch(ctx, () => { ctx.beginPath(); ctx.rect(x - 10, base, 150, 22); }, [x - 10, base, 150, 22], 0.2, 2.6, 0.45, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(x - 10, base, 150, 22);
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath(); for (let k = 0; k < 30; k++) { const wx = x - 6 + k * 5; ctx.moveTo(wx, base + 22); ctx.quadraticCurveTo(wx + 2, base + 34, wx - 1, base + 44 + (k % 3) * 4); } ctx.stroke();
+  // the house itself, its door on the causeway
+  turret(ctx, x + 66, base, 104, 120, 70, 'orb', false, R);
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x + 2, base); ctx.lineTo(x + 2, base - 38); ctx.arc(x + 14, base - 38, 12, Math.PI, 0); ctx.lineTo(x + 26, base); ctx.closePath(); ctx.fill();
+  // the great wheel on its west wall
+  const wx = x + 120, wy = base - 6;
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(wx, wy, 26, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 0.8; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * 26, wy + Math.sin(a) * 26); } ctx.stroke();
+}
+/** The sluice on the Eel Dyke: posts and a lifting board. */
+function sluiceGate(ctx: Ctx, at: Vec, R: () => number) {
+  const x = at.x - 10, y = at.y + 46;
+  for (const px of [x - 22, x + 22]) { ctx.fillStyle = PAPER; ctx.fillRect(px - 4, y - 44, 8, 50); hatch(ctx, () => { ctx.beginPath(); ctx.rect(px - 4, y - 44, 8, 50); }, [px - 4, y - 44, 8, 50], 0.8, 1.8, 0.45, INK, R); ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.strokeRect(px - 4, y - 44, 8, 50); }
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 28, y - 44); ctx.lineTo(x + 28, y - 44); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.fillRect(x - 18, y - 30, 36, 24); ctx.lineWidth = 1; ctx.strokeRect(x - 18, y - 30, 36, 24);
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = -24; k < -6; k += 6) { ctx.moveTo(x - 18, y + k); ctx.lineTo(x + 18, y + k); } ctx.stroke();
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y - 52, 6, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath(); for (let k = 0; k < 8; k++) { ctx.moveTo(x - 16 + k * 4, y - 4); ctx.quadraticCurveTo(x - 15 + k * 4, y + 6, x - 18 + k * 4, y + 12); } ctx.stroke();
+}
+
+function buildFen(scale: number): HTMLCanvasElement {
+  const cv = document.createElement('canvas');
+  cv.width = MAP_W * scale; cv.height = MAP_H * scale;
+  const ctx = cv.getContext('2d')!;
+  ctx.scale(scale, scale);
+  const R = rng(41);
+  const plate: [number, number, number, number] = [40, 40, 350, 78];
+  paperGround(ctx, R, 40);
+
+  // the flood: a grey-sepia wash over nearly everything, with wind-ruffled lines on the water
+  ctx.fillStyle = 'rgba(84,74,62,0.13)'; ctx.fillRect(20, 20, MAP_W - 40, MAP_H - 40);
+  for (let i = 0; i < 18; i++) groundWash(ctx, R() * MAP_W, R() * MAP_H, 200 + R() * 260, 40 + R() * 50, 0.04 + R() * 0.05);
+  ctx.strokeStyle = 'rgba(58,34,18,0.32)'; ctx.lineWidth = 0.6;
+  for (let i = 0; i < 520; i++) {
+    const x = 30 + R() * (MAP_W - 60), y = 30 + R() * (MAP_H - 60), L = 8 + R() * 22;
+    if (nearRoad({ x, y }, 40)) continue;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + L / 2, y - 1.5, x + L, y); ctx.stroke();
+  }
+  // drowned hedgerows: rows of willow tops and posts poking out of the water
+  for (const [x0, y0, x1, y1] of [[80, 560, 360, 520], [980, 120, 1380, 170], [1100, 900, 1500, 860], [560, 640, 700, 560]] as [number, number, number, number][]) {
+    for (let t = 0; t <= 1; t += 0.06) {
+      const p = { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t };
+      if (nearRoad(p, 34) || nearLey(p, 10) || FOUNDATION_IDS.some((f) => Math.hypot(NODE[f].x - p.x, NODE[f].y - p.y) < 56)) continue;
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + (R() - 0.5) * 2, p.y - 6 - R() * 6); ctx.stroke();
+      ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.ellipse(p.x, p.y + 1, 6, 1.6, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  // islands of firm ground under every foundation, with a fringe of reeds
+  for (const f of FOUNDATION_IDS) {
+    const n = NODE[f], isl = () => { ctx.beginPath(); ctx.ellipse(n.x, n.y + 4, 58, 26, 0, 0, Math.PI * 2); };
+    ctx.fillStyle = PAPER; isl(); ctx.fill();
+    ctx.save(); isl(); ctx.clip(); ctx.strokeStyle = 'rgba(58,34,18,0.35)'; ctx.lineWidth = 0.5;
+    for (let i = 0; i < 40; i++) { const gx = n.x - 56 + R() * 112, gy = n.y - 20 + R() * 46; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + (R() - 0.5) * 3, gy - 4); ctx.stroke(); }
+    ctx.restore();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1; isl(); ctx.stroke();
+    reeds(ctx, n.x - 50, n.y + 16, 6, R); reeds(ctx, n.x + 48, n.y + 12, 5, R);
+  }
+  // the causeways, raised on banks above the flood
+  embankment(ctx, LANES.mill.pts, R);
+  embankment(ctx, LANES.king.pts.slice(0, LANES.king.pts.length - 3), R);
+  inkSurreal.road(ctx, LANES.mill.pts, 'mill');
+  inkSurreal.road(ctx, LANES.king.pts, 'king');
+  inkSurreal.ley(ctx, LEY_EDGES.map((e) => e.pts), Object.values(NODE).filter((n) => !n.foundation && n.id !== 'ink').map((n) => ({ x: n.x, y: n.y })));
+
+  // scenery in the open water: reed beds, punts, herons, drowned roofs, eel men's huts
+  const taken: Spot[] = [];
+  const roofs = scatter(R, 3, 46, plate, taken);
+  for (const sp of roofs) drownedRoof(ctx, sp.x, sp.y, R);
+  for (const sp of scatter(R, 4, 34, plate, taken)) punt(ctx, sp.x, sp.y, (R() - 0.5) * 0.8);
+  for (const sp of scatter(R, 7, 18, plate, taken)) standingHeron(ctx, sp.x, sp.y, R() < 0.5 ? -1 : 1);
+  for (const sp of scatter(R, 46, 16, plate, taken, 4000)) reeds(ctx, sp.x, sp.y, 6 + Math.floor(R() * 8), R);
+  for (const sp of scatter(R, 6, 40, plate, taken)) scribble(ctx, sp.x - 36, sp.y - 14, 72, 3 + Math.floor(R() * 2), R);
+  // mist lying in bands
+  for (let i = 0; i < 7; i++) { const y = 120 + R() * 780; const g = ctx.createLinearGradient(0, y - 30, 0, y + 30); g.addColorStop(0, 'rgba(240,230,210,0)'); g.addColorStop(0.5, 'rgba(240,230,210,0.32)'); g.addColorStop(1, 'rgba(240,230,210,0)'); ctx.fillStyle = g; ctx.fillRect(0, y - 30, MAP_W, 60); }
+
+  sluiceGate(ctx, BRIDGE, R);
+  weirHouse(ctx, GATE, R);
+  inkInkwell(ctx, INKWELL);
+  inkSmudge(ctx, MAP_W - 70, MAP_H - 90, 30, 40, R);
+
+  label(ctx, 'the Reed Causeway', 160, 222, 16);
+  label(ctx, 'the Eel Dyke', 140, 832, 16);
+  label(ctx, 'the Sluice', BRIDGE.x - 10, BRIDGE.y + 76, 14);
+  label(ctx, 'the Weir House', GATE.x + 76, GATE.y - 196, 15);
+  label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
+
+  finishSheet(ctx, R, 'The Flooded Fen', 'Defence of Goosebridge Castle · Level 4', 40);
+  return cv;
+}
+
+// ── Level 5: the barrows ────────────────────────────────────────────────────
+
+/** A grassy burial mound; long barrows are stretched, and some have a stone door. */
+function barrowMound(ctx: Ctx, x: number, y: number, w: number, h: number, R: () => number, door = false) {
+  groundWash(ctx, x + w * 0.2, y + 4, w * 1.1, h * 0.5, 0.35);
+  const m = () => { ctx.beginPath(); ctx.moveTo(x - w, y); ctx.bezierCurveTo(x - w * 0.8, y - h * 1.1, x + w * 0.8, y - h * 1.1, x + w, y); ctx.closePath(); };
+  ctx.fillStyle = PAPER; m(); ctx.fill();
+  ctx.save(); m(); ctx.clip();
+  ctx.strokeStyle = 'rgba(58,34,18,0.5)'; ctx.lineWidth = 0.55; ctx.beginPath();
+  for (let k = 0; k < 6; k++) { const yy = y - h * (0.15 + k * 0.14); ctx.moveTo(x - w, yy + 4); ctx.quadraticCurveTo(x, yy - 6, x + w, yy + 4); }
+  ctx.stroke();
+  ctx.fillStyle = sepia(0.25); ctx.beginPath(); ctx.ellipse(x + w * 0.55, y, w * 0.6, h * 1.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; m(); ctx.stroke();
+  if (door) {
+    const dw = Math.min(16, w * 0.3);
+    ctx.fillStyle = PAPER; ctx.fillRect(x - dw - 6, y - h * 0.62, (dw + 6) * 2, h * 0.62);
+    ctx.lineWidth = 1.2; ctx.strokeRect(x - dw - 6, y - h * 0.62, (dw + 6) * 2, h * 0.62);
+    ctx.fillStyle = 'rgba(29,25,21,0.92)'; ctx.beginPath(); ctx.moveTo(x - dw, y); ctx.lineTo(x - dw, y - h * 0.5); ctx.lineTo(x + dw, y - h * 0.5); ctx.lineTo(x + dw, y); ctx.closePath(); ctx.fill();
+  }
+  // grass fringe
+  ctx.strokeStyle = 'rgba(58,34,18,0.5)'; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let i = 0; i < w / 3; i++) { const gx = x - w + R() * w * 2; ctx.moveTo(gx, y); ctx.lineTo(gx + (R() - 0.5) * 3, y - 4 - R() * 3); }
+  ctx.stroke();
+}
+/** A lone standing stone of the downs. */
+function stone(ctx: Ctx, x: number, y: number, h: number, R: () => number, lean = 0) {
+  groundWash(ctx, x + 4, y + 1, h * 0.5, h * 0.12, 0.4);
+  const w = h * 0.22;
+  const st = () => { ctx.beginPath(); ctx.moveTo(x - w, y); ctx.quadraticCurveTo(x - w * 1.1 + lean, y - h * 0.6, x - w * 0.5 + lean * 1.4, y - h); ctx.quadraticCurveTo(x + lean * 1.4, y - h * 1.08, x + w * 0.6 + lean * 1.4, y - h * 0.95); ctx.quadraticCurveTo(x + w * 1.1 + lean, y - h * 0.5, x + w, y); ctx.closePath(); };
+  ctx.fillStyle = '#d8c7a8'; st(); ctx.fill(); hatch(ctx, st, [x - w * 1.2 + Math.min(0, lean * 1.4), y - h * 1.1, w * 2.4 + Math.abs(lean) * 1.4, h * 1.1], 0.9, 2, 0.45, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; st(); ctx.stroke();
+}
+/** A dark yew. */
+function yew(ctx: Ctx, x: number, y: number, r: number, R: () => number) {
+  groundWash(ctx, x + r * 0.4, y + 2, r * 1.3, r * 0.3, 0.4);
+  limbs(ctx, [{ x1: x, y1: y, x2: x, y2: y - r * 0.8, w: r * 0.28 }], R, false);
+  const crown = () => { ctx.beginPath(); ctx.ellipse(x, y - r * 1.3, r * 0.95, r * 0.9, 0, 0, Math.PI * 2); };
+  ctx.fillStyle = PAPER; crown(); ctx.fill(); hatch(ctx, crown, [x - r, y - r * 2.2, r * 2, r * 1.8], 0.7, 1.5, 0.5, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath();
+  for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; const cx = x + Math.cos(a) * r * 0.88, cy = y - r * 1.3 + Math.sin(a) * r * 0.84; ctx.moveTo(cx + 4, cy); ctx.arc(cx, cy, 4, 0, Math.PI * 2); }
+  ctx.stroke();
+}
+/** A white horse cut in the chalk of a hillside. */
+function chalkHorse(ctx: Ctx, x: number, y: number) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.strokeStyle = 'rgba(250,244,230,0.95)'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-50, 0); ctx.bezierCurveTo(-30, -14, 10, -16, 30, -10); ctx.quadraticCurveTo(44, -20, 52, -30); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-36, 0); ctx.lineTo(-44, 18); ctx.moveTo(-20, 0); ctx.lineTo(-16, 20); ctx.moveTo(14, -4); ctx.lineTo(8, 18); ctx.moveTo(28, -6); ctx.lineTo(34, 16); ctx.moveTo(-50, 0); ctx.lineTo(-64, -8); ctx.stroke();
+  ctx.beginPath(); ctx.arc(52, -30, 3, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-50, 3); ctx.bezierCurveTo(-30, -10, 10, -12, 30, -6); ctx.stroke();
+  ctx.restore();
+}
+/** The Ward Ring: a henge of great stones round the place the wizard holds. */
+function wardRing(ctx: Ctx, gate: Vec, R: () => number) {
+  const cx = gate.x + 80, cy = gate.y + 6;
+  // bank and ditch
+  ctx.strokeStyle = 'rgba(58,34,18,0.35)'; ctx.lineWidth = 10; ctx.beginPath(); ctx.ellipse(cx, cy, 104, 66, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.ellipse(cx, cy, 110, 71, 0, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.ellipse(cx, cy, 98, 61, 0, 0, Math.PI * 2); ctx.stroke();
+  // stones: back half first, front half after
+  const at = (a: number) => ({ x: cx + Math.cos(a) * 86, y: cy + Math.sin(a) * 52 });
+  const angles = Array.from({ length: 12 }, (_, i) => (i / 12) * Math.PI * 2).filter((a) => Math.abs(Math.atan2(Math.sin(a), Math.cos(a)) - Math.PI) > 0.3 && Math.abs(Math.atan2(Math.sin(a), Math.cos(a)) + Math.PI) > 0.3);
+  for (const a of angles.filter((a) => Math.sin(a) < 0)) { const p = at(a); stone(ctx, p.x, p.y, 34, R); }
+  // the altar stone at the centre
+  ctx.fillStyle = '#d8c7a8'; ctx.fillRect(cx - 18, cy - 6, 36, 10); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(cx - 18, cy - 6, 36, 10);
+  for (const a of angles.filter((a) => Math.sin(a) >= 0)) { const p = at(a); stone(ctx, p.x, p.y, 34, R); }
+}
+
+function buildBarrows(scale: number): HTMLCanvasElement {
+  const cv = document.createElement('canvas');
+  cv.width = MAP_W * scale; cv.height = MAP_H * scale;
+  const ctx = cv.getContext('2d')!;
+  ctx.scale(scale, scale);
+  const R = rng(53);
+  const plate: [number, number, number, number] = [1210, 900, 350, 78];
+  paperGround(ctx, R, 60);
+
+  // the downs: long contour lines of chalk hills
+  ctx.strokeStyle = 'rgba(58,34,18,0.16)'; ctx.lineWidth = 0.7;
+  for (let k = 0; k < 26; k++) {
+    const y0 = 40 + k * 38 + R() * 10, amp = 14 + R() * 20, f = 0.003 + R() * 0.004, ph = R() * 6;
+    ctx.beginPath(); for (let x = 20; x <= MAP_W - 20; x += 16) { const y = y0 + Math.sin(x * f + ph) * amp; x === 20 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+  }
+  // tufts of downland grass
+  ctx.strokeStyle = 'rgba(58,34,18,0.42)'; ctx.lineWidth = 0.6;
+  for (let i = 0; i < 220; i++) {
+    const x = R() * MAP_W, y = 40 + R() * (MAP_H - 60), n = 3 + Math.floor(R() * 3);
+    ctx.beginPath(); for (let k = 0; k < n; k++) { const a = -Math.PI / 2 + (k - (n - 1) / 2) * 0.35; ctx.moveTo(x + k, y); ctx.lineTo(x + k + Math.cos(a) * 7, y + Math.sin(a) * 7); } ctx.stroke();
+  }
+  // the hollow way is sunk between banks; the corpse road runs over the top
+  embankment(ctx, LANES.king.pts.slice(0, LANES.king.pts.length - 3), R, 30);
+  inkSurreal.road(ctx, LANES.mill.pts, 'mill');
+  inkSurreal.road(ctx, LANES.king.pts, 'king');
+  inkSurreal.ley(ctx, LEY_EDGES.map((e) => e.pts), Object.values(NODE).filter((n) => !n.foundation && n.id !== 'ink').map((n) => ({ x: n.x, y: n.y })));
+
+  // the kennel barrow: the hollow way comes out of its door
+  barrowMound(ctx, BRIDGE.x, BRIDGE.y + 70, 120, 70, R, true);
+
+  const taken: Spot[] = [];
+  type Item = { y: number; draw: () => void };
+  const items: Item[] = [];
+  for (const sp of scatter(R, 4, 70, plate, taken)) { const w = 60 + R() * 50; items.push({ y: sp.y, draw: () => barrowMound(ctx, sp.x, sp.y, w, 26 + R() * 14, R, R() < 0.5) }); }
+  for (const sp of scatter(R, 7, 34, plate, taken)) items.push({ y: sp.y, draw: () => barrowMound(ctx, sp.x, sp.y, 28 + R() * 10, 22 + R() * 8, R) });
+  for (const sp of scatter(R, 12, 14, plate, taken)) { const h = 30 + R() * 26, l = (R() - 0.5) * 8; items.push({ y: sp.y, draw: () => stone(ctx, sp.x, sp.y, h, R, l) }); }
+  for (const sp of scatter(R, 9, 26, plate, taken)) items.push({ y: sp.y, draw: () => yew(ctx, sp.x, sp.y, 16 + R() * 8, R) });
+  const horse = scatter(R, 1, 70, plate, taken)[0];
+  if (horse) chalkHorse(ctx, horse.x, horse.y);
+  for (const sp of scatter(R, 5, 40, plate, taken)) scribble(ctx, sp.x - 36, sp.y - 14, 72, 3 + Math.floor(R() * 2), R);
+  items.push({ y: GATE.y + 60, draw: () => wardRing(ctx, GATE, R) });
+  items.push({ y: INKWELL.y + 22, draw: () => inkInkwell(ctx, INKWELL) });
+  items.sort((a, b) => a.y - b.y);
+  for (const it of items) it.draw();
+
+  // dusk: the sky darkens from the east, and the sheet's edges sink into shadow
+  const dusk = ctx.createLinearGradient(0, 0, 0, MAP_H);
+  dusk.addColorStop(0, 'rgba(60,40,30,0.16)'); dusk.addColorStop(0.4, 'rgba(60,40,30,0.04)'); dusk.addColorStop(1, 'rgba(60,40,30,0.1)');
+  ctx.fillStyle = dusk; ctx.fillRect(0, 0, MAP_W, MAP_H);
+
+  label(ctx, 'the Corpse Road', 150, 252, 16);
+  label(ctx, 'the Hollow Way', 600, 940, 16);
+  label(ctx, 'the Kennel Barrow', BRIDGE.x + 150, BRIDGE.y + 64, 13);
+  label(ctx, 'the Ward Ring', GATE.x + 80, GATE.y - 74, 15);
+  label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
+
+  finishSheet(ctx, R, 'The Barrows', 'Defence of Goosebridge Castle · Level 5', plate[1], plate[0]);
+  return cv;
 }

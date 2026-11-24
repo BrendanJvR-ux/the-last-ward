@@ -176,7 +176,93 @@ const KEEP_GEO: LevelGeometry = {
   ],
 };
 
-export const LEVEL_GEOMETRY: Record<LevelId, LevelGeometry> = { fields: FIELDS_GEO, courtyard: COURTYARD_GEO, keep: KEEP_GEO };
+// ── Level 4: the flooded fen ───────────────────────────────────────────────
+// The water meadows below Goosebridge in flood. Two raised causeways cross the water: the levy
+// wade in along the Reed Causeway (north-west), the dogs run the Eel Dyke past the sluice
+// (south-west). They meet at the Withy Bed and one causeway runs east to the Weir House,
+// where the wizard keeps his inkwell.
+const N_JUNCTION: Vec = { x: 860, y: 540 };
+const N_GATE: Vec = { x: 1440, y: 460 };
+const N_SLUICE: Vec = { x: 420, y: 760 };
+const N_INKWELL: Vec = { x: 1470, y: 640 };
+const N_SHARED: Vec[] = [N_JUNCTION, { x: 1060, y: 540 }, { x: 1200, y: 460 }, N_GATE];
+const FEN_GEO: LevelGeometry = {
+  junction: N_JUNCTION, gate: N_GATE, choke: N_SLUICE, inkwell: N_INKWELL,
+  castle: { x: -500, y: -500 }, mill: { x: -500, y: -500 }, pond: { x: -500, y: -500 }, river: [],
+  laneNames: { mill: 'Reed Causeway', king: 'Eel Dyke' },
+  millPts: [{ x: -40, y: 250 }, { x: 200, y: 250 }, { x: 380, y: 360 }, { x: 560, y: 300 }, { x: 720, y: 420 }, ...N_SHARED],
+  kingPts: [{ x: -40, y: 860 }, { x: 240, y: 860 }, N_SLUICE, { x: 620, y: 800 }, { x: 760, y: 680 }, ...N_SHARED],
+  leyNodes: [
+    { id: 'ink', x: N_INKWELL.x - 34, y: N_INKWELL.y - 6 },
+    { id: 'f_weir', x: 1300, y: 560, parent: 'ink', bow: 8, foundation: { name: 'Weir Head' } },
+    // south, along the staithes
+    { id: 's1', x: 1380, y: 790, parent: 'ink', bow: -6 },
+    { id: 'f_osiers', x: 1060, y: 650, parent: 's1', bow: 10, foundation: { name: 'Osier Bed' } },
+    { id: 's2', x: 1080, y: 820, parent: 's1', bow: 8 },
+    { id: 'f_staithe', x: 860, y: 740, parent: 's2', bow: -8, foundation: { name: 'Peat Staithe' } },
+    { id: 'f_withy', x: 760, y: 560, parent: 's2', bow: 12, foundation: { name: 'Withy Bed' } },
+    { id: 's3', x: 700, y: 930, parent: 's2', bow: -10 },
+    { id: 'f_island', x: 560, y: 900, parent: 's3', bow: 6, foundation: { name: 'Eel Island' } },
+    { id: 'f_dyke', x: 300, y: 740, parent: 's3', bow: -12, foundation: { name: 'Dyke End' } },
+    // north, across the drowned meadows
+    { id: 'n1', x: 1520, y: 330, parent: 'ink', bow: 8 },
+    { id: 'f_sluice', x: 1340, y: 360, parent: 'n1', bow: -6, foundation: { name: 'Sluice House' } },
+    { id: 'n2', x: 1250, y: 230, parent: 'n1', bow: 10 },
+    { id: 'f_punt', x: 1200, y: 350, parent: 'n2', bow: 6, foundation: { name: 'Punt Landing' } },
+    { id: 'n3', x: 980, y: 250, parent: 'n2', bow: -8 },
+    { id: 'f_drowned', x: 980, y: 440, parent: 'n3', bow: 10, foundation: { name: 'Drowned Mill' } },
+    { id: 'n4', x: 700, y: 160, parent: 'n3', bow: 8 },
+    { id: 'f_heronry', x: 560, y: 200, parent: 'n4', bow: -6, foundation: { name: 'Heronry' } },
+    { id: 'f_carr', x: 580, y: 420, parent: 'n4', bow: 12, foundation: { name: 'Alder Carr' } },
+    { id: 'n5', x: 300, y: 170, parent: 'n4', bow: -10 },
+    { id: 'f_reedbank', x: 300, y: 380, parent: 'n5', bow: 8, foundation: { name: 'Reed Bank' } },
+    { id: 'f_peat', x: 120, y: 360, parent: 'n5', bow: -8, foundation: { name: 'Peat Cuttings' } },
+  ],
+};
+
+// ── Level 5: the barrows ───────────────────────────────────────────────────
+// The chalk downs at dusk, where the hunt-master kennels his dogs in the old mound doors and the
+// Cairn-Born sleep in the long barrows. The levy come over the hill by the Corpse Road; the dogs
+// break out of the mound door and up the Hollow Way. The wizard holds the Ward Ring, a henge.
+const B_JUNCTION: Vec = { x: 900, y: 560 };
+const B_GATE: Vec = { x: 1400, y: 520 };
+const B_DOOR: Vec = { x: 260, y: 900 };
+const B_INKWELL: Vec = { x: 1462, y: 700 };
+const B_SHARED: Vec[] = [B_JUNCTION, { x: 1100, y: 600 }, { x: 1240, y: 520 }, B_GATE];
+const BARROWS_GEO: LevelGeometry = {
+  junction: B_JUNCTION, gate: B_GATE, choke: B_DOOR, inkwell: B_INKWELL,
+  castle: { x: -500, y: -500 }, mill: { x: -500, y: -500 }, pond: { x: -500, y: -500 }, river: [],
+  laneNames: { mill: 'Corpse Road', king: 'Hollow Way' },
+  millPts: [{ x: -40, y: 280 }, { x: 200, y: 280 }, { x: 360, y: 180 }, { x: 560, y: 200 }, { x: 720, y: 340 }, ...B_SHARED],
+  kingPts: [{ x: 260, y: 1040 }, B_DOOR, { x: 480, y: 820 }, { x: 660, y: 880 }, { x: 820, y: 760 }, ...B_SHARED],
+  leyNodes: [
+    { id: 'ink', x: B_INKWELL.x - 34, y: B_INKWELL.y - 6 },
+    { id: 'f_ring', x: 1280, y: 640, parent: 'ink', bow: 8, foundation: { name: 'Stone Ring' } },
+    // south, under the downs
+    { id: 's1', x: 1380, y: 840, parent: 'ink', bow: -6 },
+    { id: 'f_gallows', x: 980, y: 720, parent: 's1', bow: 10, foundation: { name: 'Gibbet Knap' } },
+    { id: 's2', x: 900, y: 900, parent: 's1', bow: 8 },
+    { id: 'f_longbarrow', x: 760, y: 600, parent: 's2', bow: -12, foundation: { name: 'Long Barrow' } },
+    { id: 'f_cromlech', x: 600, y: 760, parent: 's2', bow: 8, foundation: { name: 'Cromlech' } },
+    { id: 'f_hillfort', x: 420, y: 940, parent: 's2', bow: -6, foundation: { name: 'Hill Fort' } },
+    { id: 's3', x: 170, y: 960, parent: 's2', bow: 10 },
+    { id: 'f_yew', x: 140, y: 820, parent: 's3', bow: -8, foundation: { name: 'Old Yew' } },
+    // north, along the ridge
+    { id: 'n1', x: 1500, y: 360, parent: 'ink', bow: 8 },
+    { id: 'f_owlstone', x: 1180, y: 400, parent: 'n1', bow: -6, foundation: { name: 'Owl Stone' } },
+    { id: 'f_kingstone', x: 1080, y: 490, parent: 'n1', bow: 10, foundation: { name: 'King Stone' } },
+    { id: 'n2', x: 1100, y: 200, parent: 'n1', bow: -8 },
+    { id: 'f_chalk', x: 860, y: 420, parent: 'n2', bow: 8, foundation: { name: 'Chalk Horse' } },
+    { id: 'n3', x: 640, y: 90, parent: 'n2', bow: 10 },
+    { id: 'f_dolmen', x: 470, y: 300, parent: 'n3', bow: -8, foundation: { name: 'Dolmen' } },
+    { id: 'f_dyke', x: 660, y: 470, parent: 'n3', bow: 12, foundation: { name: 'Bank and Ditch' } },
+    { id: 'n4', x: 260, y: 110, parent: 'n3', bow: -8 },
+    { id: 'f_tumulus', x: 300, y: 350, parent: 'n4', bow: 8, foundation: { name: 'Tumulus' } },
+    { id: 'f_cairnhill', x: 120, y: 170, parent: 'n4', bow: -6, foundation: { name: 'Cairn Hill' } },
+  ],
+};
+
+export const LEVEL_GEOMETRY: Record<LevelId, LevelGeometry> = { fields: FIELDS_GEO, courtyard: COURTYARD_GEO, keep: KEEP_GEO, fen: FEN_GEO, barrows: BARROWS_GEO };
 
 export interface Lane {
   id: LaneId;
