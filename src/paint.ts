@@ -258,6 +258,8 @@ function wallBand(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, hori
 }
 
 /** Broken masonry: a scatter of hatched stones. */
+const sepiaWash = (a: number) => `rgba(86,68,52,${a})`;
+
 function rubble(ctx: Ctx, cx: number, cy: number, w: number, h: number, n: number, R: () => number, avoid?: (x: number, y: number) => boolean) {
   for (let i = 0; i < n; i++) {
     const x = cx + (R() - 0.5) * w, y = cy + (R() - 0.5) * h, r = 4 + R() * 7;
@@ -479,6 +481,43 @@ function buildCourtyard(scale: number): HTMLCanvasElement {
     ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath();
     ctx.moveTo(x, 6); ctx.lineTo(x - d * 10, 12); ctx.lineTo(x + d * 2, 20); ctx.lineTo(x - d * 8, 28); ctx.lineTo(x, 36); ctx.stroke();
   }
+  // ivy hanging over the walls, and torch sconces along them
+  for (const [ix, iy, dir] of [[150, 36, 1], [420, 36, 1], [1240, 36, 1], [1480, 36, 1], [36, 250, 0], [36, 760, 0], [520, 962, -1], [940, 962, -1]] as [number, number, number][]) {
+    const rv = seed(ix, iy, 31);
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.8;
+    for (let k = 0; k < 5; k++) {
+      // one tendril creeping off the wall, with leaves along it
+      const pts: Vec[] = [];
+      let px = dir === 0 ? ix : ix + (rv() - 0.5) * 50, py = dir === 0 ? iy + (rv() - 0.5) * 50 : iy;
+      const len = 16 + rv() * 30;
+      for (let t = 0; t <= len; t += 3) {
+        if (dir === 0) px += 3; else py += 3 * dir;
+        const wob = Math.sin(t * 0.35 + k * 1.7) * 2.5;
+        pts.push(dir === 0 ? { x: px, y: py + wob } : { x: px + wob, y: py });
+      }
+      ctx.strokeStyle = INK; ctx.lineWidth = 0.7; ctx.beginPath();
+      pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke();
+      ctx.fillStyle = PAPER; ctx.lineWidth = 0.6;
+      for (let i = 2; i < pts.length; i += 3) {
+        const p = pts[i], side = i % 2 ? 1 : -1;
+        const lx = p.x + (dir === 0 ? 0 : side * 3), ly = p.y + (dir === 0 ? side * 3 : 0);
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(lx + side * 2, ly - 2, lx + side * 4, ly + 1); ctx.quadraticCurveTo(lx, ly + 3, p.x, p.y); ctx.fill(); ctx.stroke();
+      }
+    }
+  }
+  for (const tx of [300, 700, 1100, 1380]) {
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(tx, 36); ctx.lineTo(tx, 48); ctx.stroke();
+    ctx.fillStyle = 'rgba(206,120,52,0.55)'; ctx.beginPath(); ctx.moveTo(tx - 3, 37); ctx.quadraticCurveTo(tx, 26, tx + 1, 22); ctx.quadraticCurveTo(tx + 4, 30, tx + 3, 37); ctx.closePath(); ctx.fill();
+    ctx.lineWidth = 0.6; ctx.stroke();
+  }
+  // spent arrows and a broken shield where the breach was stormed
+  for (const [ax, ay, aa] of [[790, 140, 0.6], [1050, 120, -0.8], [980, 160, 2.3], [120, 560, 1.2], [210, 440, -0.4], [80, 360, 0.2]] as [number, number, number][]) {
+    if (nearRoad({ x: ax, y: ay }, 22)) continue;
+    ctx.save(); ctx.translate(ax, ay); ctx.rotate(aa);
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.moveTo(-9, 0); ctx.lineTo(-12, -2.5); ctx.moveTo(-9, 0); ctx.lineTo(-12, 2.5); ctx.stroke();
+    ctx.restore();
+  }
+  if (!nearRoad({ x: 1060, y: 160 }, 26)) { ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(1060, 160, 9, 0.4, Math.PI * 1.7); ctx.lineTo(1060, 160); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   // the fallen gatehouse: two stumps of tower either side of the passage
   turret(ctx, 24, 440, 42, 46, 0, 'none', false, R);
   turret(ctx, 24, 575, 42, 46, 0, 'none', false, R);
@@ -506,14 +545,151 @@ function buildCourtyard(scale: number): HTMLCanvasElement {
     { y: 650, draw: () => turret(ctx, 1545, 650, 44, 70, 0, 'none', false, R) },
     { y: INKWELL.y + 22, draw: () => inkInkwell(ctx, INKWELL) },
   ];
-  // a few fynbos shrubs between the flagstones
-  const taken: Spot[] = [];
-  for (let i = 0; i < 16; i++) {
-    const sp = findSpot(R, 22, taken);
+  // the life of the yard: claim ground around what is already built, then fill in
+  const taken: Spot[] = [
+    { x: 700, y: 240, r: 50 }, { x: 1010, y: 340, r: 50 }, { x: 770, y: 450, r: 55 }, { x: 525, y: 640, r: 50 },
+    { x: 272, y: 770, r: 45 }, { x: 640, y: 930, r: 50 }, { x: 1120, y: 925, r: 60 }, { x: 1280, y: 925, r: 60 },
+    { x: 1338, y: 920, r: 20 }, { x: 1062, y: 940, r: 18 }, { x: 1504, y: 935, r: 22 }, { x: 1478, y: 420, r: 45 },
+  ];
+  const decor: [(x: number, y: number, r: () => number) => void, number, number, number][] = [
+    [beehives, 30, 300, 230], [kitchenGarden, 42, 420, 840], [woodpile, 28, 860, 880], [weaponRack, 26, 330, 640],
+    [archeryButt, 18, 150, 760], [archeryButt, 18, 150, 840], [dovecote, 22, 1150, 640], [marketStall, 36, 980, 780],
+    [washingLine, 40, 240, 120], [statue, 22, 1240, 230], [crates, 20, 1420, 730], [crates, 20, 470, 120],
+    [puddle, 24, 880, 640], [puddle, 20, 360, 460], [hens, 26, 760, 760], [hens, 26, 1100, 120], [woodpile, 24, 1420, 180],
+  ];
+  for (const [draw, r, nx, ny] of decor) {
+    const sp = findSpot(R, r, taken, { x: nx, y: ny }, 160);
+    if (!sp || sp.y < 70 || sp.y > 930 || sp.x < 70 || sp.x > 1500) continue;
+    const dx = sp.x, dy = sp.y, rs = seed(dx, dy, 12);
+    items.push({ y: dy, draw: () => draw(dx, dy, rs) });
+  }
+  // and a few fynbos shrubs between the flagstones
+  for (let i = 0; i < 10; i++) {
+    const sp = findSpot(R, 20, taken);
     if (!sp || sp.x < 60 || sp.y < 70 || sp.y > 900) continue;
-    if ([[700, 252], [1010, 360], [770, 482], [525, 662], [270, 780], [640, 944], [1200, 950]].some(([bx, by]) => Math.hypot(bx - sp.x, by - sp.y) < 80)) continue;
     const sx = sp.x, sy = sp.y, rs = seed(sx, sy, 6);
     items.push({ y: sy, draw: () => { groundWash(ctx, sx + 4, sy + 2, 18, 5, 0.3); for (let k = 0; k < 3; k++) { const tx = sx + (k - 1) * 8, ty = sy - 14 - rs() * 8; ctx.strokeStyle = INK; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(sx + (k - 1) * 2, sy); ctx.quadraticCurveTo((sx + tx) / 2, (sy + ty) / 2, tx, ty + 3); ctx.stroke(); proteaHead(ctx, tx, ty, 1, rs); } } });
+  }
+  // ── yard life, drawn here so each piece can use this sheet's context ──
+  function beehives(x: number, y: number) {
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillStyle = PAPER;
+    ctx.fillRect(x - 30, y - 6, 60, 5); ctx.strokeRect(x - 30, y - 6, 60, 5);
+    ctx.beginPath(); ctx.moveTo(x - 26, y - 1); ctx.lineTo(x - 26, y + 6); ctx.moveTo(x + 26, y - 1); ctx.lineTo(x + 26, y + 6); ctx.stroke();
+    for (const hx of [-18, 0, 18]) {
+      const sk = () => { ctx.beginPath(); ctx.moveTo(x + hx - 9, y - 6); ctx.quadraticCurveTo(x + hx - 9, y - 26, x + hx, y - 27); ctx.quadraticCurveTo(x + hx + 9, y - 26, x + hx + 9, y - 6); ctx.closePath(); };
+      ctx.fillStyle = PAPER; sk(); ctx.fill();
+      ctx.save(); sk(); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath();
+      for (let yy = y - 9; yy > y - 27; yy -= 3.2) { ctx.moveTo(x + hx - 10, yy); ctx.quadraticCurveTo(x + hx, yy + 1.5, x + hx + 10, yy); }
+      ctx.stroke(); ctx.restore();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; sk(); ctx.stroke();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + hx, y - 9, 1.6, Math.PI, 0); ctx.fill();
+    }
+    ctx.fillStyle = INK; for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.arc(x - 20 + i * 7, y - 34 - (i % 3) * 4, 0.9, 0, Math.PI * 2); ctx.fill(); }
+  }
+  function kitchenGarden(x: number, y: number, r: () => number) {
+    for (const [bx, by] of [[-40, -22], [6, -22], [-40, 6], [6, 6]]) {
+      ctx.fillStyle = 'rgba(92,70,50,0.18)'; ctx.fillRect(x + bx, y + by, 36, 18);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(x + bx, y + by, 36, 18);
+      ctx.lineWidth = 0.6; ctx.beginPath();
+      for (let row = 0; row < 3; row++) for (let k = 0; k < 6; k++) { const px = x + bx + 4 + k * 5.6, py = y + by + 5 + row * 5; ctx.moveTo(px, py + 1.5); ctx.lineTo(px - 1.4, py - 1.5 - r()); ctx.moveTo(px, py + 1.5); ctx.lineTo(px + 1.4, py - 1.5 - r()); }
+      ctx.stroke();
+    }
+  }
+  function woodpile(x: number, y: number) {
+    groundWash(ctx, x + 4, y + 3, 30, 7, 0.35);
+    for (let row = 0; row < 3; row++) for (let k = 0; k < 4 - row; k++) {
+      const lx = x - 15 + row * 5 + k * 10, ly = y - 5 - row * 9;
+      ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(lx, ly, 5, 4.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 0.5; ctx.beginPath(); ctx.ellipse(lx, ly, 2.6, 2.3, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(lx, ly, 0.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x + 24, y); ctx.lineTo(x + 30, y - 18); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x + 27, y - 15); ctx.lineTo(x + 34, y - 20); ctx.lineTo(x + 31, y - 13); ctx.closePath(); ctx.fill();
+  }
+  function weaponRack(x: number, y: number) {
+    groundWash(ctx, x + 4, y + 3, 26, 6, 0.35);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 20, y); ctx.lineTo(x - 20, y - 30); ctx.moveTo(x + 20, y); ctx.lineTo(x + 20, y - 30); ctx.moveTo(x - 22, y - 24); ctx.lineTo(x + 22, y - 24); ctx.stroke();
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) { const sx = x - 14 + i * 7; ctx.beginPath(); ctx.moveTo(sx, y - 2); ctx.lineTo(sx + 2, y - 44); ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(sx + 2, y - 50); ctx.lineTo(sx + 4, y - 43); ctx.lineTo(sx, y - 43); ctx.closePath(); ctx.fill(); }
+    // a round shield leaning against it
+    ctx.fillStyle = PAPER; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(x + 26, y - 9, 8, 10, 0.15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + 26, y - 9, 2.2, 0, Math.PI * 2); ctx.fill();
+  }
+  function archeryButt(x: number, y: number) {
+    groundWash(ctx, x + 3, y + 2, 16, 4, 0.35);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.lineTo(x - 3, y - 14); ctx.moveTo(x + 8, y); ctx.lineTo(x + 3, y - 14); ctx.stroke();
+    ctx.fillStyle = PAPER; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y - 22, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 0.7; for (const rr of [8.5, 5]) { ctx.beginPath(); ctx.arc(x, y - 22, rr, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x, y - 22, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(x + 3, y - 24); ctx.lineTo(x + 13, y - 29); ctx.moveTo(x + 13, y - 29); ctx.lineTo(x + 16, y - 27); ctx.moveTo(x + 13, y - 29); ctx.lineTo(x + 15, y - 32); ctx.stroke();
+  }
+  function dovecote(x: number, y: number, r: () => number) {
+    groundWash(ctx, x + 4, y + 3, 16, 5, 0.35);
+    limbs(ctx, [{ x1: x, y1: y, x2: x, y2: y - 46, w: 3.2 }], r, false);
+    house(ctx, x, y - 46, 26, 16, 12, r, false);
+    ctx.fillStyle = INK; for (const hx of [-6, 0, 6]) { ctx.beginPath(); ctx.arc(x + hx, y - 54, 2.2, Math.PI, 0); ctx.lineTo(x + hx + 2.2, y - 52); ctx.lineTo(x + hx - 2.2, y - 52); ctx.fill(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.8;
+    for (const [bx, by] of [[x - 18, y - 74], [x + 14, y - 82]]) { ctx.beginPath(); ctx.moveTo(bx - 5, by); ctx.quadraticCurveTo(bx - 2, by - 4, bx, by); ctx.quadraticCurveTo(bx + 2, by - 4, bx + 5, by); ctx.stroke(); }
+  }
+  function marketStall(x: number, y: number, r: () => number) {
+    groundWash(ctx, x + 6, y + 3, 40, 8, 0.35);
+    ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillRect(x - 30, y - 18, 60, 18); ctx.strokeRect(x - 30, y - 18, 60, 18);
+    ctx.beginPath(); ctx.moveTo(x - 28, y - 18); ctx.lineTo(x - 28, y - 46); ctx.moveTo(x + 28, y - 18); ctx.lineTo(x + 28, y - 46); ctx.stroke();
+    // striped awning with a scalloped edge
+    const aw = () => { ctx.beginPath(); ctx.moveTo(x - 34, y - 40); ctx.lineTo(x - 26, y - 54); ctx.lineTo(x + 26, y - 54); ctx.lineTo(x + 34, y - 40); for (let i = 0; i < 6; i++) ctx.arc(x + 34 - 6 - i * 11.4 + 0.3, y - 40, 5.7, 0, Math.PI); ctx.closePath(); };
+    ctx.fillStyle = PAPER; aw(); ctx.fill();
+    ctx.save(); aw(); ctx.clip(); ctx.fillStyle = sepiaWash(0.45); for (let i = -3; i < 3; i += 2) ctx.fillRect(x + i * 11.4, y - 56, 11.4, 22); ctx.restore();
+    ctx.lineWidth = 1; aw(); ctx.stroke();
+    // wares: pots and loaves on the counter
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(x - 20 + i * 13, y - 21, 4.5, 3.6 + r(), 0, Math.PI, 0); ctx.fill(); ctx.stroke(); }
+  }
+  function washingLine(x: number, y: number) {
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 40, y); ctx.lineTo(x - 40, y - 40); ctx.moveTo(x + 40, y); ctx.lineTo(x + 40, y - 40); ctx.stroke();
+    ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x - 40, y - 38); ctx.quadraticCurveTo(x, y - 30, x + 40, y - 38); ctx.stroke();
+    for (const [cx, w, h] of [[-26, 14, 18], [-6, 18, 14], [16, 12, 20]] as [number, number, number][]) {
+      const top = y - 34 + Math.abs(cx) * 0.04;
+      const cl = () => { ctx.beginPath(); ctx.moveTo(x + cx - w / 2, top); ctx.lineTo(x + cx + w / 2, top); ctx.lineTo(x + cx + w / 2 - 1, top + h); ctx.quadraticCurveTo(x + cx, top + h + 3, x + cx - w / 2 + 1, top + h); ctx.closePath(); };
+      ctx.fillStyle = PAPER; cl(); ctx.fill(); hatch(ctx, cl, [x + cx - w / 2, top, w, h + 4], 1.2, 2, 0.4); ctx.strokeStyle = INK; ctx.lineWidth = 0.9; cl(); ctx.stroke();
+    }
+  }
+  function statue(x: number, y: number, r: () => number) {
+    groundWash(ctx, x + 6, y + 3, 24, 6, 0.4);
+    const plinth = () => { ctx.beginPath(); ctx.rect(x - 14, y - 16, 28, 16); };
+    ctx.fillStyle = PAPER; plinth(); ctx.fill(); hatch(ctx, plinth, [x - 14, y - 16, 28, 16], -0.3, 1.6, 0.45, INK, r); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; plinth(); ctx.stroke();
+    // a robed founder holding up a quill, like the wizard
+    const fig = () => { ctx.beginPath(); ctx.moveTo(x - 8, y - 16); ctx.quadraticCurveTo(x - 9, y - 40, x - 4, y - 50); ctx.lineTo(x + 4, y - 50); ctx.quadraticCurveTo(x + 9, y - 40, x + 8, y - 16); ctx.closePath(); };
+    ctx.fillStyle = '#e6dfcf'; fig(); ctx.fill(); hatch(ctx, fig, [x - 10, y - 52, 20, 38], -0.7, 1.7, 0.45); ctx.strokeStyle = INK; ctx.lineWidth = 1.1; fig(); ctx.stroke();
+    ctx.fillStyle = '#e6dfcf'; ctx.beginPath(); ctx.arc(x, y - 55, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 5, y - 42); ctx.lineTo(x + 12, y - 60); ctx.stroke();
+    ctx.lineWidth = 0.5; ctx.beginPath(); for (let t = 0.3; t < 1; t += 0.12) { const px = x + 5 + 7 * t, py = y - 42 - 18 * t; ctx.moveTo(px, py); ctx.lineTo(px + 3, py + 1); } ctx.stroke();
+  }
+  function crates(x: number, y: number, r: () => number) {
+    groundWash(ctx, x + 4, y + 3, 22, 5, 0.35);
+    for (const [cx, cy, w] of [[-10, 0, 18], [9, 0, 16], [-1, -18, 16]] as [number, number, number][]) {
+      const b = () => { ctx.beginPath(); ctx.rect(x + cx - w / 2, y + cy - w, w, w); };
+      ctx.fillStyle = PAPER; b(); ctx.fill(); hatch(ctx, b, [x + cx - w / 2, y + cy - w, w, w], -0.4, 2.4, 0.4, INK, r);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; b(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + cx - w / 2, y + cy - w); ctx.lineTo(x + cx + w / 2, y + cy); ctx.stroke();
+    }
+  }
+  function puddle(x: number, y: number) {
+    ctx.fillStyle = 'rgba(52,48,46,0.16)'; ctx.beginPath(); ctx.ellipse(x, y, 24, 9, 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.ellipse(x, y, 24, 9, 0.1, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(x + 4, y, 9, 3, 0.1, 0, Math.PI * 2); ctx.stroke();
+  }
+  function hens(x: number, y: number, r: () => number) {
+    for (let i = 0; i < 3; i++) {
+      const hx = x + (i - 1) * 16 + (r() - 0.5) * 6, hy = y + (r() - 0.5) * 10, d = r() < 0.5 ? -1 : 1;
+      ctx.save(); ctx.translate(hx, hy); ctx.scale(d, 1);
+      groundWash(ctx, 0, 1, 8, 2.5, 0.35);
+      ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(-7, -6); ctx.quadraticCurveTo(-8, 0, 0, 0); ctx.quadraticCurveTo(6, 0, 6, -6); ctx.lineTo(7, -11); ctx.quadraticCurveTo(4, -13, 3, -9); ctx.quadraticCurveTo(-2, -9, -7, -6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-7, -6); ctx.lineTo(-10, -10); ctx.lineTo(-8, -5); ctx.stroke();
+      ctx.fillStyle = '#7a2826'; ctx.beginPath(); ctx.arc(5.5, -12.5, 1.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(7, -10); ctx.lineTo(9.5, -9.5); ctx.lineTo(7, -9); ctx.fill(); ctx.beginPath(); ctx.arc(5.2, -10.3, 0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(-1, 3); ctx.moveTo(2, 0); ctx.lineTo(2, 3); ctx.stroke();
+      ctx.restore();
+    }
   }
   items.sort((a, b) => a.y - b.y);
   for (const it of items) it.draw();
@@ -525,6 +701,6 @@ function buildCourtyard(scale: number): HTMLCanvasElement {
   label(ctx, 'the East Gate', 1462, 594, 15);
   label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
 
-  finishSheet(ctx, R, 'The Castle Courtyard', 'Defence of Goosebridge Castle · the second sheet');
+  finishSheet(ctx, R, 'The Castle Courtyard', 'Defence of Goosebridge Castle · Level 2');
   return cv;
 }

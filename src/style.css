@@ -360,3 +360,11 @@ button.gild, .tower-row button.gild, button.gilt-btn { background: linear-gradie
 .menu .resume { text-align: center; margin: 16px 0 0; }
 body[data-menu] #app { filter: saturate(0.85); }
 @media (max-width: 700px) { .menu { padding: 8px; } .menu-panel { padding: 14px; } .menu-panel h1 { font-size: 24px; } }
+
+/* Title page of the menu: a column of buttons */
+.menu-title, .menu-rewards, .menu-exit { max-width: 560px; }
+.menu-buttons { display: flex; flex-direction: column; gap: 10px; max-width: 340px; margin: 18px auto 4px; }
+.menu-buttons button { min-height: 52px; font-size: 19px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.menu-buttons button small { font-size: 12.5px; font-style: italic; opacity: 0.75; }
+.menu .menu-back { text-align: center; margin: 16px 0 0; }
+.menu .menu-back button { min-width: 160px; min-height: 44px; }

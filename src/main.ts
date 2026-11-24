@@ -250,6 +250,10 @@ function handleAction(e: Event) {
     case 'play': startLevel(el.dataset.level as LevelId); break;
     case 'menu': openMenu(); break;
     case 'closeMenu': closeMenu(); break;
+    case 'menuStart': menuView = 'levels'; renderMenu(); return;
+    case 'menuRewards': menuView = 'rewards'; renderMenu(); return;
+    case 'menuExit': menuView = 'exit'; renderMenu(); return;
+    case 'menuBack': menuView = 'title'; renderMenu(); return;
     case 'ribbon': ribbonFolded = !ribbonFolded; break;
   }
   lastSig = '';
@@ -299,7 +303,10 @@ function restart() {
 
 window.addEventListener('keydown', (e) => {
   const tag = (e.target as HTMLElement).tagName;
-  if (menuOpen) { if (e.key === 'Escape' && menuCanClose()) closeMenu(); return; }
+  if (menuOpen) {
+    if (e.key === 'Escape') { if (menuView !== 'title') { menuView = 'title'; renderMenu(); } else if (menuCanClose()) closeMenu(); }
+    return;
+  }
   if (e.key === 'Escape') { closePopover(); cancelGesture(); bindConfirm = null; view.bindPreview = null; lastSig = ''; return; }
   if (e.key === 'p' || e.key === 'P' || (e.key === ' ' && tag !== 'BUTTON')) { e.preventDefault(); togglePause(); return; }
   if ((e.key === 'u' || e.key === 'U') && s.phase === 'prep') { undoTrace(s); return; }
@@ -407,9 +414,9 @@ function renderMargin() {
       <section class="card"><h3>Unthreaded towers</h3><ul class="towers dim">${s.towers.filter((t) => !t.traced && !t.bound).map((t) => `<li class="tower-row"><span class="ico" data-tower="${t.type}"></span><span class="tw"><b>${esc(tname(t.type))}</b><small>${esc(fname(t.foundation))} · attacking</small></span></li>`).join('') || '<li class="sub">None</li>'}</ul></section>`;
   }
   if (s.phase === 'victory') h = s.level === 'fields'
-    ? `<h2><small>The End of the first sheet</small>Goosebridge stands</h2><p class="hint">Every wave held in the fields. The fight moves inside the walls.</p><div class="start"><button data-act="play" data-level="courtyard" class="primary">On to the Castle Courtyard</button><button data-act="restart">Play the fields again</button></div>`
-    : `<h2><small>The End</small>The courtyard held</h2><p class="hint">Every wave held in the courtyard.</p><div class="start"><button data-act="menu" class="primary">Back to the menu</button><button data-act="restart">Play the courtyard again</button></div>`;
-  if (s.phase === 'defeat') h = `<h2><small>Wave ${s.wave}</small>${s.level === 'fields' ? 'The gate has fallen' : 'The east gate is broken'}</h2><p class="hint">Restart clears gold, leaves, binds and every thread.</p><div class="start"><button data-act="restart" class="primary">Restart this sheet</button><button data-act="menu">Main menu</button></div>`;
+    ? `<h2><small>Level 1 complete</small>The gate held</h2><p class="hint">Every wave held at the gate. The fight moves inside the walls.</p><div class="start"><button data-act="play" data-level="courtyard" class="primary">On to Level 2: the Castle Courtyard</button><button data-act="restart">Play Gate Defence again</button></div>`
+    : `<h2><small>Level 2 complete</small>The courtyard held</h2><p class="hint">Every wave held in the courtyard.</p><div class="start"><button data-act="menu" class="primary">Back to the menu</button><button data-act="restart">Play the courtyard again</button></div>`;
+  if (s.phase === 'defeat') h = `<h2><small>Wave ${s.wave}</small>${s.level === 'fields' ? 'The gate has fallen' : 'The east gate is broken'}</h2><p class="hint">Restart clears gold, leaves, binds and every thread.</p><div class="start"><button data-act="restart" class="primary">Restart this level</button><button data-act="menu">Main menu</button></div>`;
   const focused = document.activeElement as HTMLElement | null;
   const key = focused && margin.contains(focused) ? focused.getAttribute('data-act') + '|' + (focused.dataset.id ?? focused.dataset.f ?? focused.dataset.type ?? '') : null;
   margin.innerHTML = h;
@@ -428,13 +435,13 @@ function renderOverlay() {
     const bound = s.towers.filter((t) => t.bound).length;
     const stats = `<p class="sub">Castle ${s.castleHp}/${BALANCE.castleHp} · ${s.kills} foes turned back · ${bound} tower${bound === 1 ? '' : 's'} bound in gold</p>`;
     overlay.innerHTML = s.level === 'fields'
-      ? `<div class="plate"><p class="kicker">The first sheet</p><h2>The fields are held</h2><p class="caption">“The levy broke on the roads, and the dogs on the bridge. But the old wizard turned the page: the outer wall had already fallen.”</p>${stats}<button data-act="play" data-level="courtyard" class="primary">On to the Castle Courtyard</button> <button data-act="restart">Read it again</button></div>`
+      ? `<div class="plate"><p class="kicker">Level 1 · Gate Defence</p><h2>The gate is held</h2><p class="caption">“The levy broke on the roads, and the dogs on the bridge. But the old wizard turned the page: the outer wall had already fallen.”</p>${stats}<button data-act="play" data-level="courtyard" class="primary">On to Level 2: the Castle Courtyard</button> <button data-act="restart">Read it again</button></div>`
       : `<div class="plate"><p class="kicker">The End</p><h2>Defence of Goosebridge Castle</h2><p class="caption">“And so Goosebridge Castle held, and the old wizard let the ink dry on the final page.”</p>${stats}<button data-act="menu" class="primary">Back to the menu</button> <button data-act="restart">Read it again</button></div>`;
     recordWin(s.level, s.castleHp);
   } else if (s.phase === 'defeat') {
     overlay.hidden = false;
     overlay.className = 'defeat';
-    overlay.innerHTML = `<div class="plate"><p class="kicker">Wave ${s.wave}</p><h2>${s.level === 'fields' ? 'The gate has fallen' : 'The east gate is broken'}</h2><p class="caption">The ink ran dry before the last ward could hold. Turn back the page and try another thread.</p><button data-act="restart" class="primary">Restart this sheet</button> <button data-act="menu">Main menu</button></div>`;
+    overlay.innerHTML = `<div class="plate"><p class="kicker">Wave ${s.wave}</p><h2>${s.level === 'fields' ? 'The gate has fallen' : 'The east gate is broken'}</h2><p class="caption">The ink ran dry before the last ward could hold. Turn back the page and try another thread.</p><button data-act="restart" class="primary">Restart this level</button> <button data-act="menu">Main menu</button></div>`;
   } else if (s.paused) {
     overlay.hidden = false;
     overlay.className = 'paused';
@@ -542,8 +549,8 @@ function hydrateIcons(root: HTMLElement) {
 // ── Main menu ───────────────────────────────────────────────────────────────
 const menuEl = $('menu');
 const LEVELS: { id: LevelId; name: string; sub: string; blurb: string }[] = [
-  { id: 'fields', name: 'The Fields', sub: 'First sheet', blurb: 'Two roads cross the fields to Goosebridge Castle: the Fen Levy on the Mill Road, the war dogs over the bridge. Bramble, Ember, Bell and Verdigris hold the way.' },
-  { id: 'courtyard', name: 'The Castle Courtyard', sub: 'Second sheet', blurb: 'The outer wall has fallen. The levy pour through the ruined gatehouse and the dogs leap the breach. Hold the east gate with gargoyles, mangonels, ink fountains and banners.' },
+  { id: 'fields', name: 'Gate Defence', sub: 'Level 1', blurb: 'Two roads cross the fields to Goosebridge Castle: the Fen Levy on the Mill Road, the war dogs over the bridge. Bramble, Ember, Bell and Verdigris hold the way.' },
+  { id: 'courtyard', name: 'The Castle Courtyard', sub: 'Level 2', blurb: 'The outer wall has fallen. The levy pour through the ruined gatehouse and the dogs leap the breach. Hold the east gate with gargoyles, mangonels, ink fountains and banners.' },
 ];
 const thumbs = new Map<LevelId, HTMLCanvasElement>();
 
@@ -557,36 +564,59 @@ function recordWin(id: LevelId, hp: number) {
 /** The menu can be closed back to a game already under way. */
 function menuCanClose() { return s.phase !== 'victory' && s.phase !== 'defeat' && (s.wave > 1 || s.phase === 'combat' || s.traces.length > 0 || s.gold !== BALANCE.startGold); }
 
+/** Which page of the menu is open. */
+type MenuView = 'title' | 'levels' | 'rewards' | 'exit';
+let menuView: MenuView = 'title';
+
 function renderMenu() {
   if (!thumbs.size) {
-    // draw each sheet once in its own geometry, then return to the open one
+    // draw each level once in its own geometry, then return to the open one
     for (const L of LEVELS) { setLevel(L.id); thumbs.set(L.id, levelThumbnail(360)); }
     setLevel(s.level);
   }
-  const cards = LEVELS.map((L) => {
-    const best = readRecord(L.id);
-    const towers = LEVEL_BALANCE[L.id].towerTypes;
-    return `<article class="level-card"><div class="thumb" data-thumb="${L.id}"></div><div class="lc-body">
-      <p class="kicker">${esc(L.sub)}${best !== null ? ` · <span class="won">held, castle ${best}/${BALANCE.castleHp}</span>` : ''}</p>
-      <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p>
-      <div class="lc-towers">${towers.map((ty) => `<span class="ico" data-tower="${ty}" title="${esc(BALANCE.towers[ty].name)}"></span>`).join('')}</div>
-      <button data-act="play" data-level="${L.id}" class="primary">${s.level === L.id && menuCanClose() ? 'Start this sheet again' : 'Begin'}</button></div></article>`;
-  }).join('');
-  menuEl.innerHTML = `<div class="menu-panel"><header><h1>Defence of Goosebridge Castle</h1><p class="lede">A tower defence drawn in pen and ink. Trace threads of ink from the wizard's inkwell to prepare your towers, then pulse them in battle.</p></header>
-    <div class="levels">${cards}</div>
-    ${menuCanClose() ? `<p class="resume"><button data-act="closeMenu">Return to ${esc(LEVELS.find((L) => L.id === s.level)!.name)}, wave ${s.wave}</button></p>` : ''}</div>`;
+  const here = LEVELS.find((L) => L.id === s.level)!;
+  const canResume = menuCanClose();
+  let body = '';
+  if (menuView === 'title') {
+    body = `<header><h1>Defence of Goosebridge Castle</h1><p class="lede">A tower defence drawn in pen and ink. Trace threads of ink from the wizard's inkwell to prepare your towers, then pulse them in battle.</p></header>
+      <nav class="menu-buttons" aria-label="Main menu">
+        <button data-act="menuStart" class="primary">Start</button>
+        <button data-act="closeMenu" ${canResume ? '' : 'disabled'}>Resume${canResume ? `<small>${esc(here.sub)}: ${esc(here.name)}, wave ${s.wave}</small>` : '<small>no game in progress</small>'}</button>
+        <button data-act="menuRewards">Redeem rewards</button>
+        <button data-act="menuExit">Exit</button>
+      </nav>`;
+  } else if (menuView === 'levels') {
+    const cards = LEVELS.map((L) => {
+      const best = readRecord(L.id);
+      const towers = LEVEL_BALANCE[L.id].towerTypes;
+      return `<article class="level-card"><div class="thumb" data-thumb="${L.id}"></div><div class="lc-body">
+        <p class="kicker">${esc(L.sub)}${best !== null ? ` · <span class="won">held, castle ${best}/${BALANCE.castleHp}</span>` : ''}</p>
+        <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p>
+        <div class="lc-towers">${towers.map((ty) => `<span class="ico" data-tower="${ty}" title="${esc(BALANCE.towers[ty].name)}"></span>`).join('')}</div>
+        <button data-act="play" data-level="${L.id}" class="primary">${s.level === L.id && canResume ? 'Start this level again' : `Begin ${esc(L.sub)}`}</button></div></article>`;
+    }).join('');
+    body = `<header><h1>Choose a level</h1></header><div class="levels">${cards}</div><p class="menu-back"><button data-act="menuBack">Back</button></p>`;
+  } else if (menuView === 'rewards') {
+    body = `<header><h1>Redeem rewards</h1><p class="lede">Rewards are coming soon. Gilded leaves and trophies you earn on the battlefield will be redeemable here.</p></header>
+      <p class="menu-back"><button data-act="menuBack" class="primary">Back</button></p>`;
+  } else {
+    body = `<header><h1>The book is closed</h1><p class="lede">The wizard sets down his quill. You can close this tab now${canResume ? '; your game will wait on its page until you do' : ''}.</p></header>
+      <p class="menu-back"><button data-act="menuBack" class="primary">Open the book again</button></p>`;
+  }
+  menuEl.innerHTML = `<div class="menu-panel menu-${menuView}">${body}</div>`;
   menuEl.querySelectorAll<HTMLElement>('[data-thumb]').forEach((el) => {
     const src = thumbs.get(el.dataset.thumb as LevelId)!;
     const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
     c.getContext('2d')!.drawImage(src, 0, 0); el.replaceChildren(c);
   });
   hydrateIcons(menuEl);
+  (menuEl.querySelector('button.primary:not([disabled])') as HTMLButtonElement | null)?.focus({ preventScroll: true });
 }
 function openMenu() {
   menuOpen = true; menuEl.hidden = false; document.body.dataset.menu = '1';
+  menuView = 'title';
   closePopover(); cancelGesture();
   renderMenu();
-  (menuEl.querySelector('button.primary') as HTMLButtonElement | null)?.focus({ preventScroll: true });
 }
 function closeMenu() { menuOpen = false; menuEl.hidden = true; delete document.body.dataset.menu; lastSig = ''; }
 function startLevel(id: LevelId) {
@@ -595,7 +625,7 @@ function startLevel(id: LevelId) {
   restart();
   iconCache.clear();
   ribbonSig = ''; overlaySig = '';
-  toast(s, id === 'fields' ? 'The first sheet: the fields before Goosebridge.' : 'The second sheet: the castle courtyard. New towers to raise.', 'info');
+  toast(s, id === 'fields' ? 'Level 1: Gate Defence. Hold the roads to the castle gate.' : 'Level 2: the Castle Courtyard. New towers to raise.', 'info');
 }
 menuEl.addEventListener('click', handleAction);
 $('btnMenu').addEventListener('click', openMenu);
