@@ -837,6 +837,257 @@ function studyDesk(ctx: Ctx, x: number, base: number, R: () => number) {
   ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(gx, base - 40, 14, 5, 0.2, 0, Math.PI * 2); ctx.moveTo(gx, base - 26); ctx.lineTo(gx, base); ctx.moveTo(gx - 8, base); ctx.lineTo(gx + 8, base); ctx.stroke();
 }
 
+
+// ── More furnishings for the keep ───────────────────────────────────────────
+
+type KeepItem = { w: number; h: number; draw: (ctx: Ctx, x: number, base: number, R: () => number) => void };
+const keepStroke = (ctx: Ctx, lw = 1.1) => { ctx.strokeStyle = INK; ctx.lineWidth = lw; };
+
+// standing on a floor (x is the centre, base the floor line)
+const kBarrels: KeepItem = { w: 60, h: 50, draw(ctx, x, b) { cask(ctx, x - 14, b - 12, 12); cask(ctx, x + 14, b - 12, 12); cask(ctx, x, b - 34, 12); } };
+const kSacks: KeepItem = { w: 50, h: 34, draw(ctx, x, b, R) {
+  for (const [dx, h] of [[-14, 30], [6, 26], [20, 20]] as [number, number][]) {
+    const sk = () => { ctx.beginPath(); ctx.moveTo(x + dx - 9, b); ctx.quadraticCurveTo(x + dx - 12, b - h * 0.6, x + dx - 4, b - h); ctx.lineTo(x + dx + 4, b - h); ctx.quadraticCurveTo(x + dx + 12, b - h * 0.6, x + dx + 9, b); ctx.closePath(); };
+    ctx.fillStyle = PAPER; sk(); ctx.fill(); hatch(ctx, sk, [x + dx - 12, b - h, 24, h], 0.8, 2.2, 0.4, INK, R); keepStroke(ctx); sk(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + dx - 5, b - h + 4); ctx.lineTo(x + dx + 5, b - h + 4); ctx.stroke();
+  } } };
+const kWorktable: KeepItem = { w: 90, h: 50, draw(ctx, x, b) {
+  ctx.fillStyle = PAPER; keepStroke(ctx, 1.2); ctx.fillRect(x - 42, b - 30, 84, 6); ctx.strokeRect(x - 42, b - 30, 84, 6);
+  ctx.beginPath(); ctx.moveTo(x - 36, b - 24); ctx.lineTo(x - 36, b); ctx.moveTo(x + 36, b - 24); ctx.lineTo(x + 36, b); ctx.stroke();
+  // a loaf, a jug, a cleaver in the board
+  ctx.beginPath(); ctx.ellipse(x - 20, b - 36, 12, 6, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (const k of [-26, -20, -14]) { ctx.moveTo(x + k, b - 40); ctx.lineTo(x + k + 3, b - 33); } ctx.stroke();
+  ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 6, b - 30); ctx.quadraticCurveTo(x + 2, b - 40, x + 8, b - 48); ctx.lineTo(x + 16, b - 48); ctx.quadraticCurveTo(x + 22, b - 40, x + 18, b - 30); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + 21, b - 41, 4, -1.2, 1.2); ctx.stroke();
+  ctx.fillStyle = '#c8c0b0'; ctx.beginPath(); ctx.moveTo(x + 28, b - 30); ctx.lineTo(x + 30, b - 42); ctx.lineTo(x + 38, b - 40); ctx.lineTo(x + 36, b - 30); ctx.closePath(); ctx.fill(); ctx.stroke();
+} };
+const kStool: KeepItem = { w: 26, h: 24, draw(ctx, x, b) {
+  ctx.fillStyle = PAPER; keepStroke(ctx); ctx.beginPath(); ctx.ellipse(x, b - 20, 11, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 7, b - 18); ctx.lineTo(x - 10, b); ctx.moveTo(x + 7, b - 18); ctx.lineTo(x + 10, b); ctx.moveTo(x, b - 18); ctx.lineTo(x, b); ctx.stroke();
+} };
+const kCat: KeepItem = { w: 34, h: 22, draw(ctx, x, b) {
+  ctx.fillStyle = PAPER; keepStroke(ctx, 1);
+  ctx.beginPath(); ctx.ellipse(x, b - 7, 12, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + 11, b - 13, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 8, b - 16); ctx.lineTo(x + 8, b - 21); ctx.lineTo(x + 11, b - 18); ctx.lineTo(x + 14, b - 21); ctx.lineTo(x + 14, b - 16); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 11, b - 4); ctx.quadraticCurveTo(x - 20, b - 2, x - 16, b - 12); ctx.stroke();
+  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x + 9, b - 13); ctx.lineTo(x + 11, b - 13); ctx.moveTo(x + 12.5, b - 13); ctx.lineTo(x + 14, b - 13); ctx.stroke();
+  ctx.beginPath(); for (let k = -6; k <= 6; k += 3) { ctx.moveTo(x + k, b - 13); ctx.lineTo(x + k + 2, b - 4); } ctx.stroke();
+} };
+const kBroom: KeepItem = { w: 18, h: 62, draw(ctx, x, b) {
+  keepStroke(ctx, 1.4); ctx.beginPath(); ctx.moveTo(x - 4, b - 60); ctx.lineTo(x + 2, b - 18); ctx.stroke();
+  ctx.lineWidth = 0.6; ctx.beginPath(); for (let k = -6; k <= 6; k += 1.5) { ctx.moveTo(x + 2, b - 20); ctx.lineTo(x + 2 + k * 1.2, b); } ctx.stroke();
+} };
+const kLectern: KeepItem = { w: 40, h: 64, draw(ctx, x, b, R) {
+  keepStroke(ctx, 1.4); ctx.beginPath(); ctx.moveTo(x, b - 44); ctx.lineTo(x, b); ctx.moveTo(x - 12, b); ctx.lineTo(x + 12, b); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.moveTo(x - 16, b - 42); ctx.lineTo(x + 16, b - 52); ctx.lineTo(x + 16, b - 46); ctx.lineTo(x - 16, b - 36); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // an open book on it
+  ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x - 15, b - 44); ctx.quadraticCurveTo(x - 8, b - 52, x, b - 49); ctx.quadraticCurveTo(x + 8, b - 58, x + 15, b - 56); ctx.lineTo(x + 15, b - 52); ctx.lineTo(x, b - 46); ctx.lineTo(x - 15, b - 40); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 0.4; ctx.beginPath(); for (let k = 0; k < 3; k++) { ctx.moveTo(x - 12, b - 44 - k * 2.5 + 2); ctx.lineTo(x - 3, b - 48 - k * 2.5 + 2); ctx.moveTo(x + 3, b - 51 - k * 2.5 + 2); ctx.lineTo(x + 12, b - 54 - k * 2.5 + 2); } ctx.stroke();
+  void R;
+} };
+const kBookPile: KeepItem = { w: 34, h: 34, draw(ctx, x, b, R) {
+  let y = b;
+  for (let i = 0; i < 5; i++) { const w = 22 + R() * 10, h = 5 + R() * 2, dx = (R() - 0.5) * 6; ctx.fillStyle = i % 2 ? 'rgba(122,40,38,0.4)' : PAPER; ctx.fillRect(x - w / 2 + dx, y - h, w, h); keepStroke(ctx, 0.7); ctx.strokeRect(x - w / 2 + dx, y - h, w, h); y -= h; }
+} };
+const kChair: KeepItem = { w: 30, h: 64, draw(ctx, x, b) {
+  ctx.fillStyle = PAPER; keepStroke(ctx, 1.2);
+  ctx.beginPath(); ctx.moveTo(x - 12, b); ctx.lineTo(x - 12, b - 62); ctx.quadraticCurveTo(x - 4, b - 70, x + 2, b - 62); ctx.lineTo(x + 2, b - 26); ctx.stroke();
+  ctx.fillRect(x - 12, b - 28, 26, 5); ctx.strokeRect(x - 12, b - 28, 26, 5);
+  ctx.beginPath(); ctx.moveTo(x + 12, b - 23); ctx.lineTo(x + 12, b); ctx.stroke();
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = b - 58; k < b - 30; k += 5) { ctx.moveTo(x - 12, k); ctx.lineTo(x + 2, k); } ctx.stroke();
+} };
+const kChest: KeepItem = { w: 52, h: 34, draw(ctx, x, b, R) {
+  const box = () => { ctx.beginPath(); ctx.rect(x - 24, b - 24, 48, 24); };
+  ctx.fillStyle = PAPER; box(); ctx.fill(); hatch(ctx, box, [x - 24, b - 24, 48, 24], 0, 3, 0.4, INK, R); keepStroke(ctx, 1.2); box(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 24, b - 24); ctx.quadraticCurveTo(x, b - 36, x + 24, b - 24); ctx.closePath(); ctx.fillStyle = PAPER; ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 2; ctx.beginPath(); for (const bx of [x - 16, x + 16]) { ctx.moveTo(bx, b - 30); ctx.lineTo(bx, b); } ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.fillRect(x - 3, b - 22, 6, 7);
+} };
+const kHarp: KeepItem = { w: 36, h: 70, draw(ctx, x, b) {
+  keepStroke(ctx, 2); ctx.beginPath(); ctx.moveTo(x - 12, b); ctx.lineTo(x - 12, b - 66); ctx.quadraticCurveTo(x + 4, b - 70, x + 14, b - 50); ctx.quadraticCurveTo(x + 6, b - 20, x - 12, b); ctx.stroke();
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = 0; k < 8; k++) { const t = k / 8; ctx.moveTo(x - 12, b - 6 - t * 56); ctx.lineTo(x - 12 + (1 - t) * 6 + t * 24, b - 10 - t * 50 + (1 - t) * 0); } ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(x - 12, b - 66, 2.4, 0, Math.PI * 2); ctx.fill();
+} };
+const kCandelabra: KeepItem = { w: 30, h: 76, draw(ctx, x, b) {
+  keepStroke(ctx, 1.6); ctx.beginPath(); ctx.moveTo(x, b - 60); ctx.lineTo(x, b); ctx.moveTo(x - 10, b); ctx.lineTo(x, b - 8); ctx.lineTo(x + 10, b); ctx.stroke();
+  ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(x - 12, b - 52); ctx.quadraticCurveTo(x, b - 62, x + 12, b - 52); ctx.stroke();
+  for (const cx of [x - 12, x, x + 12]) { const cy = cx === x ? b - 60 : b - 52; ctx.fillStyle = PAPER; ctx.fillRect(cx - 2, cy - 10, 4, 10); ctx.lineWidth = 0.7; ctx.strokeRect(cx - 2, cy - 10, 4, 10); ctx.fillStyle = 'rgba(240,190,90,0.9)'; ctx.beginPath(); ctx.ellipse(cx, cy - 14, 1.6, 3.4, 0, 0, Math.PI * 2); ctx.fill(); }
+} };
+const kTelescope: KeepItem = { w: 56, h: 70, draw(ctx, x, b, R) {
+  keepStroke(ctx, 1.2); ctx.beginPath(); ctx.moveTo(x, b - 40); ctx.lineTo(x - 14, b); ctx.moveTo(x, b - 40); ctx.lineTo(x + 14, b); ctx.moveTo(x, b - 40); ctx.lineTo(x + 2, b); ctx.stroke();
+  const tube = () => { ctx.beginPath(); ctx.moveTo(x - 22, b - 30); ctx.lineTo(x + 24, b - 66); ctx.lineTo(x + 28, b - 60); ctx.lineTo(x - 18, b - 24); ctx.closePath(); };
+  ctx.fillStyle = PAPER; tube(); ctx.fill(); hatch(ctx, tube, [x - 22, b - 66, 50, 42], 0.7, 2, 0.4, INK, R); ctx.lineWidth = 1.1; tube(); ctx.stroke();
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 6, b - 50); ctx.lineTo(x + 10, b - 44); ctx.moveTo(x - 6, b - 40); ctx.lineTo(x - 2, b - 34); ctx.stroke();
+} };
+const kAlembic: KeepItem = { w: 50, h: 50, draw(ctx, x, b) {
+  ctx.fillStyle = PAPER; keepStroke(ctx, 1.1); ctx.fillRect(x - 24, b - 20, 48, 5); ctx.strokeRect(x - 24, b - 20, 48, 5);
+  ctx.beginPath(); ctx.moveTo(x - 20, b - 15); ctx.lineTo(x - 20, b); ctx.moveTo(x + 20, b - 15); ctx.lineTo(x + 20, b); ctx.stroke();
+  // a round flask over a candle, a tube to a little jar
+  ctx.beginPath(); ctx.arc(x - 8, b - 32, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(60,122,100,0.35)'; ctx.beginPath(); ctx.arc(x - 8, b - 32, 10, 0.2, Math.PI - 0.2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 8, b - 42); ctx.lineTo(x - 8, b - 48); ctx.quadraticCurveTo(x + 6, b - 50, x + 14, b - 32); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.fillRect(x + 10, b - 32, 9, 12); ctx.strokeRect(x + 10, b - 32, 9, 12);
+  ctx.fillStyle = 'rgba(240,190,90,0.9)'; ctx.beginPath(); ctx.ellipse(x - 8, b - 23, 1.2, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+} };
+const kSkullCandle: KeepItem = { w: 34, h: 30, draw(ctx, x, b) {
+  ctx.fillStyle = '#efe6d2'; keepStroke(ctx, 1);
+  ctx.beginPath(); ctx.arc(x - 6, b - 9, 8, Math.PI, 0); ctx.lineTo(x + 1, b); ctx.lineTo(x - 13, b); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x - 9, b - 9, 1.8, 0, Math.PI * 2); ctx.arc(x - 3, b - 9, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = PAPER; ctx.fillRect(x + 8, b - 16, 5, 16); ctx.strokeRect(x + 8, b - 16, 5, 16);
+  ctx.fillStyle = 'rgba(240,190,90,0.9)'; ctx.beginPath(); ctx.ellipse(x + 10.5, b - 21, 1.6, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+} };
+
+// hung on a wall (x is the centre, base the bottom of the hanging)
+const kPortrait: KeepItem = { w: 40, h: 52, draw(ctx, x, b, R) {
+  ctx.fillStyle = PAPER; ctx.fillRect(x - 18, b - 50, 36, 50); ctx.strokeStyle = GOLD; ctx.lineWidth = 3; ctx.strokeRect(x - 18, b - 50, 36, 50);
+  keepStroke(ctx, 0.8); ctx.strokeRect(x - 20, b - 52, 40, 54); ctx.strokeRect(x - 14, b - 46, 28, 42);
+  // a stern ancestor in a ruff
+  const head = () => { ctx.beginPath(); ctx.ellipse(x, b - 30, 6, 8, 0, 0, Math.PI * 2); };
+  hatch(ctx, () => { ctx.beginPath(); ctx.rect(x - 14, b - 46, 28, 42); }, [x - 14, b - 46, 28, 42], 0.8, 2.4, 0.3, INK, R);
+  ctx.fillStyle = PAPER; head(); ctx.fill(); ctx.lineWidth = 0.8; head(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, b - 20, 9, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.fillRect(x - 3.5, b - 32, 2, 1); ctx.fillRect(x + 1.5, b - 32, 2, 1);
+  ctx.beginPath(); ctx.moveTo(x - 10, b - 4); ctx.quadraticCurveTo(x, b - 18, x + 10, b - 4); ctx.closePath(); ctx.fill();
+} };
+const kShieldSwords: KeepItem = { w: 56, h: 52, draw(ctx, x, b, R) {
+  keepStroke(ctx, 1.6); ctx.beginPath(); ctx.moveTo(x - 24, b - 4); ctx.lineTo(x + 22, b - 50); ctx.moveTo(x + 24, b - 4); ctx.lineTo(x - 22, b - 50); ctx.stroke();
+  ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x - 20, b - 14); ctx.lineTo(x - 12, b - 6); ctx.moveTo(x + 20, b - 14); ctx.lineTo(x + 12, b - 6); ctx.stroke();
+  const sh = () => { ctx.beginPath(); ctx.moveTo(x - 13, b - 42); ctx.lineTo(x + 13, b - 42); ctx.quadraticCurveTo(x + 13, b - 18, x, b - 8); ctx.quadraticCurveTo(x - 13, b - 18, x - 13, b - 42); ctx.closePath(); };
+  ctx.fillStyle = PAPER; sh(); ctx.fill(); ctx.save(); sh(); ctx.clip(); ctx.fillStyle = 'rgba(122,40,38,0.45)'; ctx.fillRect(x - 14, b - 43, 14, 18); ctx.fillRect(x, b - 25, 14, 18); ctx.restore();
+  hatch(ctx, sh, [x - 13, b - 42, 26, 34], 0.9, 2.6, 0.3, INK, R); keepStroke(ctx, 1.2); sh(); ctx.stroke();
+} };
+const kAntlers: KeepItem = { w: 50, h: 36, draw(ctx, x, b) {
+  ctx.fillStyle = PAPER; keepStroke(ctx, 1); ctx.beginPath(); ctx.ellipse(x, b - 8, 8, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1.6; ctx.beginPath();
+  for (const sd of [-1, 1]) { ctx.moveTo(x + sd * 4, b - 14); ctx.quadraticCurveTo(x + sd * 14, b - 22, x + sd * 22, b - 34); ctx.moveTo(x + sd * 10, b - 19); ctx.lineTo(x + sd * 8, b - 30); ctx.moveTo(x + sd * 16, b - 25); ctx.lineTo(x + sd * 24, b - 26); }
+  ctx.stroke();
+} };
+const kSconce: KeepItem = { w: 20, h: 34, draw(ctx, x, b) {
+  keepStroke(ctx, 1.4); ctx.beginPath(); ctx.moveTo(x - 6, b); ctx.lineTo(x, b - 6); ctx.lineTo(x + 6, b); ctx.moveTo(x, b - 6); ctx.lineTo(x, b - 14); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.fillRect(x - 2.5, b - 24, 5, 10); ctx.lineWidth = 0.7; ctx.strokeRect(x - 2.5, b - 24, 5, 10);
+  const g = ctx.createRadialGradient(x, b - 28, 0, x, b - 28, 16); g.addColorStop(0, 'rgba(250,215,130,0.5)'); g.addColorStop(1, 'rgba(250,215,130,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, b - 28, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(240,190,90,0.95)'; ctx.beginPath(); ctx.ellipse(x, b - 28, 1.8, 3.6, 0, 0, Math.PI * 2); ctx.fill();
+} };
+const kWallMap: KeepItem = { w: 60, h: 46, draw(ctx, x, b, R) {
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.moveTo(x - 28, b - 42); ctx.lineTo(x + 28, b - 44); ctx.lineTo(x + 27, b - 2); ctx.lineTo(x - 27, b); ctx.closePath(); ctx.fill(); keepStroke(ctx, 1); ctx.stroke();
+  for (const [cx, cy] of [[x - 28, b - 42], [x + 28, b - 44], [x + 27, b - 2], [x - 27, b]]) { ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(cx, cy, 1.3, 0, Math.PI * 2); ctx.fill(); }
+  // a coastline, a rose of winds and some writing
+  ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x - 22, b - 30); for (let k = 0; k < 10; k++) ctx.lineTo(x - 22 + k * 4, b - 30 + Math.sin(k * 1.3 + R()) * 6 + k * 0.8); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + 14, b - 16, 6, 0, Math.PI * 2); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; ctx.moveTo(x + 14, b - 16); ctx.lineTo(x + 14 + Math.cos(a) * 9, b - 16 + Math.sin(a) * 9); } ctx.stroke();
+  scribble(ctx, x - 24, b - 14, 26, 2, R, 3);
+} };
+const kStarChart: KeepItem = { w: 48, h: 50, draw(ctx, x, b, R) {
+  ctx.fillStyle = PAPER; ctx.fillRect(x - 22, b - 48, 44, 48); keepStroke(ctx, 1); ctx.strokeRect(x - 22, b - 48, 44, 48);
+  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.arc(x, b - 24, 18, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(x, b - 24, 10, 0, Math.PI * 2); ctx.stroke();
+  const st: Vec[] = []; for (let i = 0; i < 9; i++) st.push({ x: x - 16 + R() * 32, y: b - 40 + R() * 32 });
+  ctx.beginPath(); for (let i = 0; i < 5; i++) { i ? ctx.lineTo(st[i].x, st[i].y) : ctx.moveTo(st[i].x, st[i].y); } ctx.stroke();
+  ctx.fillStyle = INK; for (const p of st) { ctx.beginPath(); ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(x + 14, b - 42, 2.4, 0, Math.PI * 2); ctx.fill();
+} };
+const kBanner: KeepItem = { w: 30, h: 80, draw(ctx, x, b, R) {
+  const f = () => { ctx.beginPath(); ctx.moveTo(x - 13, b - 78); ctx.lineTo(x + 13, b - 78); ctx.lineTo(x + 13, b - 6); ctx.lineTo(x, b); ctx.lineTo(x - 13, b - 6); ctx.closePath(); };
+  ctx.fillStyle = 'rgba(122,40,38,0.3)'; f(); ctx.fill(); hatch(ctx, f, [x - 13, b - 78, 26, 78], 1.3, 3, 0.35, INK, R); keepStroke(ctx, 1); f(); ctx.stroke();
+  ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 17, b - 78); ctx.lineTo(x + 17, b - 78); ctx.stroke();
+  // a goose, the badge of Goosebridge
+  ctx.fillStyle = PAPER; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.ellipse(x - 1, b - 38, 7, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 4, b - 41); ctx.quadraticCurveTo(x + 6, b - 54, x + 3, b - 56); ctx.stroke(); ctx.fillStyle = GOLD; ctx.beginPath(); ctx.moveTo(x + 3, b - 57); ctx.lineTo(x + 8, b - 55); ctx.lineTo(x + 3, b - 54); ctx.fill();
+} };
+
+// hung from a ceiling (x is the centre, base the ceiling line)
+const kHams: KeepItem = { w: 70, h: 56, draw(ctx, x, b) {
+  keepStroke(ctx, 1.4); ctx.beginPath(); ctx.moveTo(x - 32, b + 10); ctx.lineTo(x + 32, b + 10); ctx.stroke();
+  for (const [dx, kind] of [[-24, 0], [-8, 1], [8, 0], [24, 2]] as [number, number][]) {
+    ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x + dx, b + 10); ctx.lineTo(x + dx, b + 18); ctx.stroke();
+    ctx.fillStyle = PAPER; ctx.lineWidth = 1;
+    if (kind === 0) { ctx.beginPath(); ctx.moveTo(x + dx - 3, b + 18); ctx.quadraticCurveTo(x + dx - 9, b + 40, x + dx, b + 50); ctx.quadraticCurveTo(x + dx + 9, b + 40, x + dx + 3, b + 18); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = 24; k < 46; k += 5) { ctx.moveTo(x + dx - 6, b + k); ctx.lineTo(x + dx + 6, b + k + 2); } ctx.stroke(); }
+    else if (kind === 1) { for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(x + dx + (k % 2 ? 2 : -2), b + 22 + k * 6, 3.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); } }
+    else { ctx.lineWidth = 0.6; ctx.beginPath(); for (let k = -5; k <= 5; k += 1.6) { ctx.moveTo(x + dx, b + 18); ctx.quadraticCurveTo(x + dx + k, b + 30, x + dx + k * 1.4, b + 40); } ctx.stroke(); }
+  }
+} };
+const kAstrolabe: KeepItem = { w: 40, h: 70, draw(ctx, x, b) {
+  keepStroke(ctx, 0.8); ctx.beginPath(); ctx.moveTo(x, b); ctx.lineTo(x, b + 30); ctx.stroke();
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, b + 46, 16, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, b + 46, 16, 6, 0.4, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x, b + 46, 6, 16, 0.4, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(x, b + 46, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + 12, b + 38, 1.6, 0, Math.PI * 2); ctx.fill();
+} };
+const kPennants: KeepItem = { w: 90, h: 40, draw(ctx, x, b) {
+  keepStroke(ctx, 0.8); ctx.beginPath(); ctx.moveTo(x - 44, b + 6); ctx.quadraticCurveTo(x, b + 24, x + 44, b + 6); ctx.stroke();
+  for (let i = 0; i < 7; i++) { const t = (i + 0.5) / 7, px = x - 44 + t * 88, py = b + 6 + Math.sin(t * Math.PI) * 9; ctx.fillStyle = i % 2 ? 'rgba(122,40,38,0.45)' : PAPER; ctx.beginPath(); ctx.moveTo(px - 5, py); ctx.lineTo(px + 5, py); ctx.lineTo(px, py + 14); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+} };
+const kHerbs: KeepItem = { w: 60, h: 40, draw(ctx, x, b) {
+  keepStroke(ctx, 1.2); ctx.beginPath(); ctx.moveTo(x - 28, b + 8); ctx.lineTo(x + 28, b + 8); ctx.stroke();
+  for (let i = 0; i < 5; i++) { const hx = x - 22 + i * 11; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(hx, b + 8); ctx.lineTo(hx, b + 14); for (let k = -4; k <= 4; k += 2) { ctx.moveTo(hx, b + 14); ctx.lineTo(hx + k, b + 30 + Math.abs(k)); } ctx.stroke(); }
+} };
+
+// in the cellars
+const kWineRack: KeepItem = { w: 64, h: 44, draw(ctx, x, b) {
+  ctx.fillStyle = PAPER; keepStroke(ctx, 1.2); ctx.fillRect(x - 30, b - 42, 60, 42); ctx.strokeRect(x - 30, b - 42, 60, 42);
+  ctx.lineWidth = 0.7; ctx.beginPath(); for (let k = -30; k <= 30; k += 10) { ctx.moveTo(x + k, b - 42); ctx.lineTo(x + k, b); } for (let k = b - 42; k <= b; k += 10.5) { ctx.moveTo(x - 30, k); ctx.lineTo(x + 30, k); } ctx.stroke();
+  ctx.fillStyle = 'rgba(29,25,21,0.75)'; for (let i = 0; i < 6; i++) for (let j = 0; j < 4; j++) if ((i + j * 3) % 5) { ctx.beginPath(); ctx.arc(x - 25 + i * 10, b - 37 + j * 10.5, 3, 0, Math.PI * 2); ctx.fill(); }
+} };
+const kRat: KeepItem = { w: 30, h: 12, draw(ctx, x, b) {
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(x, b - 4, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 6, b - 6); ctx.lineTo(x + 12, b - 3); ctx.lineTo(x + 6, b - 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 5, b - 8, 1.8, 0, Math.PI * 2); ctx.fill();
+  keepStroke(ctx, 0.7); ctx.beginPath(); ctx.moveTo(x - 7, b - 3); ctx.quadraticCurveTo(x - 14, b - 1, x - 16, b - 8); ctx.stroke();
+} };
+
+function cobweb(ctx: Ctx, x: number, y: number, r: number, dir: number) {
+  ctx.strokeStyle = 'rgba(58,34,18,0.45)'; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let k = 0; k <= 4; k++) { const a = (k / 4) * Math.PI / 2; ctx.moveTo(x, y); ctx.lineTo(x + dir * Math.cos(a) * r, y + Math.sin(a) * r); }
+  for (let ring = 1; ring <= 3; ring++) { const q = (ring / 3) * r; for (let k = 0; k < 4; k++) { const a0 = (k / 4) * Math.PI / 2, a1 = ((k + 1) / 4) * Math.PI / 2; ctx.moveTo(x + dir * Math.cos(a0) * q, y + Math.sin(a0) * q); ctx.quadraticCurveTo(x + dir * Math.cos((a0 + a1) / 2) * q * 0.8, y + Math.sin((a0 + a1) / 2) * q * 0.8, x + dir * Math.cos(a1) * q, y + Math.sin(a1) * q); } }
+  ctx.stroke();
+}
+
+/** Furnish every floor of the keep, keeping clear of the stairs, towers, leylines and what is already drawn. */
+function furnishKeep(ctx: Ctx, R: () => number, blocked: [number, number, number, number][]) {
+  const [GROUND, FIRST, SECOND, TOP] = KEEP_FLOORS;
+  const blocks = [...blocked];
+  for (const f of FOUNDATION_IDS) { const n = NODE[f]; blocks.push([n.x - 56, n.y - 132, n.x + 56, n.y + 48]); }
+  const free = (x0: number, y0: number, x1: number, y1: number) => {
+    if (x0 < 70 || x1 > 1530) return false;
+    if (blocks.some(([a, b, c, d]) => x0 < c && x1 > a && y0 < d && y1 > b)) return false;
+    for (const id of LANE_IDS) { const L = LANES[id]; for (let s = 0; s < L.length; s += 10) { const q = pointAt(L, s); if (q.x > x0 - 26 && q.x < x1 + 26 && q.y > y0 - 26 && q.y < y1 + 30) return false; } }
+    for (const e of LEY_EDGES) for (const q of e.pts) if (q.x > x0 - 4 && q.x < x1 + 4 && q.y > y0 - 4 && q.y < y1 + 4) return false;
+    return true;
+  };
+  const row = (items: KeepItem[], base: number, mode: 'floor' | 'wall' | 'ceiling', step: number) => {
+    let x = 80 + R() * 40, i = Math.floor(R() * items.length);
+    while (x < 1520) {
+      const it = items[i % items.length];
+      const y0 = mode === 'ceiling' ? base : base - it.h, y1 = mode === 'ceiling' ? base + it.h : base;
+      if (free(x - it.w / 2, y0, x + it.w / 2, y1)) {
+        it.draw(ctx, x, base, R);
+        blocks.push([x - it.w / 2, y0, x + it.w / 2, y1]);
+        x += it.w + step * (0.6 + R() * 0.8); i++;
+      } else x += 16;
+    }
+  };
+  // kitchen and stores on the ground floor
+  row([kBarrels, kWorktable, kSacks, kStool, kCat, kBroom], GROUND, 'floor', 50);
+  row([kShieldSwords, kSconce, kAntlers, kSconce], GROUND - 110, 'wall', 80);
+  row([kHams, kHerbs], FIRST + 18, 'ceiling', 90);
+  // the library
+  row([kLectern, kBookPile, kChair, kCandelabra, kBookPile], FIRST, 'floor', 50);
+  row([kPortrait, kSconce, kWallMap, kSconce], FIRST - 110, 'wall', 70);
+  // the great hall
+  row([kChair, kChest, kHarp, kCandelabra, kChair], SECOND, 'floor', 50);
+  row([kBanner, kPortrait, kShieldSwords, kSconce], SECOND - 100, 'wall', 60);
+  row([kPennants], TOP + 18, 'ceiling', 120);
+  // the wizard's study
+  row([kTelescope, kAlembic, kSkullCandle, kBookPile, kChair], TOP, 'floor', 50);
+  row([kStarChart, kSconce, kPortrait, kWallMap], TOP - 96, 'wall', 70);
+  row([kAstrolabe, kHerbs], 66, 'ceiling', 140);
+  // cellars: wine racks, rats and cobwebs in the vaults
+  row([kWineRack, kRat, kSacks, kRat], 988, 'floor', 70);
+  for (let x = 62; x < 1538; x += 120) if (R() < 0.6) { cobweb(ctx, x + 2, GROUND + 52, 18, 1); if (R() < 0.5) cobweb(ctx, x + 118, GROUND + 52, 18, -1); }
+  // cobwebs in the corners of the rooms
+  for (const fy of [FIRST, SECOND, TOP]) { cobweb(ctx, 64, fy + 20, 26, 1); cobweb(ctx, 1536, fy + 20, 26, -1); }
+  cobweb(ctx, 64, 68, 30, 1);
+}
+
 function buildKeep(scale: number): HTMLCanvasElement {
   const cv = document.createElement('canvas');
   cv.width = MAP_W * scale; cv.height = MAP_H * scale;
@@ -898,6 +1149,22 @@ function buildKeep(scale: number): HTMLCanvasElement {
   hangingChandelier(ctx, 900, FIRST + 18, 60);
   cauldronHearth(ctx, 800, GROUND, R);
   studyDesk(ctx, 1380, TOP, R);
+  // furniture, portraits, arms and clutter on every floor, kept clear of everything above
+  {
+    const L = (x: number, y: number, w = 150): [number, number, number, number] => [x - w / 2, y - 20, x + w / 2, y + 8];
+    const door = LANES.mill.pts.at(-1)!;
+    const blocked: [number, number, number, number][] = [
+      ...([[160, GROUND], [1000, GROUND], [600, FIRST], [1440, FIRST], [300, SECOND], [1360, SECOND], [380, TOP], [700, TOP]] as [number, number][]).map(([wx, fy]) => [wx - 22, fy - 165, wx + 22, fy - 64] as [number, number, number, number]),
+      [86, FIRST - 154, 254, FIRST], [1296, TOP - 124, 1384, TOP],
+      [1256, SECOND - 194, 1310, SECOND - 76], [156, SECOND - 194, 210, SECOND - 76], [1416, FIRST - 194, 1470, FIRST - 76],
+      [116, SECOND - 44, 364, SECOND], [214, TOP + 18, 266, TOP + 96], [874, FIRST + 18, 926, FIRST + 86],
+      [736, GROUND - 140, 864, GROUND], [1296, TOP - 64, 1424, TOP], [door.x + 6, TOP - 84, door.x + 50, TOP],
+      [INKWELL.x - 70, INKWELL.y - 80, 1540, TOP],
+      [34, 64, 396, 154],
+      L(210, GROUND - 98), L(1390, GROUND - 98), L(800, GROUND + 44, 90), L(170, FIRST - 166, 90), L(240, SECOND - 120), L(1310, TOP - 150), L(760, 980, 90),
+    ];
+    furnishKeep(ctx, R, blocked);
+  }
   // stone ledges and landings for the towers that stand between floors
   for (const id of ['f_westledge', 'f_eastledge', 'f_studyledge', 'f_bell']) {
     const n = NODE[id];
