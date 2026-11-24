@@ -8,6 +8,15 @@ A single-map fantasy tower defence prototype, drawn as a sheet from an old noteb
 
 **Art style studies:** https://brendanjvr-ux.github.io/the-last-ward/styles.html (the same battle moment in alternative art directions, led by the sepia notebook look the game now uses, with notes on what each would mean in Unity; source in `src/styles/`)
 
+## Two sheets
+
+The game opens on a **main menu** (the **Menu** button returns to it at any time, and you can return to a game in progress). Pick a sheet:
+
+1. **The Fields**: two roads across the fields to the castle gate, with the Bramble, Ember, Bell and Verdigris towers. Everything below describes this sheet unless it says otherwise.
+2. **The Castle Courtyard**: the outer wall has fallen. The levy pour through the ruined gatehouse in the west wall (the Gatehouse Passage); the hounds leap the breach in the north wall (the Breach, announced by the horn at the stable yard). Both meet at the keep stair before the keep door. Four different towers defend it: the Gargoyle Perch, the Mangonel, the Ink Fountain and the Banner Tower. Same rules, same enemies, six new waves; 60 starting gold.
+
+Winning the fields offers the courtyard straight away. Each sheet remembers your best result (castle health) in the browser.
+
 TypeScript, Vite, HTML Canvas for the battlefield and HTML/CSS for the controls. All artwork and sound are made procedurally: no image or audio files, no fonts or services from the internet, no accounts or API keys.
 
 ## The central rule
@@ -51,6 +60,7 @@ Then open http://localhost:5173/ (the game) or http://localhost:5173/styles.html
 
 | | Mouse / touch | Keyboard |
 |---|---|---|
+| Choose a sheet | **Menu**, then **Begin** on a sheet | `Esc` returns to a game in progress |
 | Trace a tower | Press the inkwell, follow a leyline, release on a tower | Tab to **Trace** beside the tower in the margin |
 | Undo / clear threads | **Undo last**, **Clear all**, or click a traced tower → **Remove this thread** | `U` undoes the last thread |
 | Build | Click an empty foundation, pick a tower | Pick a foundation in the margin's **Build** list |
@@ -88,25 +98,34 @@ Waves: Levy alone (1), Hounds join (2), both together (3), a calmer wave to try 
 | **Verdigris Font** (the eye-flower) | Copper spray that strips 2 armour per hit (up to 6, wears off after 4 s) | **Tarnish**: a green mist removes all armour from enemies nearby and makes them take 30% more damage for 6 s. |
 
 
+### Courtyard towers
+
+| Tower | Attack | Pulse |
+|---|---|---|
+| **Gargoyle Perch** (a winged stone gargoyle on a fluted pillar) | Long-range stone shards, single target, heavy and slow | **Stone Gaze**: everything nearby is turned to stone (stunned) for 4 s and chipped. The Cairn-Born only stiffens briefly. |
+| **Mangonel** (a throwing engine on a stone platform) | Lobbed boulders, splash, very long range, slow | **Boulder Barrage**: seven boulders land one after another on the thickest crowd in reach. |
+| **Ink Fountain** (a stone fountain; a striped fish spouts ink) | Gobs of ink that stain and slow the target | **Inkflood**: the nearby road floods with ink for 6 s; everything wading through crawls at a quarter speed and is slowly stained. |
+| **Banner Tower** (a tall pole with a swallow-tailed pennant) | Light arrows. Towers within reach of a banner always reload 25% faster | **Rally**: every tower nearby shoots twice as fast for 8 s. |
+
 ## Tuning
 
-Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its volley, starting gold, rewards, tower costs and damage, pulse durations and strengths, bind cost, the trace/pulse table, the reinforcement wave and all six hand-authored waves.
+Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its volley, rewards, tower costs and damage, pulse durations and strengths, bind cost, the trace/pulse table, the reinforcement wave, and for each sheet its starting gold, towers and six hand-authored waves (`LEVEL_BALANCE`).
 
-`tests/balance.test.ts` plays the game headlessly with a scripted player and checks that a sensible strategy wins, that the same towers without pulses lose, and that pulses without building lose. Rerun `npm test` after tuning.
+`tests/balance.test.ts` (the fields) and `tests/courtyard.test.ts` (the courtyard) play each sheet headlessly with a scripted player and check that a sensible strategy wins, that the same towers without pulses lose, and that pulses without building lose. The scripted player uses a fixed random seed, so the results repeat exactly. Rerun `npm test` after tuning.
 
 ## Files
 
 | File | What it is |
 |---|---|
-| `src/balance.ts` | All tuning values and the six waves. |
-| `src/map.ts` | Map geometry: roads, river, the inkwell, the leyline tree and its 13 foundations, snapping. |
+| `src/balance.ts` | All tuning values, the eight tower types, and each sheet's towers, purse and six waves. |
+| `src/map.ts` | Each sheet's geometry: roads, river, the inkwell, the leyline tree and its 13 foundations, snapping. `setMapLevel` swaps them. |
 | `src/game.ts` | Game state, the trace / pulse / bind / build rules and the combat simulation (no DOM). |
 | `src/ink.ts` | The pen-and-ink look: hatching, wood grain and wash helpers, every tower, creature and building, the wizard, shared with the art studies. |
-| `src/paint.ts` | The static sheet: paper, roads, river and spring, trees, mill, windmill, castle, inkwell and labels (drawn once). |
+| `src/paint.ts` | The static sheets, drawn once each: the fields (roads, river and spring, trees, mill, windmill, castle) and the courtyard (flagstones, broken walls, gatehouse, breach, well, chapel, smithy, stables, keep). |
 | `src/sprites.ts` | Tower and enemy sprites (walk cycles, the kneeling giant, ink spatter on hits) and margin icons. |
 | `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, the wizard, effects, warnings, inspect highlight, the victory plate. |
 | `src/audio.ts` | The synthesized double horn. |
-| `src/main.ts` | Input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |
+| `src/main.ts` | The main menu, input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |
 | `src/style.css` | Layout and look, including the phone layout. |
 | `tests/` | Acceptance-rule tests, balance tests and the scripted player. |
 | `scripts/deploy.sh` | Builds and publishes the game to the `gh-pages` branch. |

@@ -1,6 +1,6 @@
 // 14. Animated 3D feature: chunky toy-like forms, soft global illumination, glossy highlights,
 // rim light, contact shadows, big expressive eyes, warm sun and a tilt-shift blur.
-import type { EnemyType, TowerType } from '../balance';
+import type { EnemyType, FieldTowerType as TowerType } from '../balance';
 import { MAP_W, MAP_H, smooth, rng, type Style, type Vec } from './scene';
 
 function mix(hex: string, k: number): string {

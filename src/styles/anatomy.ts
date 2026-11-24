@@ -1,6 +1,6 @@
 // 15. An anatomy-atlas plate of the siege inside the body: cream paper, engraved hatching,
 // stippled tissue, muted textbook colours, numbered leader lines and a Latin legend.
-import type { EnemyType, TowerType } from '../balance';
+import type { EnemyType, FieldTowerType as TowerType } from '../balance';
 import { MAP_W, MAP_H, line, smooth, rng, type Style, type Vec } from './scene';
 import { CASTLE, MILL, INKWELL, POND, BRIDGE, NODE } from '../map';
 

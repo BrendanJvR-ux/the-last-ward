@@ -1,19 +1,22 @@
 import './style.css';
-import { BALANCE, TOTAL_WAVES, phaseRule, type TowerType, type EnemyType } from './balance';
+import { BALANCE, TOTAL_WAVES, LEVEL_BALANCE, phaseRule, type TowerType, type EnemyType, type LevelId } from './balance';
 import {
   type GameState, newGame, step, rule, traceTower, untraceTower, undoTrace, clearTraces, canStartWave, startWave,
   pulseTower, pulseCheck, enemyPos, effectiveArmour, buildTower, buildCheck, placeGrant, bindTower, bindCheck, towerAt, towerById, emptyFoundations,
-  towerDamage, toast, traceCheck,
+  towerDamage, toast, traceCheck, setLevel,
 } from './game';
 import {
   MAP_W, MAP_H, NODE, FOUNDATION_IDS, INKWELL, snapToNetwork,
   routeToEdgePoint, dist, type Vec,
 } from './map';
-import { render, renderVictory, towerIconCanvas, enemyIconCanvas, type ViewState } from './render';
+import { render, renderVictory, towerIconCanvas, enemyIconCanvas, levelThumbnail, type ViewState } from './render';
 import { unlockAudio, playDoubleHorn, isMuted, setMuted } from './audio';
 
 // ── State ───────────────────────────────────────────────────────────────────
-let s: GameState = newGame();
+/** Which sheet is open, and whether the main menu is showing over it. */
+let currentLevel: LevelId = 'fields';
+let menuOpen = true;
+let s: GameState = newGame(currentLevel);
 const view: ViewState = {
   hoverFoundation: null,
   selectedFoundation: null,
@@ -24,7 +27,7 @@ const view: ViewState = {
 };
 /** Tower id awaiting bind confirmation. */
 let bindConfirm: string | null = null;
-let grantType: TowerType = 'bramble';
+let grantType: TowerType = BALANCE.towerTypes[0];
 let popoverFor: string | null = null;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -36,7 +39,6 @@ const popover = $('popover');
 const overlay = $('overlay');
 const toastsEl = $('toasts');
 
-const TOWER_TYPES: TowerType[] = ['bramble', 'ember', 'bell', 'verdigris'];
 const fname = (f: string) => NODE[f].foundation!.name;
 const tname = (t: TowerType) => BALANCE.towers[t].name;
 const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -204,11 +206,11 @@ function fillPopover() {
     }
   } else if (s.pendingGrant) {
     html += `<p class="royal">Royal reinforcement — free. Choose its type:</p><div class="choices">`;
-    for (const ty of TOWER_TYPES) html += `<button data-act="grant" data-f="${f}" data-type="${ty}" class="choice"><span class="ico" data-tower="${ty}"></span><span>${esc(tname(ty))}<small>free</small></span></button>`;
+    for (const ty of BALANCE.towerTypes) html += `<button data-act="grant" data-f="${f}" data-type="${ty}" class="choice"><span class="ico" data-tower="${ty}"></span><span>${esc(tname(ty))}<small>free</small></span></button>`;
     html += `</div>`;
   } else {
     html += `<div class="choices">`;
-    for (const ty of TOWER_TYPES) {
+    for (const ty of BALANCE.towerTypes) {
       const c = buildCheck(s, f, ty);
       html += `<button data-act="build" data-f="${f}" data-type="${ty}" class="choice" ${c.ok ? '' : 'disabled'} title="${esc(c.reason || BALANCE.towers[ty].pulseText)}"><span class="ico" data-tower="${ty}"></span><span>${esc(tname(ty))}<small>${BALANCE.towers[ty].cost} gold</small></span></button>`;
     }
@@ -245,6 +247,9 @@ function handleAction(e: Event) {
     case 'start': if (startWave(s)) { closePopover(); bindConfirm = null; view.bindPreview = null; } break;
     case 'restart': restart(); break;
     case 'resume': s.paused = false; break;
+    case 'play': startLevel(el.dataset.level as LevelId); break;
+    case 'menu': openMenu(); break;
+    case 'closeMenu': closeMenu(); break;
     case 'ribbon': ribbonFolded = !ribbonFolded; break;
   }
   lastSig = '';
@@ -280,10 +285,10 @@ function togglePause() {
 function restart() {
   view.inspectId = null;
   const speed = s.speed;
-  s = newGame();
+  s = newGame(currentLevel);
   s.speed = speed;
   bindConfirm = null;
-  grantType = 'bramble';
+  grantType = BALANCE.towerTypes[0];
   view.bindPreview = null;
   view.selectedFoundation = null;
   cancelGesture();
@@ -294,6 +299,7 @@ function restart() {
 
 window.addEventListener('keydown', (e) => {
   const tag = (e.target as HTMLElement).tagName;
+  if (menuOpen) { if (e.key === 'Escape' && menuCanClose()) closeMenu(); return; }
   if (e.key === 'Escape') { closePopover(); cancelGesture(); bindConfirm = null; view.bindPreview = null; lastSig = ''; return; }
   if (e.key === 'p' || e.key === 'P' || (e.key === ' ' && tag !== 'BUTTON')) { e.preventDefault(); togglePause(); return; }
   if ((e.key === 'u' || e.key === 'U') && s.phase === 'prep') { undoTrace(s); return; }
@@ -356,7 +362,7 @@ function renderMargin() {
     }
     if (s.pendingGrant) {
       h += `<div class="notice royal-card"><h3>A royal reinforcement!</h3><p>The Crown sends a fourth tower, free of charge, so the ward can meet its new demands: <b>${r.traces} threads</b> and <b>${r.pulses} pulses</b> a wave. Choose its type, then an empty foundation.</p>
-        <div class="choices row">${TOWER_TYPES.map((ty) => `<button data-act="grantType" data-type="${ty}" class="choice ${grantType === ty ? 'on' : ''}" aria-pressed="${grantType === ty}"><span class="ico" data-tower="${ty}"></span><span>${esc(tname(ty))}</span></button>`).join('')}</div>
+        <div class="choices row">${BALANCE.towerTypes.map((ty) => `<button data-act="grantType" data-type="${ty}" class="choice ${grantType === ty ? 'on' : ''}" aria-pressed="${grantType === ty}"><span class="ico" data-tower="${ty}"></span><span>${esc(tname(ty))}</span></button>`).join('')}</div>
         <p class="sub">Place the ${esc(tname(grantType))} at:</p>
         <div class="flist">${emptyFoundations(s).map((f) => `<button data-act="grant" data-f="${f}" data-type="${grantType}">${esc(fname(f))}</button>`).join('')}</div></div>`;
     }
@@ -368,7 +374,7 @@ function renderMargin() {
     // Build
     const empties = emptyFoundations(s);
     h += `<section class="card"><h3>Build <span class="need">${s.gold} gold</span></h3>
-      <p class="hint">Click an empty foundation on the map, or pick one here. Bramble ${BALANCE.towers.bramble.cost} · Ember ${BALANCE.towers.ember.cost} · Bell ${BALANCE.towers.bell.cost} · Verdigris ${BALANCE.towers.verdigris.cost}.</p>
+      <p class="hint">Click an empty foundation on the map, or pick one here. ${BALANCE.towerTypes.map((ty) => `${esc(tname(ty).split(' ')[0])} ${BALANCE.towers[ty].cost}`).join(' · ')}.</p>
       <div class="flist">${empties.map((f) => `<button data-act="select" data-f="${f}" ${s.pendingGrant ? 'disabled' : ''}>${esc(fname(f))}</button>`).join('') || '<em>Every foundation is built.</em>'}</div></section>`;
     // Bind
     h += `<section class="card bind"><h3>Bind a tower <span class="need gilt">${s.leaves} / ${BALANCE.bindCost} leaves</span></h3>`;
@@ -400,8 +406,10 @@ function renderMargin() {
       <ul class="towers">${pulseable().map((t, i) => towerRow(t, 'combat').replace('<span class="ico"', `<kbd>${i + 1}</kbd><span class="ico"`)).join('')}</ul></section>
       <section class="card"><h3>Unthreaded towers</h3><ul class="towers dim">${s.towers.filter((t) => !t.traced && !t.bound).map((t) => `<li class="tower-row"><span class="ico" data-tower="${t.type}"></span><span class="tw"><b>${esc(tname(t.type))}</b><small>${esc(fname(t.foundation))} · attacking</small></span></li>`).join('') || '<li class="sub">None</li>'}</ul></section>`;
   }
-  if (s.phase === 'victory') h = `<h2><small>The End</small>Goosebridge stands</h2><p class="hint">Every wave held. Restart to read the siege again.</p><div class="start"><button data-act="restart" class="primary">Restart the siege</button></div>`;
-  if (s.phase === 'defeat') h = `<h2><small>Wave ${s.wave}</small>The gate has fallen</h2><p class="hint">Restart clears gold, leaves, binds and every thread.</p><div class="start"><button data-act="restart" class="primary">Restart the siege</button></div>`;
+  if (s.phase === 'victory') h = s.level === 'fields'
+    ? `<h2><small>The End of the first sheet</small>Goosebridge stands</h2><p class="hint">Every wave held in the fields. The fight moves inside the walls.</p><div class="start"><button data-act="play" data-level="courtyard" class="primary">On to the Castle Courtyard</button><button data-act="restart">Play the fields again</button></div>`
+    : `<h2><small>The End</small>The keep held</h2><p class="hint">Every wave held in the courtyard.</p><div class="start"><button data-act="menu" class="primary">Back to the menu</button><button data-act="restart">Play the courtyard again</button></div>`;
+  if (s.phase === 'defeat') h = `<h2><small>Wave ${s.wave}</small>${s.level === 'fields' ? 'The gate has fallen' : 'The keep door is broken'}</h2><p class="hint">Restart clears gold, leaves, binds and every thread.</p><div class="start"><button data-act="restart" class="primary">Restart this sheet</button><button data-act="menu">Main menu</button></div>`;
   const focused = document.activeElement as HTMLElement | null;
   const key = focused && margin.contains(focused) ? focused.getAttribute('data-act') + '|' + (focused.dataset.id ?? focused.dataset.f ?? focused.dataset.type ?? '') : null;
   margin.innerHTML = h;
@@ -417,11 +425,16 @@ function renderOverlay() {
   if (s.phase === 'victory') {
     overlay.hidden = false;
     overlay.className = 'victory';
-    overlay.innerHTML = `<div class="plate"><p class="kicker">The End</p><h2>Defence of Goosebridge Castle</h2><p class="caption">“And so Goosebridge Castle held, and the old wizard let the ink dry on the final page.”</p><p class="sub">Castle ${s.castleHp}/${BALANCE.castleHp} · ${s.kills} foes turned back · ${s.towers.filter((t) => t.bound).length} tower${s.towers.filter((t) => t.bound).length === 1 ? '' : 's'} bound in gold</p><button data-act="restart" class="primary">Read it again</button></div>`;
+    const bound = s.towers.filter((t) => t.bound).length;
+    const stats = `<p class="sub">Castle ${s.castleHp}/${BALANCE.castleHp} · ${s.kills} foes turned back · ${bound} tower${bound === 1 ? '' : 's'} bound in gold</p>`;
+    overlay.innerHTML = s.level === 'fields'
+      ? `<div class="plate"><p class="kicker">The first sheet</p><h2>The fields are held</h2><p class="caption">“The levy broke on the roads, and the hounds on the bridge. But the old wizard turned the page: the outer wall had already fallen.”</p>${stats}<button data-act="play" data-level="courtyard" class="primary">On to the Castle Courtyard</button> <button data-act="restart">Read it again</button></div>`
+      : `<div class="plate"><p class="kicker">The End</p><h2>Defence of Goosebridge Castle</h2><p class="caption">“And so Goosebridge Castle held, and the old wizard let the ink dry on the final page.”</p>${stats}<button data-act="menu" class="primary">Back to the menu</button> <button data-act="restart">Read it again</button></div>`;
+    recordWin(s.level, s.castleHp);
   } else if (s.phase === 'defeat') {
     overlay.hidden = false;
     overlay.className = 'defeat';
-    overlay.innerHTML = `<div class="plate"><p class="kicker">Wave ${s.wave}</p><h2>The gate has fallen</h2><p class="caption">The ink ran dry before the last ward could hold. Turn back to the first page and try another thread.</p><button data-act="restart" class="primary">Restart the siege</button></div>`;
+    overlay.innerHTML = `<div class="plate"><p class="kicker">Wave ${s.wave}</p><h2>${s.level === 'fields' ? 'The gate has fallen' : 'The keep door is broken'}</h2><p class="caption">The ink ran dry before the last ward could hold. Turn back the page and try another thread.</p><button data-act="restart" class="primary">Restart this sheet</button> <button data-act="menu">Main menu</button></div>`;
   } else if (s.paused) {
     overlay.hidden = false;
     overlay.className = 'paused';
@@ -526,6 +539,67 @@ function hydrateIcons(root: HTMLElement) {
   });
 }
 
+// ── Main menu ───────────────────────────────────────────────────────────────
+const menuEl = $('menu');
+const LEVELS: { id: LevelId; name: string; sub: string; blurb: string }[] = [
+  { id: 'fields', name: 'The Fields', sub: 'First sheet', blurb: 'Two roads cross the fields to Goosebridge Castle: the Fen Levy on the Mill Road, the Barrow Hounds over the bridge. Bramble, Ember, Bell and Verdigris hold the way.' },
+  { id: 'courtyard', name: 'The Castle Courtyard', sub: 'Second sheet', blurb: 'The outer wall has fallen. The levy pour through the ruined gatehouse and the hounds leap the breach. Defend the keep with gargoyles, mangonels, ink fountains and banners.' },
+];
+const thumbs = new Map<LevelId, HTMLCanvasElement>();
+
+function readRecord(id: LevelId): number | null {
+  try { const v = localStorage.getItem(`goosebridge.best.${id}`); return v === null ? null : Number(v); } catch { return null; }
+}
+function recordWin(id: LevelId, hp: number) {
+  try { const best = readRecord(id); if (best === null || hp > best) localStorage.setItem(`goosebridge.best.${id}`, String(hp)); } catch { /* private mode */ }
+}
+
+/** The menu can be closed back to a game already under way. */
+function menuCanClose() { return s.phase !== 'victory' && s.phase !== 'defeat' && (s.wave > 1 || s.phase === 'combat' || s.traces.length > 0 || s.gold !== BALANCE.startGold); }
+
+function renderMenu() {
+  if (!thumbs.size) {
+    // draw each sheet once in its own geometry, then return to the open one
+    for (const L of LEVELS) { setLevel(L.id); thumbs.set(L.id, levelThumbnail(360)); }
+    setLevel(s.level);
+  }
+  const cards = LEVELS.map((L) => {
+    const best = readRecord(L.id);
+    const towers = LEVEL_BALANCE[L.id].towerTypes;
+    return `<article class="level-card"><div class="thumb" data-thumb="${L.id}"></div><div class="lc-body">
+      <p class="kicker">${esc(L.sub)}${best !== null ? ` · <span class="won">held, castle ${best}/${BALANCE.castleHp}</span>` : ''}</p>
+      <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p>
+      <div class="lc-towers">${towers.map((ty) => `<span class="ico" data-tower="${ty}" title="${esc(BALANCE.towers[ty].name)}"></span>`).join('')}</div>
+      <button data-act="play" data-level="${L.id}" class="primary">${s.level === L.id && menuCanClose() ? 'Start this sheet again' : 'Begin'}</button></div></article>`;
+  }).join('');
+  menuEl.innerHTML = `<div class="menu-panel"><header><h1>Defence of Goosebridge Castle</h1><p class="lede">A tower defence drawn in pen and ink. Trace threads of ink from the wizard's inkwell to prepare your towers, then pulse them in battle.</p></header>
+    <div class="levels">${cards}</div>
+    ${menuCanClose() ? `<p class="resume"><button data-act="closeMenu">Return to ${esc(LEVELS.find((L) => L.id === s.level)!.name)}, wave ${s.wave}</button></p>` : ''}</div>`;
+  menuEl.querySelectorAll<HTMLElement>('[data-thumb]').forEach((el) => {
+    const src = thumbs.get(el.dataset.thumb as LevelId)!;
+    const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+    c.getContext('2d')!.drawImage(src, 0, 0); el.replaceChildren(c);
+  });
+  hydrateIcons(menuEl);
+}
+function openMenu() {
+  menuOpen = true; menuEl.hidden = false; document.body.dataset.menu = '1';
+  closePopover(); cancelGesture();
+  renderMenu();
+  (menuEl.querySelector('button.primary') as HTMLButtonElement | null)?.focus({ preventScroll: true });
+}
+function closeMenu() { menuOpen = false; menuEl.hidden = true; delete document.body.dataset.menu; lastSig = ''; }
+function startLevel(id: LevelId) {
+  currentLevel = id;
+  closeMenu();
+  restart();
+  iconCache.clear();
+  ribbonSig = ''; overlaySig = '';
+  toast(s, id === 'fields' ? 'The first sheet: the fields before Goosebridge.' : 'The second sheet: the castle courtyard. New towers to raise.', 'info');
+}
+menuEl.addEventListener('click', handleAction);
+$('btnMenu').addEventListener('click', openMenu);
+
 // ── Main loop ───────────────────────────────────────────────────────────────
 let last = performance.now();
 let ribbonSig = '';
@@ -560,12 +634,13 @@ function refresh(now: number) {
 function frame(now: number) {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
-  if (!s.paused) for (let i = 0; i < s.speed; i++) step(s, dt);
+  if (!s.paused && !menuOpen) for (let i = 0; i < s.speed; i++) step(s, dt);
   refresh(now);
   requestAnimationFrame(frame);
 }
 resize();
 refresh(performance.now());
+openMenu();
 requestAnimationFrame(frame);
 
 // Debug / automated-check hooks (harmless in play): inspect state, advance the clock.
@@ -577,5 +652,6 @@ Object.assign(window, {
     return { phase: s.phase, wave: s.wave, hp: s.castleHp, enemies: s.enemies.length, pulses: s.pulsesLeft };
   },
   __refresh: () => refresh(performance.now()),
+  __level: (id: LevelId) => startLevel(id),
 });
 

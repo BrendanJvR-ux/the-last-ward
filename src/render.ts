@@ -1,7 +1,8 @@
 // Live drawing on top of the ink sheet.
 import { BALANCE, phaseRule } from './balance';
-import { MAP_W, MAP_H, LANES, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, routePolyline, pointAt, type Vec } from './map';
+import { MAP_W, MAP_H, LANES, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, LEVEL, routePolyline, pointAt, type Vec } from './map';
 import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint } from './game';
+import type { LevelId } from './balance';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
 import { P, drawTowerIcon, drawEnemy, drawNameStone, litGrad, softShadow, ENEMY_SCALE, TOWER_SCALE } from './sprites';
 import { inkFoundation, inkFlame, windmillSails, wizard, grow, limbs, hatch, seed, PAPER, type Seg } from './ink';
@@ -28,11 +29,20 @@ export interface ViewState {
 
 const INK = '#1e1008';
 /** The keeper of the inkwell stands just east of it. */
-const WIZARD = { x: INKWELL.x + 62, y: INKWELL.y + 26 };
-let staticLayer: HTMLCanvasElement | null = null;
+const wizardAt = () => ({ x: INKWELL.x + 62, y: INKWELL.y + 26 });
+const staticLayers = new Map<LevelId, HTMLCanvasElement>();
 function base(ctx: CanvasRenderingContext2D) {
-  if (!staticLayer) staticLayer = buildStatic(2);
-  ctx.drawImage(staticLayer, 0, 0, MAP_W, MAP_H);
+  if (!staticLayers.has(LEVEL)) staticLayers.set(LEVEL, buildStatic(2));
+  ctx.drawImage(staticLayers.get(LEVEL)!, 0, 0, MAP_W, MAP_H);
+}
+
+/** A small picture of a level's sheet, for the main menu (builds it in that level's geometry). */
+export function levelThumbnail(w: number): HTMLCanvasElement {
+  if (!staticLayers.has(LEVEL)) staticLayers.set(LEVEL, buildStatic(2));
+  const c = document.createElement('canvas');
+  c.width = w; c.height = Math.round((w * MAP_H) / MAP_W);
+  c.getContext('2d')!.drawImage(staticLayers.get(LEVEL)!, 0, 0, c.width, c.height);
+  return c;
 }
 
 /** Iron-gall ink: tapering, wobbly, soaked into the paint, with a wet sheen while fresh. */
@@ -123,6 +133,11 @@ function drawTowerState(ctx: CanvasRenderingContext2D, s: GameState, t: Tower, t
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y - 54, 76, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
   drawTowerIcon(ctx, t.type, p.x, p.y, TOWER_SCALE, time + p.x);
+  if (s.rallies.some((r) => Math.hypot(r.x - p.x, r.y - p.y) <= r.r)) {
+    // rallied: gold flecks streaming up from the tower
+    ctx.fillStyle = P.gold;
+    for (let i = 0; i < 5; i++) { const u = (time * 1.2 + i / 5) % 1; ctx.beginPath(); ctx.arc(p.x + Math.sin(i * 2.1 + time * 3) * 14, p.y - 20 - u * 90, 1.8 * (1 - u) + 0.6, 0, Math.PI * 2); ctx.fill(); }
+  }
   const markX = p.x + 38, markY = p.y - 102;
   if (t.traced) {
     const ready = s.phase === 'combat' && !t.committed && s.pulsesLeft > 0;
@@ -211,6 +226,24 @@ function drawFire(ctx: CanvasRenderingContext2D, f: GameState['fires'][number], 
   ctx.restore();
 }
 
+/** Inkflood: pools of ink lying across the road, rippling. */
+function drawPool(ctx: CanvasRenderingContext2D, pl: GameState['pools'][number], time: number) {
+  const life = Math.min(1, pl.t / 0.3, (pl.dur - pl.t) / 0.8);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, life);
+  for (let i = 0; i < pl.pts.length; i += 2) {
+    const p = pl.pts[i];
+    const w = 22 + ((i * 7) % 9), h = 11 + ((i * 5) % 5);
+    ctx.fillStyle = 'rgba(29,25,21,0.55)'; ctx.beginPath(); ctx.ellipse(p.x + ((i * 13) % 7) - 3, p.y + 3, w, h, (i % 5) * 0.2, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(239,233,218,0.45)'; ctx.lineWidth = 0.8;
+  for (let i = 0; i < pl.pts.length; i += 5) {
+    const p = pl.pts[i], r = ((time * 0.8 + i * 0.13) % 1);
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 3, 4 + r * 16, 2 + r * 7, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 /** A defeated enemy toppling and fading where it fell; the giant crumbles to a cairn. */
 function drawFallen(ctx: CanvasRenderingContext2D, f: GameState['fallen'][number], time: number) {
   const k = f.t / 1.6;
@@ -239,6 +272,7 @@ function drawFallen(ctx: CanvasRenderingContext2D, f: GameState['fallen'][number
 
 /** The windmill's lattice sails, turning slowly. */
 function drawSails(ctx: CanvasRenderingContext2D, time: number) {
+  if (LEVEL !== 'fields') return;
   windmillSails(ctx, WINDMILL.x, WINDMILL.y - 56, time * 0.35);
 }
 
@@ -280,21 +314,21 @@ function drawHoundWarnings(ctx: CanvasRenderingContext2D, s: GameState, time: nu
   if (s.phase !== 'combat') return;
   for (const w of s.warnings) {
     if (s.waveTime < w.from || s.waveTime > w.to) continue;
-    const entry = LANES.king.pts[2]; // the bridge's southern approach
+    const entry = BRIDGE; // the bridge, or the stable yard in the courtyard
     const k = 0.6 + 0.4 * Math.abs(Math.sin(time * 5));
     ctx.save();
     ctx.globalAlpha = k;
     ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4;
     for (let r = 22; r < 80; r += 18) { ctx.beginPath(); ctx.arc(entry.x, entry.y, r, 0, Math.PI * 2); ctx.stroke(); }
     ctx.globalAlpha = 1;
-    const bx = 548, by = 722;
+    const bx = LEVEL === 'fields' ? 548 : 1060, by = LEVEL === 'fields' ? 722 : 82;
     ctx.fillStyle = 'rgba(228,211,182,0.96)'; roundRect(ctx, bx, by - 24, 258, 36, 4); ctx.fill();
     ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6; ctx.stroke();
     ctx.lineWidth = 0.6; roundRect(ctx, bx + 3, by - 21, 252, 30, 3); ctx.stroke();
     const horn = () => { ctx.beginPath(); ctx.moveTo(bx + 10, by - 2); ctx.quadraticCurveTo(bx + 18, by - 20, bx + 34, by - 16); ctx.lineTo(bx + 34, by - 4); ctx.quadraticCurveTo(bx + 20, by - 8, bx + 14, by + 2); ctx.closePath(); };
     ctx.fillStyle = PAPER; horn(); ctx.fill(); hatch(ctx, horn, [bx + 8, by - 20, 28, 24], 0.8, 1.6, 0.5); ctx.lineWidth = 1.1; horn(); ctx.stroke();
     ctx.fillStyle = '#7a2826'; ctx.font = `italic 600 17px ${SERIF}`; ctx.textAlign = 'left';
-    ctx.fillText('Horns! Hounds at the bridge', bx + 42, by);
+    ctx.fillText(BALANCE.houndWarnText, bx + 42, by);
     ctx.restore();
   }
 }
@@ -329,6 +363,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   }
 
   for (const f of s.fires) drawFire(ctx, f, time);
+  for (const pl of s.pools) drawPool(ctx, pl, time);
   for (const st of s.stones) { const p = pointAt(LANES[st.lane], st.s); drawNameStone(ctx, p.x + 14, p.y + 4, time); }
 
   for (const f of FOUNDATION_IDS) {
@@ -362,6 +397,20 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
           }
         }
         drawEnemy(ctx, e.type, p.x, p.y, dir, e.bob, e.hit, k, { kneel: e.mode === 'kneel', alpha: e.mode === 'leave' ? e.fade ?? 1 : 1 });
+        if ((e.petrifyT ?? 0) > 0) {
+          // turned to stone: a grey wash and a few cracks over the figure
+          const hgt = e.type === 'cairn' ? 100 : e.type === 'hound' ? 40 : 52, wid = e.type === 'cairn' ? 70 : 20;
+          ctx.save(); ctx.globalAlpha = Math.min(1, (e.petrifyT ?? 0) * 2);
+          ctx.fillStyle = 'rgba(120,116,108,0.45)'; ctx.beginPath(); ctx.ellipse(p.x, p.y - hgt / 2, wid, hgt / 2, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(29,25,21,0.8)'; ctx.lineWidth = 0.8; ctx.beginPath();
+          ctx.moveTo(p.x - 4, p.y - hgt * 0.8); ctx.lineTo(p.x + 2, p.y - hgt * 0.6); ctx.lineTo(p.x - 3, p.y - hgt * 0.4); ctx.lineTo(p.x + 4, p.y - hgt * 0.2);
+          ctx.stroke(); ctx.restore();
+        }
+        if ((e.slowT ?? 0) > 0) {
+          // stained with ink: drips falling from the figure
+          ctx.fillStyle = 'rgba(29,25,21,0.75)';
+          for (let i = 0; i < 3; i++) { const t = (time * 1.6 + i / 3) % 1; ctx.beginPath(); ctx.ellipse(p.x - 6 + i * 6, p.y - 30 + t * 26, 1.3, 2, 0, 0, Math.PI * 2); ctx.fill(); }
+        }
         const top = e.type === 'cairn' ? (e.mode === 'kneel' ? 104 : 120) : e.type === 'bearer' ? 78 : e.type === 'hound' ? 52 : 64;
         if (e.vulnT > 0 || e.shred > 0) {
           ctx.fillStyle = e.vulnT > 0 ? 'rgba(120,220,180,0.9)' : 'rgba(120,200,170,0.6)';
@@ -388,7 +437,8 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   for (const h of s.hedges) sprites.push({ y: h.at.y + 1, draw: () => drawHedge(ctx, h, time) });
   for (const f of s.fallen) sprites.push({ y: f.y - 1, draw: () => drawFallen(ctx, f, time) });
   sprites.push({ y: WINDMILL.y, draw: () => drawSails(ctx, time) });
-  sprites.push({ y: WIZARD.y, draw: () => wizard(ctx, WIZARD.x, WIZARD.y, -1, time, v.gesture.active || s.flights.length > 0) });
+  const wz = wizardAt();
+  sprites.push({ y: wz.y, draw: () => wizard(ctx, wz.x, wz.y, -1, time, v.gesture.active || s.flights.length > 0) });
   sprites.sort((a, b) => a.y - b.y);
   for (const sp of sprites) sp.draw();
 
@@ -405,6 +455,32 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
       ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -3); ctx.lineTo(-6, 3); ctx.closePath(); ctx.fill();
       ctx.restore();
+    } else if (p.kind === 'gargoyle') {
+      // a shard of stone spat from the gargoyle's mouth
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
+      ctx.fillStyle = P.stone; ctx.strokeStyle = P.ink; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-2, -4); ctx.lineTo(-7, 0); ctx.lineTo(-2, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    } else if (p.kind === 'banner') {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
+      ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(8, 0); ctx.stroke();
+      ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(4, -3); ctx.lineTo(4, 3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = P.oxblood; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-15, -3.5); ctx.lineTo(-13, 0); ctx.lineTo(-15, 3.5); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    } else if (p.kind === 'fountain') {
+      // a gob of ink with a tail
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
+      ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(-2, -4.5, 4, -3.5); ctx.arc(4, 0, 3.5, -Math.PI / 2, Math.PI / 2); ctx.quadraticCurveTo(-2, 4.5, -11, 0); ctx.fill();
+      ctx.restore();
+    } else if (p.kind === 'mangonel') {
+      // a boulder lobbed high, its shadow racing along the ground
+      const k = Math.min(1, p.t / p.dur);
+      const lift = Math.sin(k * Math.PI) * (p.arc ?? 80);
+      softShadow(ctx, p.x, p.y + 2, 9, 3, 0.5);
+      const rock = () => { ctx.beginPath(); ctx.ellipse(p.x, p.y - lift, 7.5, 6.5, k * 6, 0, Math.PI * 2); };
+      ctx.fillStyle = P.stone; rock(); ctx.fill();
+      hatch(ctx, rock, [p.x - 8, p.y - lift - 8, 16, 16], 0.9, 1.5, 0.5);
+      ctx.strokeStyle = P.ink; ctx.lineWidth = 1.2; rock(); ctx.stroke();
     } else if (p.kind === 'verdigris') {
       const g = ctx.createRadialGradient(p.x - 1, p.y - 1, 0, p.x, p.y, 6);
       g.addColorStop(0, '#d8fff0'); g.addColorStop(0.5, P.verdigris); g.addColorStop(1, 'rgba(40,90,75,0)');
@@ -437,6 +513,26 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
       const g = ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, rr);
       g.addColorStop(0, `rgba(140,230,190,${0.45 * (1 - k)})`); g.addColorStop(1, 'rgba(80,160,130,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(r.x, r.y, rr, 0, Math.PI * 2); ctx.fill();
+    } else if (r.kind === 'gaze') {
+      // the gargoyle's stare: a widening ring of stone-grey rays
+      const rr = r.r * (0.25 + 0.75 * k);
+      ctx.strokeStyle = `rgba(90,86,80,${0.8 * (1 - k)})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(r.x, r.y + 60, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 1; ctx.beginPath();
+      for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2; ctx.moveTo(r.x + Math.cos(a) * rr * 0.82, r.y + 60 + Math.sin(a) * rr * 0.82); ctx.lineTo(r.x + Math.cos(a) * rr, r.y + 60 + Math.sin(a) * rr); }
+      ctx.stroke();
+    } else if (r.kind === 'rally') {
+      ctx.strokeStyle = `rgba(195,150,52,${0.9 * (1 - k)})`; ctx.lineWidth = 3; ctx.setLineDash([10, 6]);
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (0.3 + 0.7 * k), 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    } else if (r.kind === 'thud') {
+      // a boulder lands: dust and flying chips
+      ctx.fillStyle = `rgba(92,70,50,${0.35 * (1 - k)})`;
+      ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r * (0.4 + 0.6 * k), r.r * 0.5 * (0.4 + 0.6 * k), 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(29,25,21,${1 - k})`;
+      for (let i = 0; i < 8; i++) { const a = i * 0.8; ctx.beginPath(); ctx.arc(r.x + Math.cos(a) * r.r * k * 0.9, r.y - 10 * Math.sin(k * Math.PI) + Math.sin(a) * r.r * k * 0.45, 1.6, 0, Math.PI * 2); ctx.fill(); }
+    } else if (r.kind === 'ink') {
+      ctx.strokeStyle = `rgba(29,25,21,${0.6 * (1 - k)})`; ctx.lineWidth = 1.5;
+      for (const f of [0.55, 0.8, 1]) { ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r * k * f, r.r * k * f * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); }
     } else if (r.kind === 'corrode') {
       ctx.fillStyle = `rgba(120,220,180,${0.7 * (1 - k)})`;
       for (let i = 0; i < 5; i++) { const a = i * 1.3; ctx.beginPath(); ctx.arc(r.x + Math.cos(a) * r.r * k, r.y + Math.sin(a) * r.r * k * 0.6, 1.8, 0, Math.PI * 2); ctx.fill(); }
@@ -467,7 +563,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
 
   drawAmbience(ctx, time);
   drawHoundWarnings(ctx, s, time);
-  drawGoose(ctx, BRIDGE.x + 26, BRIDGE.y - 40, 0.8, 1);
+  if (LEVEL === 'fields') drawGoose(ctx, BRIDGE.x + 26, BRIDGE.y - 40, 0.8, 1);
 }
 
 /** The victory plate: the finished drawing, framed in gold. */
@@ -493,7 +589,7 @@ export function renderVictory(ctx: CanvasRenderingContext2D, s: GameState, time:
     drawGoose(ctx, x, y, 1.4, -1, true, time * 7 + i);
   }
   drawSails(ctx, time);
-  wizard(ctx, WIZARD.x, WIZARD.y, -1, time, false);
+  wizard(ctx, wizardAt().x, wizardAt().y, -1, time, false);
   drawGoose(ctx, 1380, 520, 1.6, -1);
   drawGoose(ctx, 1330, 540, 1.4, 1);
 }

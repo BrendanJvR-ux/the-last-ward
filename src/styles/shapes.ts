@@ -1,5 +1,5 @@
 // Shared tower and enemy silhouettes for the art studies.
-import type { EnemyType, TowerType } from '../balance';
+import type { EnemyType, FieldTowerType as TowerType } from '../balance';
 
 // ── Shared silhouettes ──────────────────────────────────────────────────────
 

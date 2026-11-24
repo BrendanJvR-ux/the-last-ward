@@ -1,9 +1,9 @@
 // Game state, rules (trace / pulse / bind / build) and the combat simulation.
 // Pure logic: no DOM, so it runs in tests and in the browser alike.
-import { BALANCE, TOTAL_WAVES, phaseRule, type EnemyType, type LaneId, type TowerType } from './balance';
+import { BALANCE, TOTAL_WAVES, phaseRule, applyBalanceLevel, type EnemyType, type LaneId, type LevelId, type TowerType } from './balance';
 import {
   LANES, LANE_IDS, NODE, FOUNDATION_IDS, GATE, BRIDGE, dist, nearestOnLane, pointAt, routePolyline,
-  polylineLength, pointAlong, type Vec,
+  polylineLength, pointAlong, setMapLevel, type Vec,
 } from './map';
 
 export type Phase = 'prep' | 'combat' | 'victory' | 'defeat';
@@ -41,6 +41,10 @@ export interface Enemy {
   shredT: number;
   /** Tarnished: no armour and extra damage taken. */
   vulnT: number;
+  /** Stained by an Ink Fountain: slowed while this runs. */
+  slowT?: number;
+  /** Turned to stone by a Gargoyle's gaze (visual; the stun does the work). */
+  petrifyT?: number;
   /** Cairn-Born behaviour. */
   mode?: 'follow' | 'march' | 'seek' | 'kneel' | 'leave';
   modeT?: number;
@@ -66,13 +70,21 @@ export interface Projectile {
   damage: number;
   splash: number;
   shred?: number;
+  /** Ink Fountain: seconds of slow on hit. */
+  slow?: number;
+  /** Arc height for lobbed shots (mangonel boulders). */
+  arc?: number;
   t: number;
   dur: number;
 }
 
 export interface Hedge { towerId: string; at: Vec; angle: number; stops: { lane: LaneId; s: number }[]; t: number; dur: number }
 export interface Fire { towerId: string; ranges: { lane: LaneId; s0: number; s1: number }[]; pts: Vec[]; t: number; dur: number }
-export interface Ring { x: number; y: number; r: number; t: number; dur: number; kind: 'bell' | 'toll' | 'splash' | 'arrive' | 'spawn' | 'tarnish' | 'corrode' }
+export interface Ring { x: number; y: number; r: number; t: number; dur: number; kind: 'bell' | 'toll' | 'splash' | 'arrive' | 'spawn' | 'tarnish' | 'corrode' | 'gaze' | 'rally' | 'thud' | 'ink' }
+/** Inkflood: a slowing pool of ink on the road. */
+export interface Pool { towerId: string; ranges: { lane: LaneId; s0: number; s1: number }[]; pts: Vec[]; t: number; dur: number }
+/** Rally: towers near the banner shoot faster for a while. */
+export interface Rally { x: number; y: number; r: number; t: number; dur: number }
 export interface PulseFlight { towerId: string; path: Vec[]; length: number; s: number }
 /** Barrow Hounds: horn and a marker at the bridge shortly before the pack arrives there. */
 export interface Warning { lane: LaneId; type: EnemyType; from: number; to: number; count: number; sounded: boolean }
@@ -82,6 +94,7 @@ export interface Toast { text: string; kind: 'info' | 'good' | 'bad' | 'gold'; t
 export interface Spawn { type: EnemyType; lane: LaneId; at: number; side?: number }
 
 export interface GameState {
+  level: LevelId;
   phase: Phase;
   paused: boolean;
   speed: number;
@@ -98,6 +111,8 @@ export interface GameState {
   projectiles: Projectile[];
   hedges: Hedge[];
   fires: Fire[];
+  pools: Pool[];
+  rallies: Rally[];
   rings: Ring[];
   flights: PulseFlight[];
   spawns: Spawn[];
@@ -117,12 +132,24 @@ export interface GameState {
   castleCd: number;
 }
 
-export function newGame(): GameState {
+/** Distance along the King's lane to its choke point (the bridge on level 1). */
+export let BRIDGE_S = 0;
+
+/** Load a level's map and balance. Every new game does this, so levels never leak into each other. */
+export function setLevel(level: LevelId) {
+  setMapLevel(level);
+  applyBalanceLevel(level);
+  BRIDGE_S = LANES.king.cum[LANES.king.pts.indexOf(BRIDGE)];
+}
+
+export function newGame(level: LevelId = 'fields'): GameState {
+  setLevel(level);
   const s: GameState = {
+    level,
     phase: 'prep', paused: false, speed: 1, wave: 1,
     castleHp: BALANCE.castleHp, gold: BALANCE.startGold, leaves: BALANCE.startLeaves,
     towers: [], traces: [], pulsesLeft: 0, pendingGrant: false, castleCd: 0,
-    enemies: [], projectiles: [], hedges: [], fires: [], rings: [], flights: [], spawns: [],
+    enemies: [], projectiles: [], hedges: [], fires: [], pools: [], rallies: [], rings: [], flights: [], spawns: [],
     warnings: [], stones: [], fallen: [], fading: [], toasts: [], waveTime: 0, time: 0, nextId: 1, kills: 0, leaked: 0, leakLog: [], resetBanner: 0,
   };
   for (const t of BALANCE.startingTowers) addTower(s, t.foundation, t.type);
@@ -301,9 +328,6 @@ export function waveSpawns(wave: number): Spawn[] {
   return out.sort((a, b) => a.at - b.at);
 }
 
-/** Distance along the King's Road to the bridge. */
-export const BRIDGE_S = LANES.king.cum[LANES.king.pts.indexOf(BRIDGE)];
-
 function houndWarnings(wave: number): Warning[] {
   const out: Warning[] = [];
   for (const g of BALANCE.waves[wave - 1].groups) {
@@ -354,6 +378,26 @@ export function pulseTower(s: GameState, towerId: string): boolean {
   return true;
 }
 
+/** Stretches of road within `radius` of a point (and points to draw on them, the shared stretch once). */
+function roadNear(p: Vec, radius: number): { ranges: Fire['ranges']; pts: Vec[] } {
+  const ranges: Fire['ranges'] = [];
+  const pts: Vec[] = [];
+  for (const id of LANE_IDS) {
+    const L = LANES[id];
+    let s0 = -1;
+    for (let x = 0; x <= L.length; x += 8) {
+      const q = pointAt(L, x);
+      const inside = dist(q, p) <= radius;
+      if (inside) {
+        if (s0 < 0) s0 = x;
+        if (id === 'mill' || x < L.junctionS) pts.push(q);
+      }
+      if ((!inside || x + 8 > L.length) && s0 >= 0) { ranges.push({ lane: id, s0, s1: x }); s0 = -1; }
+    }
+  }
+  return { ranges, pts };
+}
+
 function applyPulse(s: GameState, t: Tower) {
   const p = posOf(t);
   const P = BALANCE.pulses;
@@ -375,23 +419,44 @@ function applyPulse(s: GameState, t: Tower) {
     const at = pointAt(lane, best!.s);
     s.hedges.push({ towerId: t.id, at, angle: at.angle, stops, t: 0, dur: P.hedgeDuration });
   } else if (t.type === 'ember') {
-    const ranges: Fire['ranges'] = [];
-    const pts: Vec[] = [];
-    for (const id of LANE_IDS) {
-      const L = LANES[id];
-      let s0 = -1;
-      for (let x = 0; x <= L.length; x += 8) {
-        const q = pointAt(L, x);
-        const inside = dist(q, p) <= P.fireRadius;
-        if (inside) {
-          if (s0 < 0) s0 = x;
-          // Don't draw the shared stretch twice.
-          if (id === 'mill' || x < L.junctionS) pts.push(q);
-        }
-        if ((!inside || x + 8 > L.length) && s0 >= 0) { ranges.push({ lane: id, s0, s1: x }); s0 = -1; }
+    const { ranges, pts } = roadNear(p, P.fireRadius);
+    s.fires.push({ towerId: t.id, ranges, pts, t: 0, dur: P.fireDuration });
+  } else if (t.type === 'gargoyle') {
+    // Stone Gaze: everything nearby turns to stone; giants only stiffen.
+    s.rings.push({ x: p.x, y: p.y - 60, r: P.gazeRadius, t: 0, dur: 1.1, kind: 'gaze' });
+    for (const e of s.enemies) {
+      if (e.hp <= 0 || e.mode === 'leave' || dist(enemyPos(e), p) > P.gazeRadius) continue;
+      const d = e.type === 'cairn' ? P.gazeGiantStun : P.gazeStun;
+      e.stun = Math.max(e.stun, d);
+      e.petrifyT = Math.max(e.petrifyT ?? 0, d);
+      hurt(s, e, P.gazeDamage, true);
+    }
+  } else if (t.type === 'mangonel') {
+    // Boulder Barrage: a volley onto the thickest crowd in reach, landing one after another.
+    const near = s.enemies.filter((e) => e.hp > 0 && e.s > 0 && e.mode !== 'leave' && dist(enemyPos(e), p) <= P.barrageRadius);
+    let centre: Vec | null = null, most = -1;
+    for (const e of near) {
+      const ep = enemyPos(e);
+      const n = near.filter((o) => dist(enemyPos(o), ep) <= P.barrageSplash).length;
+      if (n > most) { most = n; centre = ep; }
+    }
+    if (centre) {
+      for (let i = 0; i < P.barrageCount; i++) {
+        const a = i * 2.39996, r = (i === 0 ? 0 : 18 + (i % 3) * 16);
+        const tx = centre.x + Math.cos(a) * r, ty = centre.y + Math.sin(a) * r * 0.7;
+        s.projectiles.push({
+          kind: 'mangonel', x: p.x, y: p.y - 50, sx: p.x, sy: p.y - 50, tx, ty, targetId: null, speed: 0,
+          damage: P.barrageDamage, splash: P.barrageSplash, arc: 110, t: 0, dur: 0.7 + i * 0.28,
+        });
       }
     }
-    s.fires.push({ towerId: t.id, ranges, pts, t: 0, dur: P.fireDuration });
+  } else if (t.type === 'fountain') {
+    const { ranges, pts } = roadNear(p, P.floodRadius);
+    s.pools.push({ towerId: t.id, ranges, pts, t: 0, dur: P.floodDuration });
+    s.rings.push({ x: p.x, y: p.y, r: P.floodRadius, t: 0, dur: 0.8, kind: 'ink' });
+  } else if (t.type === 'banner') {
+    s.rallies.push({ x: p.x, y: p.y, r: P.rallyRadius, t: 0, dur: P.rallyDuration });
+    s.rings.push({ x: p.x, y: p.y, r: P.rallyRadius, t: 0, dur: 1.0, kind: 'rally' });
   } else if (t.type === 'verdigris') {
     s.rings.push({ x: p.x, y: p.y, r: P.tarnishRadius, t: 0, dur: 1.4, kind: 'tarnish' });
     for (const e of s.enemies) if (dist(enemyPos(e), p) <= P.tarnishRadius) e.vulnT = P.tarnishDuration;
@@ -475,6 +540,16 @@ function spawnEnemy(s: GameState, sp: Spawn) {
   s.enemies.push(e);
 }
 
+/** How fast a tower reloads: banners nearby quicken it a little, an active Rally doubles it. */
+export function fireRate(s: GameState, t: Tower): number {
+  const P = BALANCE.pulses;
+  const p = posOf(t);
+  let k = 1;
+  if (s.towers.some((o) => o !== t && o.type === 'banner' && dist(posOf(o), p) <= P.bannerAuraRadius)) k += P.bannerAura;
+  if (s.rallies.some((r) => dist(r, p) <= r.r)) k *= P.rallyRate;
+  return k;
+}
+
 function pickTarget(s: GameState, from: Vec, range: number): Enemy | null {
   let best: Enemy | null = null;
   let bestLeft = Infinity;
@@ -555,6 +630,10 @@ export function step(s: GameState, dtRaw: number) {
   s.hedges = s.hedges.filter((h) => h.t < h.dur);
   for (const f of s.fires) f.t += dt;
   s.fires = s.fires.filter((f) => f.t < f.dur);
+  for (const pl of s.pools) pl.t += dt;
+  s.pools = s.pools.filter((pl) => pl.t < pl.dur);
+  for (const r of s.rallies) r.t += dt;
+  s.rallies = s.rallies.filter((r) => r.t < r.dur);
 
   // Kneeling giants block their road behind them (both lanes if on the shared stretch).
   const giantBlocks: { lane: LaneId; s: number; id: number }[] = [];
@@ -565,12 +644,17 @@ export function step(s: GameState, dtRaw: number) {
     e.hit = Math.max(0, e.hit - dt);
     if (e.shredT > 0) { e.shredT -= dt; if (e.shredT <= 0) e.shred = 0; }
     if (e.vulnT > 0) e.vulnT = Math.max(0, e.vulnT - dt);
+    if (e.slowT) e.slowT = Math.max(0, e.slowT - dt);
+    if (e.petrifyT) e.petrifyT = Math.max(0, e.petrifyT - dt);
     const st = BALANCE.enemies[e.type];
     if (e.type === 'cairn') {
       if (moveGiant(s, e, dt)) continue;
     }
     if (e.stun > 0) { e.stun -= dt; continue; }
-    let ns = e.s + st.speed * dt;
+    let k = 1;
+    if (e.slowT) k = Math.min(k, BALANCE.pulses.inkSlow);
+    if (s.pools.some((pl) => pl.ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1))) k = Math.min(k, BALANCE.pulses.floodSlow);
+    let ns = e.s + st.speed * k * dt;
     for (const h of s.hedges) {
       for (const stop of h.stops) {
         if (stop.lane === e.lane && e.s <= stop.s - 2 && ns > stop.s - 10) ns = Math.min(ns, Math.max(e.s, stop.s - 10));
@@ -602,10 +686,16 @@ export function step(s: GameState, dtRaw: number) {
       if (f.ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1)) hurt(s, e, BALANCE.pulses.fireDps * dt, true);
     }
   }
+  // Ink pools stain whatever wades through them
+  for (const pl of s.pools) {
+    for (const e of s.enemies) {
+      if (pl.ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1)) hurt(s, e, BALANCE.pulses.floodDps * dt, true);
+    }
+  }
 
   // Towers attack automatically (traced or not)
   for (const t of s.towers) {
-    t.cd -= dt;
+    t.cd -= dt * fireRate(s, t);
     if (t.cd > 0) continue;
     const st = BALANCE.towers[t.type];
     const p = posOf(t);
@@ -620,13 +710,14 @@ export function step(s: GameState, dtRaw: number) {
       const ep = enemyPos(target);
       let tx = ep.x, ty = ep.y;
       const flight = dist(p, ep) / st.projectileSpeed;
-      if (t.type === 'ember' && target.stun <= 0) {
+      if ((t.type === 'ember' || t.type === 'mangonel') && target.stun <= 0) {
         const fut = enemyPos({ ...target, s: target.s + BALANCE.enemies[target.type].speed * flight * 0.8 });
         tx = fut.x; ty = fut.y;
       }
       s.projectiles.push({
         kind: t.type, x: p.x, y: p.y - 30, sx: p.x, sy: p.y - 30, tx, ty,
-        targetId: t.type === 'bramble' || t.type === 'verdigris' ? target.id : null, speed: st.projectileSpeed, damage: dmg, splash: st.splash, shred: st.shred,
+        targetId: st.splash > 0 ? null : target.id, speed: st.projectileSpeed, damage: dmg, splash: st.splash, shred: st.shred, slow: st.slow,
+        arc: t.type === 'mangonel' ? 80 : t.type === 'ember' ? 60 : 0,
         t: 0, dur: Math.max(0.12, flight),
       });
     }
@@ -659,11 +750,12 @@ export function step(s: GameState, dtRaw: number) {
     pr.y = pr.sy + (pr.ty - pr.sy) * k;
     if (k >= 1) {
       if (pr.splash > 0) {
-        s.rings.push({ x: pr.tx, y: pr.ty, r: pr.splash, t: 0, dur: 0.35, kind: 'splash' });
+        s.rings.push({ x: pr.tx, y: pr.ty, r: pr.splash, t: 0, dur: 0.35, kind: pr.kind === 'mangonel' ? 'thud' : 'splash' });
         for (const e of s.enemies) if (e.hp > 0 && dist(enemyPos(e), { x: pr.tx, y: pr.ty }) <= pr.splash) hurt(s, e, pr.damage);
       } else {
         const e = s.enemies.find((x) => x.id === pr.targetId && x.hp > 0);
         if (e) {
+          if (pr.slow) e.slowT = Math.max(e.slowT ?? 0, pr.slow);
           if (pr.shred) {
             e.shred = Math.min(BALANCE.pulses.shredMax, BALANCE.enemies[e.type].armour, e.shred + pr.shred);
             e.shredT = BALANCE.pulses.shredDuration;
@@ -683,7 +775,7 @@ export function step(s: GameState, dtRaw: number) {
       s.castleHp = Math.max(0, s.castleHp - BALANCE.enemies[e.type].castleDamage);
       s.leaked += 1;
       s.leakLog.push(`${e.type}@${e.lane}`);
-      s.rings.push({ x: LANES[e.lane].pts.at(-1)!.x, y: 520, r: 50, t: 0, dur: 0.5, kind: 'splash' });
+      s.rings.push({ x: LANES[e.lane].pts.at(-1)!.x, y: LANES[e.lane].pts.at(-1)!.y, r: 50, t: 0, dur: 0.5, kind: 'splash' });
     }
   }
   s.enemies = s.enemies.filter((e) => e.hp > 0);
@@ -712,6 +804,8 @@ function endWave(s: GameState) {
   s.flights = [];
   s.hedges = [];
   s.fires = [];
+  s.pools = [];
+  s.rallies = [];
   s.projectiles = [];
   s.warnings = [];
   s.stones = [];

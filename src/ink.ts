@@ -281,6 +281,18 @@ export function towerInk(ctx: C, type: TowerType, x: number, y: number, m: 'trac
     ctx.fillStyle = PAPER; bell(); ctx.fill(); hatch(ctx, bell, [-6, 4, 12, 13], -0.4, 1.3, 0.5); ctx.lineWidth = 1; bell(); ctx.stroke();
     ctx.restore();
     mark(ctx, x, y - 120, m);
+  } else if (type === 'gargoyle') {
+    courtGargoyle(ctx, x, y, time, R);
+    mark(ctx, x, y - 120, m);
+  } else if (type === 'mangonel') {
+    courtMangonel(ctx, x, y, time, R);
+    mark(ctx, x, y - 112, m);
+  } else if (type === 'fountain') {
+    courtFountain(ctx, x, y, time);
+    mark(ctx, x, y - 92, m);
+  } else if (type === 'banner') {
+    courtBanner(ctx, x, y, time, R);
+    mark(ctx, x, y - 128, m);
   } else {
     // the eye-flower: a crooked stalk carrying a great watching eye in a crown of filaments
     ctx.lineCap = 'round';
@@ -532,6 +544,7 @@ export function turret(ctx: C, x: number, base: number, w: number, h: number, ro
     for (let xx = L; xx < L + w - 2; xx += 7) { ctx.fillRect(xx, top - 5, 4, 5); ctx.strokeRect(xx, top - 5, 4, 5); }
   }
   // finial
+  if (fin === 'none') return;
   const fy = top - roofH;
   ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(x, fy); ctx.lineTo(x, fy - 16); ctx.stroke();
@@ -1008,4 +1021,179 @@ export function foldCrease(ctx: C, horizontal: boolean, at: number, R: R) {
   ctx.fillStyle = band; if (horizontal) ctx.fillRect(0, at - 14, MAP_W, 28); else ctx.fillRect(at - 14, 0, 28, MAP_H);
   ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,244,220,0.45)'; polyline(ctx, off(-1.2)); ctx.stroke();
   ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(60,34,14,0.4)'; polyline(ctx, off(0.8)); ctx.stroke();
+}
+
+
+// ── Courtyard towers ────────────────────────────────────────────────────────
+
+/** A crouching stone gargoyle with bat wings on a fluted pillar. */
+function courtGargoyle(ctx: C, x: number, y: number, time: number, R: R) {
+  // pillar: plinth, fluted shaft, capital
+  const plinth = () => { ctx.beginPath(); ctx.rect(x - 16, y - 9, 32, 9); };
+  const shaft = () => { ctx.beginPath(); ctx.moveTo(x - 10, y - 9); ctx.lineTo(x - 9, y - 56); ctx.lineTo(x + 9, y - 56); ctx.lineTo(x + 10, y - 9); ctx.closePath(); };
+  const cap = () => { ctx.beginPath(); ctx.rect(x - 15, y - 64, 30, 8); };
+  for (const part of [plinth, shaft, cap]) { ctx.fillStyle = PAPER; part(); ctx.fill(); }
+  ctx.save(); shaft(); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath();
+  for (let i = -8; i <= 8; i += 2.6) { ctx.moveTo(x + i, y - 9); ctx.lineTo(x + i * 0.92, y - 56); }
+  ctx.stroke(); ctx.restore();
+  hatch(ctx, () => { ctx.beginPath(); ctx.rect(x + 3, y - 66, 14, 66); }, [x + 3, y - 66, 14, 66], -0.3, 1.7, 0.5, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; for (const part of [plinth, shaft, cap]) { part(); ctx.stroke(); }
+  // volutes on the capital
+  ctx.lineWidth = 0.7;
+  for (const sx of [-1, 1]) { ctx.beginPath(); for (let t = 0; t < 9; t += 0.3) { const r = 3.2 - t * 0.33; ctx.lineTo(x + sx * 13 + Math.cos(t) * r * sx, y - 60 + Math.sin(t) * r); } ctx.stroke(); }
+  // wings, raised behind, flexing a little
+  const flex = Math.sin(time * 1.3) * 2;
+  for (const sx of [-1, 1]) {
+    const wing = () => {
+      ctx.beginPath(); ctx.moveTo(x + sx * 4, y - 80);
+      ctx.quadraticCurveTo(x + sx * 16, y - 108 - flex, x + sx * 34, y - 112 - flex);
+      ctx.quadraticCurveTo(x + sx * 30, y - 98, x + sx * 33, y - 88);
+      ctx.quadraticCurveTo(x + sx * 25, y - 92, x + sx * 24, y - 82);
+      ctx.quadraticCurveTo(x + sx * 17, y - 86, x + sx * 14, y - 76);
+      ctx.closePath();
+    };
+    ctx.fillStyle = PAPER; wing(); ctx.fill();
+    hatch(ctx, wing, [x - 36, y - 116, 72, 44], sx > 0 ? -0.6 : 0.6, 1.5, 0.45);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.1; wing(); ctx.stroke();
+    ctx.lineWidth = 0.7; ctx.beginPath();
+    for (const [tx, ty] of [[33, -88], [24, -82], [14, -76]]) { ctx.moveTo(x + sx * 5, y - 82); ctx.lineTo(x + sx * tx, y + ty); }
+    ctx.stroke();
+  }
+  // crouching body
+  const body = () => { ctx.beginPath(); ctx.moveTo(x - 13, y - 64); ctx.quadraticCurveTo(x - 17, y - 84, x - 4, y - 90); ctx.quadraticCurveTo(x + 10, y - 92, x + 12, y - 80); ctx.quadraticCurveTo(x + 15, y - 70, x + 13, y - 64); ctx.closePath(); };
+  ctx.fillStyle = PAPER; body(); ctx.fill();
+  hatch(ctx, body, [x - 18, y - 94, 34, 32], -0.9, 1.6, 0.45, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; body(); ctx.stroke();
+  // haunch and claws gripping the capital
+  ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(x - 7, y - 70, 6, 5, -0.3, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); for (const cx of [x - 11, x - 7, x + 6, x + 10]) { ctx.moveTo(cx, y - 64); ctx.lineTo(cx + 1, y - 61); } ctx.stroke();
+  // tail curling down the pillar
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - 12, y - 66); ctx.bezierCurveTo(x - 22, y - 50, x - 6, y - 40, x - 14, y - 28); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - 14, y - 28); ctx.lineTo(x - 18, y - 22); ctx.lineTo(x - 11, y - 25); ctx.fill();
+  // horned head leaning out, mouth open
+  const head = () => { ctx.beginPath(); ctx.moveTo(x + 4, y - 90); ctx.quadraticCurveTo(x + 6, y - 100, x + 15, y - 98); ctx.lineTo(x + 24, y - 92); ctx.lineTo(x + 22, y - 88); ctx.lineTo(x + 15, y - 88); ctx.lineTo(x + 21, y - 84); ctx.quadraticCurveTo(x + 12, y - 80, x + 6, y - 84); ctx.closePath(); };
+  ctx.fillStyle = PAPER; head(); ctx.fill();
+  hatch(ctx, head, [x + 2, y - 102, 24, 24], 0.9, 1.6, 0.4);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.1; head(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x + 15, y - 88); ctx.lineTo(x + 22, y - 88); ctx.lineTo(x + 21, y - 84); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = PAPER; ctx.beginPath(); for (const tx of [16.5, 19]) { ctx.moveTo(x + tx, y - 88); ctx.lineTo(x + tx + 1, y - 86.4); ctx.lineTo(x + tx + 2, y - 88); } ctx.fill();
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x + 7, y - 97); ctx.quadraticCurveTo(x + 2, y - 106, x - 2, y - 104); ctx.moveTo(x + 11, y - 98); ctx.quadraticCurveTo(x + 10, y - 108, x + 5, y - 109); ctx.stroke();
+  eye(ctx, x + 13, y - 93, 2.4, 0.35, time % 5.3 < 0.14);
+}
+
+/** A stone platform carrying a wooden throwing engine, its sling loaded. */
+function courtMangonel(ctx: C, x: number, y: number, time: number, R: R) {
+  const base = () => { ctx.beginPath(); ctx.rect(x - 22, y - 42, 44, 42); };
+  ctx.fillStyle = PAPER; base(); ctx.fill();
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let yy = y - 38; yy < y; yy += 6) for (let xx = x - 20 + (((yy - y) / 6) % 2 ? 6 : 0); xx < x + 20; xx += 12) { ctx.moveTo(xx, yy); ctx.lineTo(xx + 9, yy); ctx.moveTo(xx + 10, yy); ctx.lineTo(xx + 10, yy + 6); }
+  ctx.stroke();
+  hatch(ctx, () => { ctx.beginPath(); ctx.rect(x + 6, y - 42, 16, 42); }, [x + 6, y - 42, 16, 42], -0.3, 1.6, 0.5, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; base(); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1;
+  for (let xx = x - 22; xx < x + 22; xx += 11) { ctx.fillRect(xx, y - 48, 6, 6); ctx.strokeRect(xx, y - 48, 6, 6); }
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x - 4, y - 12); ctx.arc(x, y - 12, 4, Math.PI, 0); ctx.lineTo(x + 4, y); ctx.fill();
+  // the engine: A-frame, a long arm on its axle, counterweight and sling
+  const ax = x, ay = y - 80, a = -2.45 + Math.sin(time * 0.9) * 0.05;
+  const longX = ax + Math.cos(a) * 46, longY = ay + Math.sin(a) * 46;
+  const shortX = ax - Math.cos(a) * 18, shortY = ay - Math.sin(a) * 18;
+  const segs: Seg[] = [
+    { x1: x - 16, y1: y - 48, x2: ax - 2, y2: ay, w: 4.5 }, { x1: x + 16, y1: y - 48, x2: ax + 2, y2: ay, w: 4.5 },
+    { x1: x - 18, y1: y - 49, x2: x + 18, y2: y - 49, w: 4 },
+    { x1: shortX, y1: shortY, x2: longX, y2: longY, w: 5 },
+  ];
+  limbs(ctx, segs, R, false);
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ax, ay, 2.6, 0, Math.PI * 2); ctx.fill();
+  // counterweight box
+  ctx.save(); ctx.translate(shortX, shortY); ctx.rotate(a + Math.PI / 2);
+  const box = () => { ctx.beginPath(); ctx.rect(-8, -2, 16, 14); };
+  ctx.fillStyle = PAPER; box(); ctx.fill(); hatch(ctx, box, [-8, -2, 16, 14], 0.8, 1.4, 0.5); ctx.strokeStyle = INK; ctx.lineWidth = 1.1; box(); ctx.stroke();
+  ctx.restore();
+  // sling and boulder
+  const bx = longX + 4, by = longY + 16 + Math.sin(time * 1.8) * 1.5;
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(longX, longY); ctx.lineTo(bx - 4, by - 3); ctx.moveTo(longX, longY); ctx.lineTo(bx + 4, by - 3); ctx.stroke();
+  const rock = () => { ctx.beginPath(); ctx.ellipse(bx, by, 6, 5.2, 0.3, 0, Math.PI * 2); };
+  ctx.fillStyle = '#d9d1c0'; rock(); ctx.fill(); hatch(ctx, rock, [bx - 6, by - 6, 12, 12], 0.9, 1.3, 0.45); ctx.lineWidth = 1; rock(); ctx.stroke();
+}
+
+/** A two-tier stone fountain; a striped fish on top spouts ink into the basins. */
+function courtFountain(ctx: C, x: number, y: number, time: number) {
+  // lower basin
+  const bowl = () => { ctx.beginPath(); ctx.moveTo(x - 30, y - 16); ctx.quadraticCurveTo(x - 26, y + 1, x, y + 1); ctx.quadraticCurveTo(x + 26, y + 1, x + 30, y - 16); ctx.closePath(); };
+  ctx.fillStyle = PAPER; bowl(); ctx.fill();
+  hatch(ctx, bowl, [x - 30, y - 18, 60, 20], -0.5, 1.6, 0.45);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; bowl(); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(x, y - 16, 31, 8.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2b2622'; ctx.beginPath(); ctx.ellipse(x, y - 16, 26, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(239,233,218,0.55)'; ctx.lineWidth = 0.6;
+  for (let k = 1; k <= 2; k++) { const r = ((time * 0.6 + k / 2) % 1); ctx.beginPath(); ctx.ellipse(x + 4, y - 16, 6 + r * 18, 1.5 + r * 4, 0, 0, Math.PI * 2); ctx.stroke(); }
+  // pedestal and upper basin
+  const col = () => { ctx.beginPath(); ctx.moveTo(x - 5, y - 18); ctx.lineTo(x - 4, y - 48); ctx.lineTo(x + 4, y - 48); ctx.lineTo(x + 5, y - 18); ctx.closePath(); };
+  ctx.fillStyle = PAPER; col(); ctx.fill(); hatch(ctx, () => { ctx.beginPath(); ctx.rect(x + 1, y - 50, 5, 34); }, [x + 1, y - 50, 5, 34], -0.2, 1.3, 0.45);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.1; col(); ctx.stroke();
+  const up = () => { ctx.beginPath(); ctx.moveTo(x - 15, y - 50); ctx.quadraticCurveTo(x - 10, y - 42, x, y - 42); ctx.quadraticCurveTo(x + 10, y - 42, x + 15, y - 50); ctx.closePath(); };
+  ctx.fillStyle = PAPER; up(); ctx.fill(); hatch(ctx, up, [x - 15, y - 52, 30, 12], -0.5, 1.4, 0.45); ctx.strokeStyle = INK; ctx.lineWidth = 1.1; up(); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(x, y - 50, 15.5, 4.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#2b2622'; ctx.beginPath(); ctx.ellipse(x, y - 50, 12.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+  // the fish spout, nose to the sky
+  ctx.save(); ctx.translate(x - 1, y - 62); ctx.rotate(-0.9); airFish(ctx, 0, 0, 0.72, 1, time * 3); ctx.restore();
+  // jets of ink arcing down into both basins, with droplets running along them
+  const mx = x + 4, my = y - 72;
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+  const arcs: [number, number, number, number][] = [[mx, my, x + 14, y - 50], [mx, my, x + 24, y - 18], [mx, my, x - 20, y - 18]];
+  for (const [sx, sy, ex, ey] of arcs) {
+    const cx = (sx + ex) / 2 + (ex > sx ? 6 : -10), cy = Math.min(sy, ey) - 16;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.stroke();
+    for (let k = 0; k < 3; k++) {
+      const t = (time * 0.9 + k / 3) % 1, u = 1 - t;
+      const px = u * u * sx + 2 * u * t * cx + t * t * ex, py = u * u * sy + 2 * u * t * cy + t * t * ey;
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(px, py, 1.4, 2, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+/** A tall banner pole with a long swallow-tailed pennant streaming in the wind. */
+function courtBanner(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 28, 8, 0.3);
+  // round stone plinth
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(x - 14, y); ctx.lineTo(x - 12, y - 14); ctx.lineTo(x + 12, y - 14); ctx.lineTo(x + 14, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+  hatch(ctx, () => { ctx.beginPath(); ctx.rect(x + 3, y - 15, 12, 15); }, [x + 3, y - 15, 12, 15], -0.4, 1.5, 0.45);
+  ctx.beginPath(); ctx.ellipse(x, y - 14, 12, 3.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // the pole and crossbar
+  limbs(ctx, [{ x1: x, y1: y - 14, x2: x, y2: y - 112, w: 5 }, { x1: x - 3, y1: y - 104, x2: x + 12, y2: y - 104, w: 3 }], R, false);
+  // finial: a gilt crescent
+  ctx.fillStyle = GOLD; ctx.strokeStyle = INK; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.arc(x, y - 120, 5, 0.5, Math.PI * 2 - 0.5); ctx.arc(x + 2, y - 121, 4, Math.PI * 2 - 0.5, 0.5, true); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // pennant, rippling
+  const N = 14, len = 58, top: Vec[] = [], bot: Vec[] = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, px = x + 3 + t * len;
+    const wave = Math.sin(time * 3.2 - t * 5) * 5 * t;
+    const h = 24 - t * 8;
+    top.push({ x: px, y: y - 104 + wave });
+    bot.push({ x: px, y: y - 104 + h + wave * 1.1 });
+  }
+  const flag = () => {
+    ctx.beginPath(); ctx.moveTo(top[0].x, top[0].y);
+    for (const p of top) ctx.lineTo(p.x, p.y);
+    const end = top[N], endB = bot[N];
+    ctx.lineTo((end.x + endB.x) / 2 - 12, (end.y + endB.y) / 2);
+    for (let i = N; i >= 0; i--) ctx.lineTo(bot[i].x, bot[i].y);
+    ctx.closePath();
+  };
+  ctx.fillStyle = PAPER; flag(); ctx.fill();
+  ctx.save(); flag(); ctx.clip();
+  // two dark bands and a fold-shadow hatch
+  ctx.fillStyle = INK;
+  for (const band of [0.5, 0.75]) { const i = Math.round(band * N); ctx.beginPath(); ctx.moveTo(top[i].x, top[i].y); ctx.lineTo(top[i].x + 5, top[i].y); ctx.lineTo(bot[i].x + 5, bot[i].y); ctx.lineTo(bot[i].x, bot[i].y); ctx.fill(); }
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let i = 1; i < N; i++) if (Math.sin(time * 3.2 - (i / N) * 5) > 0.2) { ctx.moveTo(top[i].x, top[i].y); ctx.lineTo(bot[i].x, bot[i].y); }
+  ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.1; flag(); ctx.stroke();
+  // the emblem: an eye in a ring, like the Verdigris flower's
+  const ex = top[3].x + 3, ey = (top[3].y + bot[3].y) / 2;
+  ctx.fillStyle = PAPER; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(ex, ey, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  eye(ctx, ex, ey, 4.2, 0.2);
 }

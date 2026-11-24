@@ -1,6 +1,6 @@
 // 9. After Van Gogh: thick, directional impasto strokes that follow a swirling wind,
 // chrome-yellow wheat, viridian and cobalt, flame-like cypresses, Prussian-blue contour lines.
-import type { EnemyType, TowerType } from '../balance';
+import type { EnemyType, FieldTowerType as TowerType } from '../balance';
 import { MAP_W, MAP_H, line, smooth, rng, type Style, type Vec } from './scene';
 import { towerPath, enemyPath } from './shapes';
 import { LANES, LANE_IDS, RIVER, POND, pointAt } from '../map';

@@ -339,3 +339,24 @@ button.gild, .tower-row button.gild, button.gilt-btn { background: linear-gradie
 @media (max-width: 700px) { .inspect { position: fixed; left: 8px; right: 8px; bottom: 8px; width: auto; } }
 
 @media (max-width: 700px) { .ribbon { width: auto; } }
+
+/* ── Main menu: two sheets to choose from ─────────────────────────────── */
+.menu { position: fixed; inset: 0; z-index: 50; overflow: auto; padding: 24px 16px; background: rgba(20, 30, 26, 0.55); backdrop-filter: blur(2px); }
+.menu-panel { max-width: 1040px; margin: 0 auto; background: var(--paper); border: 1.5px solid var(--ink); outline: 3px double var(--gold); outline-offset: 5px; border-radius: 4px; padding: 22px 24px 24px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45); }
+.menu-panel header { text-align: center; margin-bottom: 16px; }
+.menu-panel h1 { margin: 0; font-style: italic; font-size: 32px; color: var(--ink); }
+.menu-panel .lede { margin: 6px auto 0; max-width: 640px; color: var(--ink-soft); }
+.levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 18px; }
+.level-card { border: 1px solid rgba(58, 34, 18, 0.45); border-radius: 4px; background: rgba(255, 250, 238, 0.45); overflow: hidden; display: flex; flex-direction: column; }
+.level-card .thumb canvas { display: block; width: 100%; height: auto; border-bottom: 1px solid rgba(58, 34, 18, 0.35); }
+.lc-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.lc-body h2 { margin: 0; font-size: 22px; font-style: italic; }
+.lc-body p { margin: 0; }
+.lc-body .kicker { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+.lc-body .won { color: #6a4c12; text-transform: none; letter-spacing: 0; }
+.lc-towers { display: flex; gap: 6px; margin: 4px 0 6px; }
+.lc-towers .ico canvas { width: 40px; height: 40px; }
+.lc-body button.primary { margin-top: auto; min-height: 44px; font-size: 17px; }
+.menu .resume { text-align: center; margin: 16px 0 0; }
+body[data-menu] #app { filter: saturate(0.85); }
+@media (max-width: 700px) { .menu { padding: 8px; } .menu-panel { padding: 14px; } .menu-panel h1 { font-size: 24px; } }

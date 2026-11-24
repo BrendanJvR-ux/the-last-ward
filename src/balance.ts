@@ -3,7 +3,12 @@
 //  Wave composition, tower damage, pulse effects, rewards and costs.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type TowerType = 'bramble' | 'ember' | 'bell' | 'verdigris';
+/** The four towers of the fields (level 1). The art-style studies draw only these. */
+export type FieldTowerType = 'bramble' | 'ember' | 'bell' | 'verdigris';
+/** The four towers of the castle courtyard (level 2). */
+export type CourtTowerType = 'gargoyle' | 'mangonel' | 'fountain' | 'banner';
+export type TowerType = FieldTowerType | CourtTowerType;
+export type LevelId = 'fields' | 'courtyard';
 /** `bearer` is the marked Fen Levy carrying the Cairn-Born's name-stone; it is spawned with every `cairn`. */
 export type EnemyType = 'levy' | 'bearer' | 'hound' | 'cairn';
 export type LaneId = 'mill' | 'king';
@@ -23,6 +28,8 @@ export interface TowerStats {
   splash: number;
   /** Armour stripped per hit (Verdigris Font only). */
   shred?: number;
+  /** Seconds of slow applied per hit (Ink Fountain only). */
+  slow?: number;
   pulseName: string;
   pulseText: string;
 }
@@ -95,6 +102,11 @@ export const BALANCE = {
   /** How fast a pulse runs along its thread (map units per second). */
   pulseSpeed: 1600,
 
+  /** Tower types that can be built on the current level (set by applyBalanceLevel). */
+  towerTypes: ['bramble', 'ember', 'bell', 'verdigris'] as TowerType[],
+  /** Warning shown when hounds near the current level's choke point. */
+  houndWarnText: 'Horns! Hounds at the bridge',
+
   startingTowers: [
     { foundation: 'f_mill', type: 'bramble' },
     { foundation: 'f_junction', type: 'ember' },
@@ -122,6 +134,27 @@ export const BALANCE = {
       projectileSpeed: 420, splash: 0, shred: 2,
       pulseName: 'Tarnish', pulseText: 'A green mist strips all armour from enemies nearby and makes them take extra damage for a while.',
     },
+    // ── The castle courtyard ──
+    gargoyle: {
+      name: 'Gargoyle Perch', cost: 90, damage: 24, cooldown: 2.0, range: 240,
+      projectileSpeed: 720, splash: 0,
+      pulseName: 'Stone Gaze', pulseText: 'The gargoyle wakes and stares: everything nearby is turned to stone for a few seconds. Stone giants only stiffen.',
+    },
+    mangonel: {
+      name: 'Mangonel', cost: 100, damage: 17, cooldown: 2.8, range: 270,
+      projectileSpeed: 260, splash: 58,
+      pulseName: 'Boulder Barrage', pulseText: 'Hurls a volley of boulders onto the thickest crowd in reach.',
+    },
+    fountain: {
+      name: 'Ink Fountain', cost: 70, damage: 5, cooldown: 1.0, range: 165,
+      projectileSpeed: 380, splash: 0, slow: 1.6,
+      pulseName: 'Inkflood', pulseText: 'Floods the nearby road with ink: everything wading through it crawls and is slowly stained.',
+    },
+    banner: {
+      name: 'Banner Tower', cost: 80, damage: 7, cooldown: 0.8, range: 175,
+      projectileSpeed: 560, splash: 0,
+      pulseName: 'Rally', pulseText: 'Sounds a rally: every tower nearby shoots twice as fast for a while. Towers beside a banner always shoot a little faster.',
+    },
   } as Record<TowerType, TowerStats>,
 
   pulses: {
@@ -144,6 +177,28 @@ export const BALANCE = {
     tarnishRadius: 175,
     tarnishDuration: 6,
     tarnishVulnerability: 0.3,
+    /** Gargoyle pulse: petrify everything nearby. */
+    gazeRadius: 175,
+    gazeStun: 4,
+    gazeGiantStun: 1.4,
+    gazeDamage: 10,
+    /** Mangonel pulse: a volley of boulders. */
+    barrageCount: 7,
+    barrageRadius: 300,
+    barrageDamage: 55,
+    barrageSplash: 68,
+    /** Ink Fountain hits: speed multiplier while stained. Inkflood: a slowing pool on the road. */
+    inkSlow: 0.6,
+    floodRadius: 155,
+    floodDuration: 6,
+    floodSlow: 0.25,
+    floodDps: 12,
+    /** Banner: towers within this range of a banner shoot this much faster; Rally doubles it. */
+    bannerAuraRadius: 185,
+    bannerAura: 0.25,
+    rallyRadius: 300,
+    rallyDuration: 8,
+    rallyRate: 2,
   },
 
   cairn: {
@@ -233,4 +288,107 @@ export function phaseRule(wave: number): PhaseRule {
   let rule = BALANCE.phaseRules[0];
   for (const r of BALANCE.phaseRules) if (wave >= r.fromWave) rule = r;
   return rule;
+}
+
+// ── Levels ──────────────────────────────────────────────────────────────────
+// The rules, enemies and tower stats are shared; each level has its own towers, waves and purse.
+
+export interface LevelBalance {
+  startGold: number;
+  towerTypes: TowerType[];
+  startingTowers: { foundation: string; type: TowerType }[];
+  waves: WaveDef[];
+  houndWarnText: string;
+}
+
+const FIELDS: LevelBalance = {
+  startGold: BALANCE.startGold,
+  towerTypes: [...BALANCE.towerTypes],
+  startingTowers: BALANCE.startingTowers,
+  waves: BALANCE.waves,
+  houndWarnText: BALANCE.houndWarnText,
+};
+
+/** Level 2: the outer wall has fallen and the fight moves into the castle courtyard. */
+const COURTYARD: LevelBalance = {
+  startGold: 60,
+  towerTypes: ['gargoyle', 'mangonel', 'fountain', 'banner'],
+  startingTowers: [
+    { foundation: 'f_barracks', type: 'gargoyle' },
+    { foundation: 'f_herb', type: 'mangonel' },
+    { foundation: 'f_stable', type: 'fountain' },
+  ],
+  houndWarnText: 'Horns! Hounds in the stable yard',
+  waves: [
+    {
+      title: 'The Gatehouse Falls',
+      lesson: 'The outer gate is splinters. The drum comes on through the arch.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 7, abreast: 3, start: 1, interval: 1.4 },
+      ],
+    },
+    {
+      title: 'Through the Breach',
+      lesson: 'Stones still falling from the north wall, and something leaping over them.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 6, abreast: 3, start: 1, interval: 1.4 },
+        { type: 'hound', lane: 'king', count: 8, start: 16, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'Teeth in the Yard',
+      lesson: 'Both ways in are open now. Listen for the horn among the stables.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 7, abreast: 3, start: 1, interval: 1.3 },
+        { type: 'hound', lane: 'king', count: 5, start: 8, interval: 0.4 },
+        { type: 'levy', lane: 'king', count: 4, abreast: 2, start: 12, interval: 1.6 },
+        { type: 'hound', lane: 'king', count: 6, start: 26, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'Torn Banners',
+      lesson: 'The Crown remembers its own. Gold may yet hold the yard.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 12, abreast: 3, start: 1, interval: 1.1 },
+        { type: 'levy', lane: 'king', count: 6, abreast: 2, start: 5, interval: 1.4 },
+        { type: 'hound', lane: 'king', count: 9, start: 16, interval: 0.4 },
+        { type: 'hound', lane: 'mill', count: 8, start: 30, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'Stone in the Courtyard',
+      lesson: 'The giant has followed its stone over the threshold. Choose where it kneels.',
+      groups: [
+        { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 13, abreast: 3, start: 8, interval: 1.1 },
+        { type: 'hound', lane: 'king', count: 8, start: 14, interval: 0.4 },
+        { type: 'levy', lane: 'king', count: 5, abreast: 2, start: 18, interval: 1.5 },
+        { type: 'hound', lane: 'mill', count: 7, start: 32, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'The Keep Door',
+      lesson: 'Two stones, two giants, and only the keep behind you.',
+      groups: [
+        { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
+        { type: 'cairn', lane: 'king', count: 1, start: 10, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 12, abreast: 3, start: 7, interval: 1.1 },
+        { type: 'hound', lane: 'king', count: 14, start: 14, interval: 0.36 },
+        { type: 'levy', lane: 'king', count: 8, abreast: 2, start: 24, interval: 1.4 },
+        { type: 'hound', lane: 'king', count: 24, start: 40, interval: 0.28 },
+      ],
+    },
+  ],
+};
+
+export const LEVEL_BALANCE: Record<LevelId, LevelBalance> = { fields: FIELDS, courtyard: COURTYARD };
+
+/** Swap in a level's towers, waves and purse. Every level has the same number of waves. */
+export function applyBalanceLevel(id: LevelId) {
+  const L = LEVEL_BALANCE[id];
+  BALANCE.startGold = L.startGold;
+  BALANCE.towerTypes = L.towerTypes;
+  BALANCE.startingTowers = L.startingTowers;
+  BALANCE.waves = L.waves;
+  BALANCE.houndWarnText = L.houndWarnText;
 }

@@ -2,12 +2,12 @@
 // Roads, the river and its spring, gnarled trees and fynbos, the mill, the windmill, the castle
 // and the inkwell are drawn once; everything that moves is drawn live in render.ts.
 import {
-  MAP_W, MAP_H, GUTTER_X, LANES, LANE_IDS, RIVER, POND, MILL, BRIDGE, INKWELL, CASTLE,
+  MAP_W, MAP_H, GUTTER_X, LANES, LANE_IDS, RIVER, POND, MILL, BRIDGE, INKWELL, CASTLE, LEVEL,
   LEY_EDGES, NODE, FOUNDATION_IDS, pointAt, type Vec,
 } from './map';
 import {
   inkSurreal, scribble, inkSmudge, foldCrease, inkCastle, inkInkwell, windmillBody, turret, paperVignette, groundWash, goose,
-  INK, INK2, PAPER,
+  hatch, grow, limbs, proteaHead, seed, INK, INK2, PAPER, type Seg,
 } from './ink';
 
 /** How much larger than its study the castle is drawn. */
@@ -66,7 +66,7 @@ function nearRiver(p: Vec, margin: number): boolean {
       if (Math.hypot(q.x - p.x, q.y - p.y) < margin) return true;
     }
   }
-  return Math.hypot(RIVER[0].x - p.x, RIVER[0].y - p.y) < margin + 30;
+  return RIVER.length > 0 && Math.hypot(RIVER[0].x - p.x, RIVER[0].y - p.y) < margin + 30;
 }
 
 /** Handwritten-style italic lettering in ink. */
@@ -128,6 +128,7 @@ function drawMill(ctx: CanvasRenderingContext2D) {
 }
 
 export function buildStatic(scale = 2): HTMLCanvasElement {
+  if (LEVEL === 'courtyard') return buildCourtyard(scale);
   const cv = document.createElement('canvas');
   cv.width = MAP_W * scale; cv.height = MAP_H * scale;
   const ctx = cv.getContext('2d')!;
@@ -187,21 +188,306 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   label(ctx, 'Goosebridge Castle', CASTLE.x - 6, CASTLE.y + 196, 15);
   label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
 
+  finishSheet(ctx, R, 'Defence of Goosebridge Castle', 'drawn in pen and ink');
+  return cv;
+}
+
+/** Folds, browning, the title plate and the ruled border: the same on every sheet. */
+function finishSheet(ctx: CanvasRenderingContext2D, R: () => number, title: string, subtitle: string) {
   // the sheet was folded once across and once down
   foldCrease(ctx, true, MAP_H * 0.54, R);
   foldCrease(ctx, false, GUTTER_X, R);
   paperVignette(ctx);
-
   // Title plate, ruled in ink
   ctx.fillStyle = 'rgba(228,211,182,0.92)'; roundRect(ctx, 40, 880, 350, 78, 4); ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
   ctx.lineWidth = 0.6; roundRect(ctx, 45, 885, 340, 68, 3); ctx.stroke();
   ctx.font = `italic 600 23px ${SERIF}`; ctx.textAlign = 'left'; ctx.fillStyle = INK;
-  ctx.fillText('Defence of Goosebridge Castle', 56, 918);
+  ctx.fillText(title, 56, 918);
   ctx.font = `italic 14px ${SERIF}`; ctx.fillStyle = 'rgba(58,34,18,0.7)';
-  ctx.fillText('drawn in pen and ink', 58, 942);
+  ctx.fillText(subtitle, 58, 942);
   // sheet border
   ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(14, 14, MAP_W - 28, MAP_H - 28);
   ctx.lineWidth = 0.6; ctx.strokeRect(19, 19, MAP_W - 38, MAP_H - 38);
+}
+
+// ── Level 2: the castle courtyard ───────────────────────────────────────────
+
+type Ctx = CanvasRenderingContext2D;
+
+/** A building seen from the front with a gabled, hatched roof. */
+function house(ctx: Ctx, x: number, base: number, w: number, h: number, roofH: number, R: () => number, door = true) {
+  groundWash(ctx, x + w * 0.15, base + 3, w * 0.7, 10, 0.35);
+  const L = x - w / 2, top = base - h;
+  ctx.fillStyle = PAPER; ctx.fillRect(L, top, w, h);
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let yy = top + 5; yy < base; yy += 5) for (let xx = L + 2 + R() * 6; xx < L + w - 4; xx += 7 + R() * 6) { ctx.moveTo(xx, yy); ctx.lineTo(xx + 3 + R() * 2, yy); }
+  ctx.stroke();
+  hatch(ctx, () => { ctx.beginPath(); ctx.rect(L + w * 0.7, top, w * 0.3, h); }, [L + w * 0.7, top, w * 0.3, h], -0.3, 1.6, 0.5, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.strokeRect(L, top, w, h);
+  const roof = () => { ctx.beginPath(); ctx.moveTo(L - 6, top); ctx.lineTo(L + w * 0.18, top - roofH); ctx.lineTo(L + w * 0.82, top - roofH); ctx.lineTo(L + w + 6, top); ctx.closePath(); };
+  ctx.fillStyle = PAPER; roof(); ctx.fill();
+  ctx.save(); roof(); ctx.clip(); ctx.strokeStyle = INK; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let xx = L - 6; xx < L + w + 6; xx += 2.6) { ctx.moveTo(xx, top); ctx.lineTo(xx + (xx - x) * -0.15, top - roofH); }
+  for (let yy = top - 5; yy > top - roofH; yy -= 6) { ctx.moveTo(L - 6, yy); ctx.lineTo(L + w + 6, yy); }
+  ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; roof(); ctx.stroke();
+  if (door) { ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - 6, base); ctx.lineTo(x - 6, base - 14); ctx.arc(x, base - 14, 6, Math.PI, 0); ctx.lineTo(x + 6, base); ctx.fill(); }
+}
+
+/** A curtain wall seen from inside the yard: a band of masonry with merlons along its far edge. */
+function wallBand(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, horizontal: boolean, R: () => number) {
+  ctx.fillStyle = PAPER; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  if (horizontal) {
+    for (let yy = y0 + 6; yy < y1; yy += 6) for (let xx = x0 + R() * 10; xx < x1; xx += 12) { ctx.moveTo(xx, yy); ctx.lineTo(xx + 10, yy); ctx.moveTo(xx + 11, yy); ctx.lineTo(xx + 11, yy - 6); }
+  } else {
+    for (let xx = x0 + 6; xx < x1; xx += 6) for (let yy = y0 + R() * 10; yy < y1; yy += 12) { ctx.moveTo(xx, yy); ctx.lineTo(xx, yy + 10); ctx.moveTo(xx, yy + 11); ctx.lineTo(xx - 6, yy + 11); }
+  }
+  ctx.stroke();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  // merlons on the outer edge
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1;
+  if (horizontal) for (let xx = x0; xx < x1 - 6; xx += 14) { const yy = y0 < MAP_H / 2 ? y0 - 6 : y1; ctx.fillRect(xx, yy, 8, 6); ctx.strokeRect(xx, yy, 8, 6); }
+  else for (let yy = y0; yy < y1 - 6; yy += 14) { ctx.fillRect(x0 - 6, yy, 6, 8); ctx.strokeRect(x0 - 6, yy, 6, 8); }
+  // the shadow the wall throws into the yard
+  const g = horizontal ? ctx.createLinearGradient(0, y1, 0, y1 + 18) : ctx.createLinearGradient(x1, 0, x1 + 18, 0);
+  g.addColorStop(0, 'rgba(86,68,52,0.28)'); g.addColorStop(1, 'rgba(86,68,52,0)');
+  ctx.fillStyle = g;
+  if (horizontal && y0 < MAP_H / 2) ctx.fillRect(x0, y1, x1 - x0, 18); else if (!horizontal) ctx.fillRect(x1, y0, 18, y1 - y0);
+}
+
+/** Broken masonry: a scatter of hatched stones. */
+function rubble(ctx: Ctx, cx: number, cy: number, w: number, h: number, n: number, R: () => number, avoid?: (x: number, y: number) => boolean) {
+  for (let i = 0; i < n; i++) {
+    const x = cx + (R() - 0.5) * w, y = cy + (R() - 0.5) * h, r = 4 + R() * 7;
+    if (avoid && avoid(x, y)) continue;
+    const st = () => { ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x - r * 0.4, y - r * 0.8); ctx.lineTo(x + r * 0.7, y - r * 0.6); ctx.lineTo(x + r, y + r * 0.2); ctx.lineTo(x + r * 0.2, y + r * 0.7); ctx.closePath(); };
+    groundWash(ctx, x + 2, y + 3, r * 1.3, r * 0.5, 0.35);
+    ctx.fillStyle = PAPER; st(); ctx.fill();
+    hatch(ctx, st, [x - r, y - r, r * 2, r * 2], 0.8 + i, 1.5, 0.45);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1; st(); ctx.stroke();
+  }
+}
+
+function wellDrawing(ctx: Ctx, x: number, y: number, R: () => number) {
+  groundWash(ctx, x + 6, y + 4, 40, 10, 0.4);
+  // round stone curb
+  const curb = () => { ctx.beginPath(); ctx.moveTo(x - 24, y - 22); ctx.lineTo(x - 24, y); ctx.quadraticCurveTo(x, y + 9, x + 24, y); ctx.lineTo(x + 24, y - 22); ctx.closePath(); };
+  ctx.fillStyle = PAPER; curb(); ctx.fill();
+  ctx.save(); curb(); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath();
+  for (let r = 0; r < 4; r++) for (let i = 0; i < 6; i++) { const xx = x - 24 + i * 8 + (r % 2) * 4; ctx.moveTo(xx, y - 22 + r * 6); ctx.lineTo(xx, y - 16 + r * 6); }
+  for (let r = 1; r < 4; r++) { ctx.moveTo(x - 24, y - 22 + r * 6); ctx.quadraticCurveTo(x, y - 16 + r * 6, x + 24, y - 22 + r * 6); }
+  ctx.stroke(); ctx.restore();
+  hatch(ctx, () => { ctx.beginPath(); ctx.rect(x + 8, y - 24, 18, 34); }, [x + 8, y - 24, 18, 34], -0.3, 1.6, 0.5, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; curb(); ctx.stroke();
+  ctx.fillStyle = '#2b2622'; ctx.beginPath(); ctx.ellipse(x, y - 22, 24, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // posts, roof and windlass with its rope and bucket
+  const segs: Seg[] = [{ x1: x - 20, y1: y - 22, x2: x - 20, y2: y - 64, w: 3.5 }, { x1: x + 20, y1: y - 22, x2: x + 20, y2: y - 64, w: 3.5 }, { x1: x - 22, y1: y - 52, x2: x + 22, y2: y - 52, w: 3 }];
+  limbs(ctx, segs, R, false);
+  const roof = () => { ctx.beginPath(); ctx.moveTo(x - 30, y - 62); ctx.lineTo(x, y - 84); ctx.lineTo(x + 30, y - 62); ctx.closePath(); };
+  ctx.fillStyle = PAPER; roof(); ctx.fill(); hatch(ctx, roof, [x - 30, y - 86, 60, 26], 1.2, 1.6, 0.5);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; roof(); ctx.stroke();
+  ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x + 2, y - 52); ctx.lineTo(x + 2, y - 34); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.moveTo(x - 3, y - 34); ctx.lineTo(x + 7, y - 34); ctx.lineTo(x + 6, y - 26); ctx.lineTo(x - 2, y - 26); ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+
+function dummy(ctx: Ctx, x: number, y: number) {
+  groundWash(ctx, x + 3, y + 2, 12, 4, 0.4);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 40); ctx.moveTo(x - 13, y - 30); ctx.lineTo(x + 13, y - 30); ctx.stroke();
+  // a straw body and a sack head with a painted target
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y - 24, 7, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (let i = -6; i <= 6; i += 2) { ctx.moveTo(x + i, y - 33); ctx.lineTo(x + i * 0.8, y - 15); } ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y - 42, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y - 24, 3.5, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x, y - 24, 1.3, 0, Math.PI * 2); ctx.fill();
+}
+
+function barrel(ctx: Ctx, x: number, y: number) {
+  const b = () => { ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.quadraticCurveTo(x - 11, y - 10, x - 8, y - 20); ctx.lineTo(x + 8, y - 20); ctx.quadraticCurveTo(x + 11, y - 10, x + 8, y); ctx.closePath(); };
+  groundWash(ctx, x + 3, y + 2, 12, 4, 0.35);
+  ctx.fillStyle = PAPER; b(); ctx.fill();
+  hatch(ctx, b, [x - 11, y - 21, 22, 22], -0.4, 1.5, 0.45);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1; b(); ctx.stroke();
+  ctx.beginPath(); for (const yy of [y - 4, y - 16]) { ctx.moveTo(x - 9.5, yy); ctx.quadraticCurveTo(x, yy + 2, x + 9.5, yy); } ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(x, y - 20, 8, 2.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+}
+
+function cart(ctx: Ctx, x: number, y: number, R: () => number) {
+  groundWash(ctx, x + 6, y + 4, 46, 9, 0.35);
+  const segs: Seg[] = [{ x1: x - 30, y1: y - 22, x2: x + 26, y2: y - 22, w: 5 }, { x1: x + 26, y1: y - 20, x2: x + 58, y2: y - 6, w: 2.6 }];
+  limbs(ctx, segs, R, false);
+  const box = () => { ctx.beginPath(); ctx.rect(x - 30, y - 42, 56, 18); };
+  ctx.fillStyle = PAPER; box(); ctx.fill(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let yy = y - 38; yy < y - 24; yy += 4.5) { ctx.moveTo(x - 30, yy); ctx.lineTo(x + 26, yy); }
+  ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; box(); ctx.stroke();
+  // a load of hay spilling over the top
+  ctx.lineWidth = 0.5; ctx.beginPath(); for (let i = 0; i < 30; i++) { const hx = x - 28 + R() * 52; ctx.moveTo(hx, y - 42); ctx.lineTo(hx + (R() - 0.5) * 8, y - 50 - R() * 8); } ctx.stroke();
+  for (const wx of [x - 18, x + 14]) {
+    ctx.fillStyle = PAPER; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(wx, y - 10, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 0.7; ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; ctx.moveTo(wx, y - 10); ctx.lineTo(wx + Math.cos(a) * 10, y - 10 + Math.sin(a) * 10); } ctx.stroke();
+  }
+}
+
+function haystack(ctx: Ctx, x: number, y: number, r: number, R: () => number) {
+  groundWash(ctx, x + 4, y + 2, r * 1.3, r * 0.4, 0.35);
+  const h = () => { ctx.beginPath(); ctx.moveTo(x - r, y); ctx.quadraticCurveTo(x - r, y - r * 1.4, x, y - r * 1.5); ctx.quadraticCurveTo(x + r, y - r * 1.4, x + r, y); ctx.closePath(); };
+  ctx.fillStyle = PAPER; h(); ctx.fill();
+  ctx.save(); h(); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let i = 0; i < 40; i++) { const sx = x - r + R() * r * 2, sy = y - R() * r * 1.4; ctx.moveTo(sx, sy); ctx.lineTo(sx + (R() - 0.5) * 6, sy + 6); }
+  ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1; h(); ctx.stroke();
+}
+
+/** A gnarled tree in a square stone planter. */
+function plantedTree(ctx: Ctx, x: number, y: number, R: () => number) {
+  const segs: Seg[] = [];
+  grow(segs, R, x, y - 14, -Math.PI / 2, 46, 12, 3, 0.7);
+  limbs(ctx, segs, R);
+  const box = () => { ctx.beginPath(); ctx.rect(x - 22, y - 16, 44, 16); };
+  ctx.fillStyle = PAPER; box(); ctx.fill(); hatch(ctx, box, [x - 22, y - 16, 44, 16], -0.3, 1.6, 0.5);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; box(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 22, y - 8); ctx.lineTo(x + 22, y - 8); ctx.moveTo(x - 4, y - 16); ctx.lineTo(x - 4, y - 8); ctx.moveTo(x + 10, y - 8); ctx.lineTo(x + 10, y); ctx.stroke();
+}
+
+function smithy(ctx: Ctx, x: number, y: number, R: () => number) {
+  house(ctx, x, y, 64, 34, 24, R);
+  // chimney with a curl of smoke, and an anvil by the door
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.fillRect(x + 14, y - 70, 9, 22); ctx.strokeRect(x + 14, y - 70, 9, 22);
+  ctx.lineWidth = 0.8; ctx.beginPath(); for (let t = 0; t < 10; t += 0.25) { const r = 1 + t * 0.9; const px = x + 18 + Math.cos(t) * r * 0.7 + t * 1.2, py = y - 74 - t * 3 + Math.sin(t) * r * 0.5; t ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - 46, y); ctx.lineTo(x - 42, y - 6); ctx.lineTo(x - 50, y - 10); ctx.lineTo(x - 30, y - 10); ctx.lineTo(x - 34, y - 6); ctx.lineTo(x - 30, y); ctx.closePath(); ctx.fill();
+}
+
+function chapel(ctx: Ctx, x: number, y: number, R: () => number) {
+  turret(ctx, x, y, 62, 64, 52, 'crescent', false, R);
+  // a rose window under the gable
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x - 6, y - 46, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 0.6; ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; ctx.moveTo(x - 6, y - 46); ctx.lineTo(x - 6 + Math.cos(a) * 8, y - 46 + Math.sin(a) * 8); } ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - 13, y); ctx.lineTo(x - 13, y - 16); ctx.arc(x - 6, y - 16, 7, Math.PI, 0); ctx.lineTo(x + 1, y); ctx.fill();
+}
+
+function stables(ctx: Ctx, x: number, y: number, R: () => number) {
+  house(ctx, x, y, 210, 40, 30, R, false);
+  // stall doors, half open
+  for (let i = 0; i < 4; i++) {
+    const dx = x - 78 + i * 52;
+    ctx.fillStyle = INK; ctx.fillRect(dx - 12, y - 30, 24, 30);
+    ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 0.9; ctx.fillRect(dx - 12, y - 14, 24, 14); ctx.strokeRect(dx - 12, y - 14, 24, 14);
+    ctx.beginPath(); ctx.moveTo(dx - 12, y - 14); ctx.lineTo(dx + 12, y); ctx.moveTo(dx + 12, y - 14); ctx.lineTo(dx - 12, y); ctx.stroke();
+  }
+}
+
+function pennant(ctx: Ctx, x: number, y: number, R: () => number) {
+  limbs(ctx, [{ x1: x, y1: y, x2: x, y2: y - 46, w: 2.6 }], R, false);
+  const f = () => { ctx.beginPath(); ctx.moveTo(x + 1, y - 46); ctx.quadraticCurveTo(x + 14, y - 44, x + 28, y - 40); ctx.lineTo(x + 20, y - 36); ctx.lineTo(x + 28, y - 32); ctx.quadraticCurveTo(x + 14, y - 32, x + 1, y - 34); ctx.closePath(); };
+  ctx.fillStyle = PAPER; f(); ctx.fill(); hatch(ctx, f, [x, y - 48, 30, 18], 0.9, 1.6, 0.45); ctx.strokeStyle = INK; ctx.lineWidth = 0.9; f(); ctx.stroke();
+}
+
+function buildCourtyard(scale: number): HTMLCanvasElement {
+  const cv = document.createElement('canvas');
+  cv.width = MAP_W * scale; cv.height = MAP_H * scale;
+  const ctx = cv.getContext('2d')!;
+  ctx.scale(scale, scale);
+  const R = rng(23);
+  const st = inkSurreal;
+
+  // paper, then the flagstones of the yard laid in rough courses
+  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, MAP_W, MAP_H);
+  for (let i = 0; i < 9000; i++) { ctx.fillStyle = R() < 0.5 ? 'rgba(110,90,60,0.07)' : 'rgba(255,244,222,0.2)'; ctx.fillRect(R() * MAP_W, R() * MAP_H, 1.2, 1.2); }
+  for (let i = 0; i < 14; i++) { const x = R() * MAP_W, y = R() * MAP_H; groundWash(ctx, x, y, 160 + R() * 220, 50 + R() * 70, 0.04 + R() * 0.05); }
+  // worn flagstones: irregular, faint, with gaps where earth shows through
+  ctx.lineWidth = 0.55;
+  for (let y = 40; y < 962;) {
+    const rh = 24 + R() * 14;
+    let x = 38 - R() * 40;
+    while (x < 1460) {
+      const w = 34 + R() * 46;
+      if (R() > 0.12) {
+        const j = () => (R() - 0.5) * 3;
+        ctx.strokeStyle = `rgba(58,34,18,${0.1 + R() * 0.1})`;
+        ctx.beginPath(); ctx.moveTo(x + 3 + j(), y + 3 + j()); ctx.lineTo(x + w - 3 + j(), y + 3 + j()); ctx.lineTo(x + w - 3 + j(), y + rh - 2 + j()); ctx.lineTo(x + 3 + j(), y + rh - 2 + j()); ctx.closePath(); ctx.stroke();
+        if (R() < 0.05) hatch(ctx, () => { ctx.beginPath(); ctx.rect(x + 4, y + 4, w - 8, rh - 7); }, [x, y, w, rh], 0.8, 2.4, 0.4, 'rgba(58,34,18,0.18)');
+      }
+      x += w;
+    }
+    y += rh;
+  }
+  // weeds in the cracks
+  ctx.strokeStyle = 'rgba(58,34,18,0.42)'; ctx.lineWidth = 0.6;
+  for (let i = 0; i < 120; i++) {
+    const x = 50 + R() * 1380, y = 50 + R() * 900, n = 3 + Math.floor(R() * 3);
+    ctx.beginPath(); for (let k = 0; k < n; k++) { const a = -Math.PI / 2 + (k - (n - 1) / 2) * 0.35; ctx.moveTo(x + k, y); ctx.lineTo(x + k + Math.cos(a) * 6, y + Math.sin(a) * 6); } ctx.stroke();
+  }
+
+  // rubble from the breach and the broken gatehouse, kept off the roads
+  const onRoad = (x: number, y: number) => nearRoad({ x, y }, 26);
+  rubble(ctx, 900, 60, 220, 80, 30, R, onRoad);
+  rubble(ctx, 60, 480, 70, 190, 18, R, onRoad);
+
+  // the roads: the levy's trodden passage and the cobbled way from the breach
+  st.road(ctx, LANES.mill.pts, 'mill');
+  st.road(ctx, LANES.king.pts, 'king');
+  st.ley(ctx, LEY_EDGES.map((e) => e.pts), Object.values(NODE).filter((n) => !n.foundation && n.id !== 'ink').map((n) => ({ x: n.x, y: n.y })));
+
+  // curtain walls: north (breached), west (gatehouse fallen), south
+  wallBand(ctx, 0, 6, 838, 36, true, R);
+  wallBand(ctx, 962, 6, 1460, 36, true, R);
+  wallBand(ctx, 6, 36, 36, 420, false, R);
+  wallBand(ctx, 6, 540, 36, 962, false, R);
+  wallBand(ctx, 0, 962, 1460, 994, true, R);
+  // jagged broken ends of the north wall
+  for (const [x, d] of [[838, -1], [962, 1]] as [number, number][]) {
+    ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath();
+    ctx.moveTo(x, 6); ctx.lineTo(x - d * 10, 12); ctx.lineTo(x + d * 2, 20); ctx.lineTo(x - d * 8, 28); ctx.lineTo(x, 36); ctx.stroke();
+  }
+  // the fallen gatehouse: two stumps of tower either side of the passage
+  turret(ctx, 24, 440, 42, 46, 0, 'none', false, R);
+  turret(ctx, 24, 575, 42, 46, 0, 'none', false, R);
+  rubble(ctx, 54, 470, 30, 80, 8, R, onRoad);
+  pennant(ctx, 230, 34, R); pennant(ctx, 560, 34, R); pennant(ctx, 1140, 34, R); pennant(ctx, 1360, 34, R);
+
+  // buildings and things of the yard, back to front
+  type Item = { y: number; draw: () => void };
+  const items: Item[] = [
+    { y: 252, draw: () => plantedTree(ctx, 700, 252, seed(700, 252, 4)) },
+    { y: 360, draw: () => wellDrawing(ctx, 1010, 360, R) },
+    { y: 482, draw: () => chapel(ctx, 770, 482, R) },
+    { y: 662, draw: () => smithy(ctx, 525, 662, R) },
+    { y: 760, draw: () => dummy(ctx, 250, 760) },
+    { y: 792, draw: () => dummy(ctx, 296, 792) },
+    { y: 944, draw: () => cart(ctx, 640, 944, R) },
+    { y: 950, draw: () => stables(ctx, 1200, 950, R) },
+    { y: 930, draw: () => haystack(ctx, 1338, 930, 14, R) },
+    { y: 950, draw: () => haystack(ctx, 1062, 948, 12, R) },
+    { y: 900, draw: () => barrel(ctx, 1384, 900) },
+    { y: 912, draw: () => barrel(ctx, 1404, 914) },
+    { y: CASTLE.y + 160, draw: () => {
+      const ax = CASTLE.x - 50, ay = CASTLE.y + 25;
+      ctx.save(); ctx.translate(ax, ay); ctx.scale(CASTLE_SCALE, CASTLE_SCALE); ctx.translate(-ax, -ay);
+      inkCastle(ctx, CASTLE);
+      ctx.restore();
+    } },
+    { y: INKWELL.y + 22, draw: () => inkInkwell(ctx, INKWELL) },
+  ];
+  // a few fynbos shrubs between the flagstones
+  const taken: Spot[] = [];
+  for (let i = 0; i < 16; i++) {
+    const sp = findSpot(R, 22, taken);
+    if (!sp || sp.x < 60 || sp.y < 70 || sp.y > 900) continue;
+    if ([[700, 252], [1010, 360], [770, 482], [525, 662], [270, 780], [640, 944], [1200, 950]].some(([bx, by]) => Math.hypot(bx - sp.x, by - sp.y) < 80)) continue;
+    const sx = sp.x, sy = sp.y, rs = seed(sx, sy, 6);
+    items.push({ y: sy, draw: () => { groundWash(ctx, sx + 4, sy + 2, 18, 5, 0.3); for (let k = 0; k < 3; k++) { const tx = sx + (k - 1) * 8, ty = sy - 14 - rs() * 8; ctx.strokeStyle = INK; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(sx + (k - 1) * 2, sy); ctx.quadraticCurveTo((sx + tx) / 2, (sy + ty) / 2, tx, ty + 3); ctx.stroke(); proteaHead(ctx, tx, ty, 1, rs); } } });
+  }
+  items.sort((a, b) => a.y - b.y);
+  for (const it of items) it.draw();
+
+  label(ctx, 'the fallen Gatehouse', 130, 405, 15);
+  label(ctx, 'the Breach', 1010, 66, 15);
+  label(ctx, 'the Old Well', 1010, 396, 14);
+  label(ctx, 'Stables', 1200, 978, 14);
+  label(ctx, 'the Keep', CASTLE.x - 6, CASTLE.y + 196, 15);
+  label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
+
+  finishSheet(ctx, R, 'The Castle Courtyard', 'Defence of Goosebridge Castle · the second sheet');
   return cv;
 }

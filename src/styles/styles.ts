@@ -1,5 +1,5 @@
 // Six art directions for the same siege. Same map, same mechanics, different worlds.
-import type { TowerType } from '../balance';
+import type { FieldTowerType as TowerType } from '../balance';
 import { MAP_W, MAP_H, line, smooth, rng, type Style, type Vec } from './scene';
 import { renaissance } from './renaissance';
 import { vanGogh } from './vangogh';
