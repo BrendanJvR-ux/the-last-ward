@@ -13,11 +13,11 @@ export function rng(seed: number) {
   return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 }
 
-export const INK = '#3a2212';
-export const INK2 = 'rgba(58,34,18,0.5)';
-export const PAPER = '#e4d3b6';
+export const INK = '#1d1915';
+export const INK2 = 'rgba(29,25,21,0.5)';
+export const PAPER = '#efe9da';
 export const GOLD = '#c39634';
-export const sepia = (a: number) => `rgba(92,58,30,${a})`;
+export const sepia = (a: number) => `rgba(86,68,52,${a})`;
 export const seed = (x: number, y: number, k = 0) => rng(((Math.round(x) * 73856093) ^ (Math.round(y) * 19349663) ^ (k * 83492791)) >>> 0);
 
 // ── Pen helpers ─────────────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ export function eye(ctx: C, x: number, y: number, r: number, look = 0.25, shut =
     ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.35, 0, 0, Math.PI); ctx.stroke();
     return;
   }
-  ctx.fillStyle = '#f3e9d6'; ctx.strokeStyle = INK; ctx.lineWidth = Math.max(0.6, r * 0.12);
+  ctx.fillStyle = '#fbf8ef'; ctx.strokeStyle = INK; ctx.lineWidth = Math.max(0.6, r * 0.12);
   ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.8, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   const ix = x + r * look, ir = r * 0.58;
   ctx.lineWidth = Math.max(0.4, r * 0.05);
@@ -149,7 +149,7 @@ export function airFish(ctx: C, x: number, y: number, s: number, dir: number, fl
   ctx.restore();
   hatch(ctx, body, [-11, -10, 22, 20], 0.9, 1.6, 0.35);
   ctx.strokeStyle = INK; ctx.lineWidth = 0.9; body(); ctx.stroke();
-  ctx.fillStyle = '#f3e9d6'; ctx.beginPath(); ctx.arc(7.2, -1.5, 1.9, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 0.5; ctx.stroke();
+  ctx.fillStyle = '#fbf8ef'; ctx.beginPath(); ctx.arc(7.2, -1.5, 1.9, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 0.5; ctx.stroke();
   ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(7.6, -1.5, 0.9, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
@@ -241,7 +241,7 @@ export function towerInk(ctx: C, type: TowerType, x: number, y: number, m: 'trac
     for (let k = 0; k < 3; k++) {
       const ph = ((time * 0.35 + k / 3) % 1);
       const sx = x - 4 + Math.sin(ph * 5 + k) * 3, sy = y - 62 - ph * 40;
-      ctx.strokeStyle = `rgba(58,34,18,${0.9 * (1 - ph)})`;
+      ctx.strokeStyle = `rgba(29,25,21,${0.9 * (1 - ph)})`;
       ctx.beginPath();
       for (let t = 0; t < 9; t += 0.2) { const r = 1 + t * 0.9, px = sx + Math.cos(t) * r * 0.7 + t * 0.6, py = sy - t * 1.6 + Math.sin(t) * r * 0.5; t ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
       ctx.stroke();
@@ -296,12 +296,12 @@ export function towerInk(ctx: C, type: TowerType, x: number, y: number, m: 'trac
     const ex = x - 2, ey = y - 66;
     for (let i = 0; i < 46; i++) {
       const a = (i / 46) * Math.PI * 2 + Math.sin(time * 1.4 + i * 0.5) * 0.06, L = 14 + R() * 9;
-      ctx.strokeStyle = i % 3 ? INK : 'rgba(84,104,70,0.9)'; ctx.lineWidth = 0.6;
+      ctx.strokeStyle = i % 3 ? INK : 'rgba(60,120,96,0.9)'; ctx.lineWidth = 0.6;
       ctx.beginPath(); ctx.moveTo(ex + Math.cos(a) * 9, ey + Math.sin(a) * 8);
       ctx.quadraticCurveTo(ex + Math.cos(a + 0.25) * L * 0.8, ey + Math.sin(a + 0.25) * L * 0.75, ex + Math.cos(a) * L, ey + Math.sin(a) * L * 0.9); ctx.stroke();
       if (i % 5 === 0) { ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * L, ey + Math.sin(a) * L * 0.9, 1.1, 0, Math.PI * 2); ctx.fill(); }
     }
-    ctx.fillStyle = 'rgba(96,110,76,0.18)'; ctx.beginPath(); ctx.ellipse(ex, ey, 18, 16, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(80,140,112,0.22)'; ctx.beginPath(); ctx.ellipse(ex, ey, 18, 16, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(ex, ey, 11, 9.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     eye(ctx, ex, ey, 8, 0.35 * Math.sin(time * 0.8), time % 6.1 < 0.14);
     mark(ctx, ex, ey - 30, m);
@@ -368,13 +368,13 @@ export function enemyInk(ctx: C, type: EnemyType, x: number, y: number, dir: num
     ctx.lineWidth = 0.5; ctx.beginPath();
     for (let i = 0; i < 34; i++) { const a = -Math.PI * 0.95 + (i / 33) * Math.PI * 0.8; ctx.moveTo(-1 + Math.cos(a) * 3, -36 + Math.sin(a) * 2); ctx.lineTo(-4 + Math.cos(a) * (15 + R() * 7), -37 + Math.sin(a) * (14 + R() * 7)); }
     ctx.stroke();
-    ctx.fillStyle = '#cbb99a'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.arc(3, -35, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#d8d0c0'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.arc(3, -35, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(3.4, -35, 1.8, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(2.8, -35.6, 0.5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = INK; ctx.beginPath(); ctx.moveTo(0.4, -35); ctx.lineTo(-4, -34); ctx.stroke();
     // the name-stone, held out in front
     const stone = () => { ctx.beginPath(); ctx.ellipse(10, -18, 5.5, 5, 0.2, 0, Math.PI * 2); };
-    ctx.fillStyle = '#cdbb9c'; stone(); ctx.fill();
+    ctx.fillStyle = '#d9d1c0'; stone(); ctx.fill();
     hatch(ctx, stone, [4, -23, 12, 10], -0.8, 1.2, 0.4);
     ctx.lineWidth = 0.9; stone(); ctx.stroke();
     ctx.strokeStyle = GOLD; ctx.lineWidth = 0.9; ctx.beginPath(); for (let t = 0; t < 10; t += 0.3) { const r = t * 0.32; ctx.lineTo(10 + Math.cos(t) * r, -18 + Math.sin(t) * r); } ctx.stroke();
@@ -446,7 +446,7 @@ export function enemyInk(ctx: C, type: EnemyType, x: number, y: number, dir: num
     // the face, large and stern
     ctx.save(); ctx.translate(36, -44); ctx.scale(1.55, 1.55); ctx.translate(-36, 44);
     const face = () => { ctx.beginPath(); ctx.moveTo(34, -60); ctx.bezierCurveTo(44, -66, 52, -60, 52, -50); ctx.lineTo(58, -42); ctx.lineTo(53, -40); ctx.quadraticCurveTo(55, -36, 52, -35); ctx.quadraticCurveTo(54, -31, 50, -30); ctx.quadraticCurveTo(48, -24, 40, -24); ctx.lineTo(36, -28); ctx.closePath(); };
-    ctx.fillStyle = '#eddfc6'; face(); ctx.fill();
+    ctx.fillStyle = '#f4eee2'; face(); ctx.fill();
     hatch(ctx, () => { ctx.beginPath(); ctx.rect(34, -62, 8, 40); }, [34, -62, 8, 40], 1.2, 1.4, 0.4);
     ctx.fillStyle = sepia(0.25); ctx.beginPath(); ctx.ellipse(46, -38, 3.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = INK; ctx.lineWidth = 1.1; face(); ctx.stroke();
@@ -559,7 +559,7 @@ export function windmillSails(ctx: C, hx: number, hy: number, rot: number) {
   for (let i = 0; i < 4; i++) {
     const a = rot + (i * Math.PI) / 2, c = Math.cos(a), s = Math.sin(a);
     const sail = () => { ctx.beginPath(); ctx.moveTo(hx + c * 6 - s * 2, hy + s * 6 + c * 2); ctx.lineTo(hx + c * 44 - s * 2, hy + s * 44 + c * 2); ctx.lineTo(hx + c * 44 - s * 11, hy + s * 44 + c * 11); ctx.lineTo(hx + c * 10 - s * 9, hy + s * 10 + c * 9); ctx.closePath(); };
-    ctx.fillStyle = 'rgba(228,211,182,0.9)'; sail(); ctx.fill();
+    ctx.fillStyle = 'rgba(239,233,218,0.9)'; sail(); ctx.fill();
     ctx.strokeStyle = INK; ctx.lineWidth = 0.5; ctx.beginPath();
     for (let t = 10; t <= 44; t += 5) { ctx.moveTo(hx + c * t - s * 2, hy + s * t + c * 2); ctx.lineTo(hx + c * t - s * 11, hy + s * t + c * 11); }
     ctx.stroke();
@@ -591,7 +591,7 @@ export function goose(ctx: C, x: number, y: number, k: number, dir: number, flyi
 export function nameStone(ctx: C, x: number, y: number, time: number) {
   groundWash(ctx, x + 2, y + 3, 14, 4, 0.4);
   const stone = () => { ctx.beginPath(); ctx.moveTo(x - 9, y + 2); ctx.lineTo(x - 8, y - 11); ctx.quadraticCurveTo(x, y - 17, x + 8, y - 11); ctx.lineTo(x + 9, y + 2); ctx.closePath(); };
-  ctx.fillStyle = '#cdbb9c'; stone(); ctx.fill();
+  ctx.fillStyle = '#d9d1c0'; stone(); ctx.fill();
   hatch(ctx, stone, [x - 9, y - 17, 18, 20], -0.8, 1.6, 0.45);
   ctx.strokeStyle = INK; ctx.lineWidth = 1.1; stone(); ctx.stroke();
   ctx.strokeStyle = `rgba(195,150,52,${0.6 + 0.4 * Math.sin(time * 4)})`; ctx.lineWidth = 1.3; ctx.beginPath();
@@ -601,21 +601,14 @@ export function nameStone(ctx: C, x: number, y: number, time: number) {
 
 export const inkSurreal: Style = {
   id: 'ink',
-  name: 'Sepia notebook',
+  name: 'Pen-and-ink surreal',
   featured: 'In the game now',
-  blurb: 'Sepia ink on mottled, folded parchment, after Renaissance anatomical notebooks: dense hatching, mirror-script notes in the margins, and gentle impossible creatures (root-walkers, striped air-fish, a walking citadel-fish).',
+  blurb: 'Fine-liner on cream paper with a grey-sepia wash: dense hatching, wood grain full of knots, and gentle impossible creatures (root-walkers, striped air-fish, a walking citadel-fish).',
   unity: '2D. Hand-drawn sprite sheets on a paper background; a paper-grain overlay and a light wash shader.',
   ground(ctx, R) {
     ctx.fillStyle = PAPER; ctx.fillRect(0, 0, MAP_W, MAP_H);
     // paper tooth
-    for (let i = 0; i < 9000; i++) { ctx.fillStyle = R() < 0.5 ? 'rgba(110,90,60,0.07)' : 'rgba(255,244,222,0.2)'; ctx.fillRect(R() * MAP_W, R() * MAP_H, 1.2, 1.2); }
-    // age: a mottled parchment, darker in blooms and blotches
-    for (let i = 0; i < 70; i++) {
-      const x = R() * MAP_W, y = R() * MAP_H, r = 40 + R() * 220;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, `rgba(120,78,38,${0.02 + R() * 0.06})`); g.addColorStop(1, 'rgba(120,78,38,0)');
-      ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
-    }
+    for (let i = 0; i < 9000; i++) { ctx.fillStyle = R() < 0.5 ? 'rgba(110,90,60,0.07)' : 'rgba(255,255,255,0.25)'; ctx.fillRect(R() * MAP_W, R() * MAP_H, 1.2, 1.2); }
     // pooled washes, as at the feet of the drawings
     for (let i = 0; i < 16; i++) { const x = R() * MAP_W, y = R() * MAP_H; groundWash(ctx, x, y, 160 + R() * 220, 50 + R() * 70, 0.05 + R() * 0.05); }
     // a ridge of distant hills in wash across the top
@@ -623,7 +616,7 @@ export const inkSurreal: Style = {
     for (let x = 0; x <= MAP_W; x += 40) ctx.lineTo(x, 46 + Math.sin(x * 0.006) * 18 + Math.sin(x * 0.021) * 8);
     ctx.lineTo(MAP_W, 0); ctx.lineTo(0, 0); ctx.closePath(); ctx.fill();
     // scattered tufts of fynbos grass
-    ctx.strokeStyle = 'rgba(58,34,18,0.42)'; ctx.lineWidth = 0.6;
+    ctx.strokeStyle = 'rgba(29,25,21,0.42)'; ctx.lineWidth = 0.6;
     for (let i = 0; i < 160; i++) {
       const x = R() * MAP_W, y = 60 + R() * (MAP_H - 60), n = 3 + Math.floor(R() * 4), lean = (R() - 0.5) * 0.6;
       ctx.beginPath();
@@ -634,7 +627,7 @@ export const inkSurreal: Style = {
   water(ctx, river, pond) {
     const pts = chaikin(river, 3), R = rng(41);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(84,54,30,0.28)'; ctx.lineWidth = 34; polyline(ctx, pts); ctx.stroke();
+    ctx.strokeStyle = 'rgba(52,48,46,0.3)'; ctx.lineWidth = 34; polyline(ctx, pts); ctx.stroke();
     edges(ctx, pts, 17, R, 1.4);
     ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath();
     for (const p of samples(pts, 7)) for (const o of [-12, -7, -2, 3, 8, 13]) {
@@ -647,7 +640,7 @@ export const inkSurreal: Style = {
     const h = river[0], a0 = Math.atan2(river[1].y - h.y, river[1].x - h.x);
     const px = h.x - Math.cos(a0) * 22, py = h.y - Math.sin(a0) * 22;
     ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(px, py, 40, 31, a0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(84,54,30,0.28)'; ctx.beginPath(); ctx.ellipse(px, py, 40, 31, a0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(52,48,46,0.3)'; ctx.beginPath(); ctx.ellipse(px, py, 40, 31, a0, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = INK; ctx.lineWidth = 0.6;
     for (let k = 1; k <= 4; k++) { ctx.setLineDash([6 + k * 3, 4 + k]); ctx.beginPath(); ctx.ellipse(px, py, k * 8, k * 6, a0, 0, Math.PI * 2); ctx.stroke(); }
     ctx.setLineDash([]);
@@ -659,7 +652,7 @@ export const inkSurreal: Style = {
       const sy = py + Math.sin(a0) * Math.cos(t + Math.PI) * 44 + Math.cos(a0) * Math.sin(t + Math.PI) * 35;
       const st = () => { ctx.beginPath(); ctx.ellipse(sx, sy, r, r * 0.68, a + RS() * 0.3, 0, Math.PI * 2); };
       groundWash(ctx, sx + 3, sy + 3, r * 1.3, r * 0.6, 0.35);
-      ctx.fillStyle = '#d8c7a8'; st(); ctx.fill();
+      ctx.fillStyle = '#e6dfcf'; st(); ctx.fill();
       hatch(ctx, st, [sx - r, sy - r, r * 2, r * 2], 0.7 + i * 0.3, 1.6, 0.45);
       ctx.strokeStyle = INK; ctx.lineWidth = 1.1; st(); ctx.stroke();
     }
@@ -675,7 +668,7 @@ export const inkSurreal: Style = {
   road(ctx, pts, kind) {
     const P = chaikin(pts, 2), R = rng(kind === 'mill' ? 11 : 12);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#eadcc2'; ctx.lineWidth = 38; polyline(ctx, P); ctx.stroke();
+    ctx.strokeStyle = '#f3eee2'; ctx.lineWidth = 38; polyline(ctx, P); ctx.stroke();
     ctx.strokeStyle = sepia(0.09); ctx.lineWidth = 38; polyline(ctx, P); ctx.stroke();
     if (kind === 'king') {
       // cobbles laid like fish scales
@@ -686,7 +679,7 @@ export const inkSurreal: Style = {
     } else {
       // dirt: stipple and two cart ruts
       const S = samples(P, 4);
-      ctx.fillStyle = 'rgba(58,34,18,0.5)';
+      ctx.fillStyle = 'rgba(29,25,21,0.5)';
       for (const p of S) for (let k = 0; k < 3; k++) { const o = (R() - 0.5) * 32; ctx.beginPath(); ctx.arc(p.x - Math.sin(p.a) * o, p.y + Math.cos(p.a) * o, 0.5 + R() * 0.5, 0, Math.PI * 2); ctx.fill(); }
       ctx.strokeStyle = INK2; ctx.lineWidth = 0.7;
       for (const o of [-7, 7]) { ctx.beginPath(); S.forEach((p, i) => { const q = { x: p.x - Math.sin(p.a) * (o + (R() - 0.5)), y: p.y + Math.cos(p.a) * (o + (R() - 0.5)) }; i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); }); ctx.stroke(); }
@@ -732,7 +725,7 @@ export const inkSurreal: Style = {
     if (r > 14) whorl(ctx, x + (R() - 0.5) * r * 0.2, y - r * 0.6, r * 0.18, R, 0.5);
   },
   ley(ctx, edgesList, knots) {
-    ctx.strokeStyle = 'rgba(58,34,18,0.45)'; ctx.lineWidth = 1.1; ctx.setLineDash([2, 5]); ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(29,25,21,0.45)'; ctx.lineWidth = 1.1; ctx.setLineDash([2, 5]); ctx.lineCap = 'round';
     for (const e of edgesList) { polyline(ctx, e); ctx.stroke(); }
     ctx.setLineDash([]);
     for (const k of knots) { ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(k.x, k.y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(k.x, k.y, 1.3, 0, Math.PI * 2); ctx.fillStyle = INK; ctx.fill(); }
@@ -858,8 +851,8 @@ export function inkInkwell(ctx: C, at: Vec) {
 /** Sepia darkening towards the edges of the sheet, and a little foxing. */
 export function paperVignette(ctx: C) {
   const R = rng(8);
-  const g = ctx.createRadialGradient(MAP_W / 2, MAP_H / 2, 380, MAP_W / 2, MAP_H / 2, 960);
-  g.addColorStop(0, 'rgba(96,58,26,0)'); g.addColorStop(1, 'rgba(96,58,26,0.36)');
+  const g = ctx.createRadialGradient(MAP_W / 2, MAP_H / 2, 420, MAP_W / 2, MAP_H / 2, 980);
+  g.addColorStop(0, 'rgba(120,96,64,0)'); g.addColorStop(1, 'rgba(120,96,64,0.22)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, MAP_W, MAP_H);
   for (let i = 0; i < 14; i++) { const x = R() * MAP_W, y = R() * MAP_H, r = 2 + R() * 6; const f = ctx.createRadialGradient(x, y, 0, x, y, r); f.addColorStop(0, 'rgba(150,110,60,0.18)'); f.addColorStop(1, 'rgba(150,110,60,0)'); ctx.fillStyle = f; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
 }
@@ -924,12 +917,12 @@ export function wizard(ctx: C, x: number, y: number, dir: number, time: number, 
   const hx = qx - 2, hy = qy + 2;
   const sleeve = () => { ctx.beginPath(); ctx.moveTo(4, -60); ctx.quadraticCurveTo(14, -58 + lift * -4, hx + 2, hy - 4); ctx.lineTo(hx + 4, hy + 6); ctx.quadraticCurveTo(10, -46 + lift * -4, 2, -48); ctx.closePath(); };
   ctx.fillStyle = PAPER; sleeve(); ctx.fill(); hatch(ctx, sleeve, [0, -66, 30, 30], 0.9, 1.7, 0.45); ctx.strokeStyle = INK; ctx.lineWidth = 1; sleeve(); ctx.stroke();
-  ctx.fillStyle = '#eddfc6'; ctx.beginPath(); ctx.arc(hx + 2, hy, 3, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 0.8; ctx.stroke();
+  ctx.fillStyle = '#f4eee2'; ctx.beginPath(); ctx.arc(hx + 2, hy, 3, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 0.8; ctx.stroke();
 
   // face, nose, spectacle and beard
-  ctx.fillStyle = '#eddfc6'; ctx.beginPath(); ctx.ellipse(1, -72, 7, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = '#eddfc6'; ctx.beginPath(); ctx.moveTo(6, -75); ctx.quadraticCurveTo(15, -72, 14, -66); ctx.quadraticCurveTo(10, -67, 6, -69); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#cbb99a'; ctx.beginPath(); ctx.arc(4, -75, 2.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#f4eee2'; ctx.beginPath(); ctx.ellipse(1, -72, 7, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#f4eee2'; ctx.beginPath(); ctx.moveTo(6, -75); ctx.quadraticCurveTo(15, -72, 14, -66); ctx.quadraticCurveTo(10, -67, 6, -69); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#d8d0c0'; ctx.beginPath(); ctx.arc(4, -75, 2.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(4.6, -75, 1.4, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(4.1, -75.6, 0.45, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(1.2, -75); ctx.lineTo(-4, -74); ctx.stroke();
@@ -957,54 +950,4 @@ export function wizard(ctx: C, x: number, y: number, dir: number, time: number, 
   ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(0, -80, 16, 3.6, -0.05, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.lineWidth = 0.5; ctx.beginPath(); ctx.ellipse(0, -80, 11, 2.2, -0.05, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
-}
-
-/**
- * Lines of notebook handwriting, written right to left as in old mirror-script notebooks.
- * It is not real text: loops, humps, ascenders and descenders in a running hand.
- */
-export function scribble(ctx: C, x: number, y: number, w: number, lines: number, R: R, size = 4.5) {
-  ctx.strokeStyle = 'rgba(58,34,18,0.72)'; ctx.lineWidth = 0.55; ctx.lineCap = 'round';
-  for (let li = 0; li < lines; li++) {
-    const cy = y + li * size * 2.1;
-    let cx = x + w - R() * size;
-    const end = x + (li === lines - 1 ? w * (0.3 + R() * 0.5) : R() * w * 0.12);
-    while (cx > end) {
-      const letters = 2 + Math.floor(R() * 6);
-      ctx.beginPath(); ctx.moveTo(cx, cy);
-      for (let k = 0; k < letters && cx > end; k++) {
-        const lw = size * (0.55 + R() * 0.5), t = R();
-        if (t < 0.3) ctx.quadraticCurveTo(cx - lw * 0.5, cy - size * 1.1, cx - lw, cy);
-        else if (t < 0.5) ctx.bezierCurveTo(cx - lw * 0.1, cy - size * 1.1, cx - lw * 1.1, cy - size, cx - lw * 0.8, cy);
-        else if (t < 0.65) { ctx.lineTo(cx - lw * 0.1, cy - size * 2); ctx.quadraticCurveTo(cx - lw * 0.5, cy - size * 2.2, cx - lw * 0.6, cy); }
-        else if (t < 0.75) { ctx.lineTo(cx - lw * 0.4, cy + size * 1.4); ctx.quadraticCurveTo(cx - lw * 0.7, cy + size * 1.8, cx - lw * 0.8, cy + size * 1.1); ctx.lineTo(cx - lw * 0.7, cy); }
-        else ctx.lineTo(cx - lw, cy - size * 0.5 * R());
-        cx -= lw;
-      }
-      ctx.stroke();
-      cx -= size * (1 + R() * 0.6);
-    }
-  }
-}
-
-/** A dark smudge of spilt ink, as on a well-used sheet. */
-export function inkSmudge(ctx: C, x: number, y: number, w: number, h: number, R: R) {
-  for (let i = 0; i < 26; i++) {
-    const px = x + (R() - 0.5) * w, py = y + (R() - 0.5) * h, r = 3 + R() * Math.min(w, h) * 0.3;
-    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
-    g.addColorStop(0, `rgba(40,22,10,${0.2 + R() * 0.35})`); g.addColorStop(1, 'rgba(40,22,10,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-/** The sheet has been folded: a crease across it, light on one side and dark on the other. */
-export function foldCrease(ctx: C, horizontal: boolean, at: number, R: R) {
-  const n = horizontal ? MAP_W : MAP_H, pts: Vec[] = [];
-  for (let t = 0; t <= n; t += 20) { const o = at + (R() - 0.5) * 3; pts.push(horizontal ? { x: t, y: o } : { x: o, y: t }); }
-  const off = (d: number) => pts.map((p) => (horizontal ? { x: p.x, y: p.y + d } : { x: p.x + d, y: p.y }));
-  const band = ctx.createLinearGradient(horizontal ? 0 : at - 14, horizontal ? at - 14 : 0, horizontal ? 0 : at + 14, horizontal ? at + 14 : 0);
-  band.addColorStop(0, 'rgba(80,50,24,0)'); band.addColorStop(0.5, 'rgba(80,50,24,0.12)'); band.addColorStop(1, 'rgba(80,50,24,0)');
-  ctx.fillStyle = band; if (horizontal) ctx.fillRect(0, at - 14, MAP_W, 28); else ctx.fillRect(at - 14, 0, 28, MAP_H);
-  ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,244,220,0.45)'; polyline(ctx, off(-1.2)); ctx.stroke();
-  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(60,34,14,0.4)'; polyline(ctx, off(0.8)); ctx.stroke();
 }

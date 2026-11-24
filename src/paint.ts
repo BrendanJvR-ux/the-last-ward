@@ -6,7 +6,7 @@ import {
   LEY_EDGES, NODE, FOUNDATION_IDS, pointAt, type Vec,
 } from './map';
 import {
-  inkSurreal, scribble, inkSmudge, foldCrease, inkCastle, inkInkwell, windmillBody, turret, paperVignette, groundWash, goose,
+  inkSurreal, inkCastle, inkInkwell, windmillBody, turret, paperVignette, groundWash, goose,
   INK, INK2, PAPER,
 } from './ink';
 
@@ -73,10 +73,10 @@ function nearRiver(p: Vec, margin: number): boolean {
 export function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size = 16, angle = 0) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
   ctx.font = `italic ${size}px ${SERIF}`; ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(228,211,182,0.85)';
+  ctx.fillStyle = 'rgba(239,233,218,0.85)';
   const w = ctx.measureText(text).width;
   ctx.fillRect(-w / 2 - 4, -size * 0.8, w + 8, size * 1.1);
-  ctx.fillStyle = 'rgba(58,34,18,0.85)'; ctx.fillText(text, 0, 0);
+  ctx.fillStyle = 'rgba(29,25,21,0.85)'; ctx.fillText(text, 0, 0);
   ctx.restore();
 }
 
@@ -145,13 +145,6 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   // the windmill claims its ground first; trees grow around it
   const taken: Spot[] = [];
   const wm = findSpot(R, 44, taken, { x: 400, y: 730 }, 260) ?? findSpot(R, 44, taken);
-  // notebook margins: blocks of mirror-script notes in the open ground
-  const notes: Spot[] = [];
-  for (let i = 0; i < 7; i++) { const sp = findSpot(R, 62, taken); if (sp) notes.push(sp); }
-  for (const n of notes) scribble(ctx, n.x - 58, n.y - 28, 116, 5 + Math.floor(R() * 3), R);
-  // ink spilt in the corners, well clear of play
-  inkSmudge(ctx, 70, 120, 40, 110, R);
-  inkSmudge(ctx, MAP_W - 60, 80, 30, 30, R);
   if (wm) WINDMILL = { x: wm.x, y: wm.y };
   const trees: { x: number; y: number; r: number; k: number }[] = [];
   for (let i = 0; i < 1400 && trees.length < 175; i++) {
@@ -187,21 +180,19 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
   label(ctx, 'Goosebridge Castle', CASTLE.x - 6, CASTLE.y + 196, 15);
   label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
 
-  // the sheet was folded once across and once down
-  foldCrease(ctx, true, MAP_H * 0.54, R);
-  foldCrease(ctx, false, GUTTER_X, R);
   paperVignette(ctx);
 
   // Title plate, ruled in ink
-  ctx.fillStyle = 'rgba(228,211,182,0.92)'; roundRect(ctx, 40, 880, 350, 78, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(239,233,218,0.92)'; roundRect(ctx, 40, 880, 350, 78, 4); ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
   ctx.lineWidth = 0.6; roundRect(ctx, 45, 885, 340, 68, 3); ctx.stroke();
   ctx.font = `italic 600 23px ${SERIF}`; ctx.textAlign = 'left'; ctx.fillStyle = INK;
   ctx.fillText('Defence of Goosebridge Castle', 56, 918);
-  ctx.font = `italic 14px ${SERIF}`; ctx.fillStyle = 'rgba(58,34,18,0.7)';
-  ctx.fillText('in sepia ink, from an old notebook of studies', 58, 942);
+  ctx.font = `italic 14px ${SERIF}`; ctx.fillStyle = 'rgba(29,25,21,0.7)';
+  ctx.fillText('drawn in pen and ink, with a little wash', 58, 942);
   // sheet border
   ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(14, 14, MAP_W - 28, MAP_H - 28);
   ctx.lineWidth = 0.6; ctx.strokeRect(19, 19, MAP_W - 38, MAP_H - 38);
+  void GUTTER_X;
   return cv;
 }
