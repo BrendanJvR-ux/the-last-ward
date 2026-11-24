@@ -4,16 +4,16 @@ import { towerInk, enemyInk, inkFoundation, nameStone, sepia } from './ink';
 
 /** Accent colours used by the live renderer, chosen to sit on cream paper beside black ink. */
 export const P = {
-  ink: '#1d1915',
+  ink: '#3a2212',
   umber: '#3b2a18',
   shadow: 'rgba(60,46,34,0.35)',
-  stone: '#d9d1c0',
+  stone: '#cdbb9c',
   stoneDark: '#8a8070',
-  stoneLight: '#f4eee2',
-  leaf: '#efe9da',
-  leafDark: '#1d1915',
+  stoneLight: '#eddfc6',
+  leaf: '#e4d3b6',
+  leafDark: '#3a2212',
   leafLight: '#f8f4ea',
-  cream: '#efe9da',
+  cream: '#e4d3b6',
   gold: '#c39634',
   goldLight: '#e8c766',
   copper: '#a8683a',
@@ -66,7 +66,7 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, type: EnemyType, x: num
   if (hit > 0) {
     // a spatter of ink where the blow lands
     const a = Math.min(1, hit * 6), cy = type === 'cairn' ? -50 : type === 'hound' ? -14 : -20;
-    ctx.fillStyle = `rgba(29,25,21,${0.8 * a})`;
+    ctx.fillStyle = `rgba(58,34,18,${0.8 * a})`;
     for (let i = 0; i < 7; i++) {
       const ang = i * 2.4 + hit * 20, d = 4 + (i % 3) * 4 + (1 - a) * 6;
       ctx.beginPath(); ctx.arc(Math.cos(ang) * d, cy + Math.sin(ang) * d * 0.8, 1 + (i % 2), 0, Math.PI * 2); ctx.fill();

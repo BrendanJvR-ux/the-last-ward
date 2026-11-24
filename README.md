@@ -1,12 +1,12 @@
 # Defence of Goosebridge Castle
 
-A single-map fantasy tower defence prototype, drawn as a surreal pen-and-ink drawing on cream paper with a soft grey-sepia wash: dense hatching, gnarled trees full of knots, fynbos and protea, a turning windmill, butterflies in pen ticks, and a river that wells up from a spring among stones. An old wizard in a patterned robe and crooked hat keeps the inkwell, leaning on a quill as tall as a staff; he raises it while you trace and pulse. The page hangs like a gallery print on an indigo wall. The creatures are gentle impossible hybrids: root-walking fynbos spirits, shoals of striped air-fish, a goggled wanderer and a walking citadel-fish with a stern human face. Two roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from the wizard's inkwell in the castle garden out to thirteen tower foundations.
+A single-map fantasy tower defence prototype, drawn as a sheet from an old notebook of studies, after the Renaissance anatomical notebooks: sepia ink on mottled parchment, folded once across and once down, with ink smudges and blocks of mirror-script notes in the margins. The drawing itself has dense hatching, gnarled trees full of knots, fynbos and protea, a turning windmill, butterflies in pen ticks, and a river that wells up from a spring among stones. An old wizard in a patterned robe and crooked hat keeps the inkwell, leaning on a quill as tall as a staff; he raises it while you trace and pulse. The sheet hangs in a thin silver frame on a sage-green wall. The creatures are gentle impossible hybrids: root-walking fynbos spirits, shoals of striped air-fish, a goggled wanderer and a walking citadel-fish with a stern human face. Two roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from the wizard's inkwell in the castle garden out to thirteen tower foundations.
 
 **Play it:** https://brendanjvr-ux.github.io/the-last-ward/
 
 **Its anatomy offshoot:** *Defend the Heart* began as a conversion of this game and now lives in its own repository: [defend-the-heart](https://github.com/BrendanJvR-ux/defend-the-heart) (play at https://brendanjvr-ux.github.io/defend-the-heart/).
 
-**Art style studies:** https://brendanjvr-ux.github.io/the-last-ward/styles.html (the same battle moment in alternative art directions, led by the pen-and-ink look the game now uses, with notes on what each would mean in Unity; source in `src/styles/`)
+**Art style studies:** https://brendanjvr-ux.github.io/the-last-ward/styles.html (the same battle moment in alternative art directions, led by the sepia notebook look the game now uses, with notes on what each would mean in Unity; source in `src/styles/`)
 
 TypeScript, Vite, HTML Canvas for the battlefield and HTML/CSS for the controls. All artwork and sound are made procedurally: no image or audio files, no fonts or services from the internet, no accounts or API keys.
 
