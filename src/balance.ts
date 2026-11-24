@@ -252,7 +252,7 @@ export const BALANCE = {
     leaveBounty: 20,
   },
 
-  /** War Dogs: the horn sounds and the bridge warning shows this many seconds before they reach the bridge. */
+  /** War Dogs: the bridge warning shows this many seconds before they reach the bridge. */
   houndWarning: 3.5,
 
   enemies: {
@@ -286,7 +286,7 @@ export const BALANCE = {
     },
     {
       title: 'Horns at the Bridge',
-      lesson: 'The hunt-master has loosed his dogs on the King\u2019s Road. Listen for the horn.',
+      lesson: 'The hunt-master has loosed his dogs on the King\u2019s Road. Watch for the warning at the bridge.',
       groups: [
         { type: 'levy', lane: 'mill', count: 5, abreast: 3, start: 1, interval: 1.5 },
         { type: 'hound', lane: 'king', count: 6, start: 20, interval: 0.4 },
@@ -390,7 +390,7 @@ const COURTYARD: LevelBalance = {
     },
     {
       title: 'Teeth in the Yard',
-      lesson: 'Both ways in are open now. Listen for the horn among the stables.',
+      lesson: 'Both ways in are open now. Watch for the warning in the stable yard.',
       groups: [
         { type: 'levy', lane: 'mill', count: 7, abreast: 3, start: 1, interval: 1.3 },
         { type: 'hound', lane: 'king', count: 5, start: 8, interval: 0.4 },
@@ -455,7 +455,7 @@ const KEEP: LevelBalance = {
     },
     {
       title: 'Up from the Cellars',
-      lesson: 'Something scrabbles behind the wine casks. Listen for the horn below.',
+      lesson: 'Something scrabbles behind the wine casks. Watch for the warning on the cellar stair.',
       groups: [
         { type: 'levy', lane: 'mill', count: 7, abreast: 3, start: 1, interval: 1.3 },
         { type: 'hound', lane: 'king', count: 9, start: 14, interval: 0.4 },

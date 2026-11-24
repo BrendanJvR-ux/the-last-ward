@@ -10,7 +10,6 @@ import {
   routeToEdgePoint, dist, type Vec,
 } from './map';
 import { render, renderVictory, towerIconCanvas, enemyIconCanvas, levelThumbnail, type ViewState } from './render';
-import { unlockAudio, playDoubleHorn, isMuted, setMuted } from './audio';
 import { entry, record, recordedCount, resetCasebook } from './casebook';
 import { LANES } from './map';
 import { REWARDS, EARN, seals, sealsEarned, owns, isActive, redeem, toggle, activePerks, award, awardWin, rewardIcon, resetRewards, type RewardId } from './rewards';
@@ -401,10 +400,6 @@ function previewable(t: GameState['towers'][number] | undefined) {
 $('btnPause').addEventListener('click', togglePause);
 $('btnSpeed').addEventListener('click', () => { s.speed = s.speed === 1 ? 2 : 1; });
 $('btnRestart').addEventListener('click', restart);
-$('btnMute').addEventListener('click', () => { setMuted(!isMuted()); unlockAudio(); });
-// Sound may only start after a gesture.
-window.addEventListener('pointerdown', unlockAudio, { capture: true });
-window.addEventListener('keydown', unlockAudio, { capture: true });
 
 function togglePause() {
   if (s.phase !== 'combat' && s.phase !== 'prep') return;
@@ -637,7 +632,6 @@ function renderHud() {
   $('btnPause').textContent = s.paused ? 'Resume' : 'Pause';
   ($('btnPause') as HTMLButtonElement).disabled = s.phase === 'victory' || s.phase === 'defeat';
   $('btnSpeed').textContent = `Speed ×${s.speed}`;
-  $('btnMute').textContent = isMuted() ? 'Sound off' : 'Sound on';
   document.body.dataset.phase = s.phase;
 }
 
@@ -900,8 +894,6 @@ function refresh(now: number) {
   renderHud();
   renderToasts();
   renderInspect();
-  // The hunt-master's double horn, once per dog warning
-  if (s.phase === 'combat') for (const w of s.warnings) if (!w.sounded && s.waveTime >= w.from) { w.sounded = true; playDoubleHorn(); }
   const k = canvas.width / MAP_W;
   ctx.setTransform(k, 0, 0, k, 0, 0);
   if (s.phase === 'victory') renderVictory(ctx, s, now / 1000);

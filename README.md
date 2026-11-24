@@ -29,13 +29,13 @@ The game opens on a **menu** (the **Menu** button returns to it at any time):
 - **Exit** closes the book (the game waits on its page until you close the tab).
 
 1. **Gate Defence**: two roads across the fields to the castle gate (the Fen Levy and the war dogs), with the Bramble, Ember, Bell and Verdigris towers. Everything below describes this level unless it says otherwise.
-2. **The Castle Courtyard**: the outer wall has fallen. The levy pour through the ruined gatehouse in the west wall (the Gatehouse Passage); the war dogs leap the breach in the north wall (the Breach, announced by the horn at the stable yard). Both meet at the gate stair before the east gate, beside its guard tower. Curtain walls enclose the whole yard, and the yard is full of life: a well, chapel, smithy, stables, beehives, a kitchen garden, a market stall, a washing line, archery butts, a weapon rack, a dovecote, a founder's statue, hens, woodpiles, ivy and torches on the walls. Four different towers defend it: the Gargoyle Perch, the Mangonel, the Ink Fountain and the Banner Tower. Same rules, same enemies, six new waves; 60 starting gold.
+2. **The Castle Courtyard**: the outer wall has fallen. The levy pour through the ruined gatehouse in the west wall (the Gatehouse Passage); the war dogs leap the breach in the north wall (the Breach, announced by a warning at the stable yard). Both meet at the gate stair before the east gate, beside its guard tower. Curtain walls enclose the whole yard, and the yard is full of life: a well, chapel, smithy, stables, beehives, a kitchen garden, a market stall, a washing line, archery butts, a weapon rack, a dovecote, a founder's statue, hens, woodpiles, ivy and torches on the walls. Four different towers defend it: the Gargoyle Perch, the Mangonel, the Ink Fountain and the Banner Tower. Same rules, same enemies, six new waves; 60 starting gold.
 
-3. **The Keep**: inside the keep itself, drawn in cut-away like an architect's section: four floors from the cellars to the roof. The levy come in at the broken west door and climb the **Great Stair**; the dogs come up from the cellars by the **Cellar Stair** (the horn sounds there). The two stairs meet on the landing of the Great Hall, and one grand stair climbs to the top floor and along it to the **study door**, where the wizard keeps his inkwell. Towers stand on the floors and on stone ledges and landings between them: the Suit of Armour, the Flapping Library, the Chandelier and the Great Hearth. Kitchen, library, Great Hall with its long table, tapestries, chandeliers, cellar casks and the wizard's study fill the rooms. Six new waves; 70 starting gold.
+3. **The Keep**: inside the keep itself, drawn in cut-away like an architect's section: four floors from the cellars to the roof. The levy come in at the broken west door and climb the **Great Stair**; the dogs come up from the cellars by the **Cellar Stair** (a warning shows there). The two stairs meet on the landing of the Great Hall, and one grand stair climbs to the top floor and along it to the **study door**, where the wizard keeps his inkwell. Towers stand on the floors and on stone ledges and landings between them: the Suit of Armour, the Flapping Library, the Chandelier and the Great Hearth. Kitchen, library, Great Hall with its long table, tapestries, chandeliers, cellar casks and the wizard's study fill the rooms. Six new waves; 70 starting gold.
 
 Winning Gate Defence offers the courtyard straight away, and winning the courtyard offers the keep. Each level remembers your best result (castle health) in the browser.
 
-TypeScript, Vite, HTML Canvas for the battlefield and HTML/CSS for the controls. All artwork and sound are made procedurally: no image or audio files, no fonts or services from the internet, no accounts or API keys.
+TypeScript, Vite, HTML Canvas for the battlefield and HTML/CSS for the controls. All artwork is made procedurally: no image files, no fonts or services from the internet, no accounts or API keys.
 
 ## The central rule
 
@@ -96,7 +96,6 @@ Then open http://localhost:5173/ (the game) or http://localhost:5173/styles.html
 | Pause | **Pause** | `P` or `Space` |
 | Speed | **Speed ×1 / ×2** | |
 | Inspect an enemy | Click / tap it during a wave | |
-| Sound | **Sound on / off** (the hunt-master's horn) | |
 | Restart | **Restart** (immediate) | |
 | Wave preview | The ▴/▾ on the bookmark folds it (it folds itself during battle) | |
 | Cancel | | `Esc` closes a popover or drops a thread |
@@ -108,7 +107,7 @@ Click (or tap) any enemy during a wave to see its health, armour and speed.
 | Enemy | Health | Armour | Speed | Notes |
 |---|---|---|---|---|
 | **Fen Levy** | 36 | 2 | 40 | Fynbos root-walkers: protea-bud heads, one eye, bodies of tangled roots. Steady infantry that march down the Mill Road in tight files, three abreast, spaced so a Bramble hedge bunches the front ranks for the Ember Kiln's splash. |
-| **War Dog** | 24 | 0 | 108 | Lean war dogs in studded collars, loosed in small packs on the King's Road. The hunt-master's double horn sounds and a warning appears at the bridge about 3.5 s before they reach it, enough to save an Ember pulse for the crossing. |
+| **War Dog** | 24 | 0 | 108 | Lean war dogs in studded collars, loosed in small packs on the King's Road. A warning appears at the bridge about 3.5 s before they reach it, enough to save an Ember pulse for the crossing. |
 | **Stone-Bearer** | 130 | 0 | 26 | A goggled wanderer with a spiky crest, patterned coat and oxblood sash, carrying the Cairn-Born's stolen name-stone. |
 | **Cairn-Born** | 700 | 8 | 24 | A walking citadel-fish with a stern human face, a little town on its back and an empty socket where its stone belonged, following its bearer. When the bearer falls, the giant walks to the stone, kneels there for 7 s blocking everything behind it on that road (both roads if on the shared stretch), then leaves the field and the queue is released. Time a pulse against the bearer to choose where the blockade forms. If the bearer reaches the gate, the giant marches on. Cannot be knocked back. |
 
@@ -173,7 +172,6 @@ Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its 
 | `src/paint.ts` | The static sheets, drawn once each: the fields (roads, river and spring, trees, mill, windmill, castle) the courtyard (flagstones, walls all round, fallen gatehouse, breach, east gate and guard tower, and the life of the yard) and the keep in cut-away (floors, stairs, rooms, cellars and the study). |
 | `src/sprites.ts` | Tower and enemy sprites (walk cycles, the kneeling giant, ink spatter on hits) and margin icons. |
 | `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, the wizard, effects, warnings, inspect highlight, the victory plate. |
-| `src/audio.ts` | The synthesized double horn. |
 | `src/casebook.ts` | The rare creature casebook: first sighting, times seen, caught and slipped away (saved in localStorage). |
 | `src/rewards.ts` | Wizard's Seals: earning, the five rewards, what they change, and their little ink pictures (saved in localStorage). |
 | `src/main.ts` | The main menu and rewards screen, input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |

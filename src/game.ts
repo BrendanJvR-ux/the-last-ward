@@ -94,8 +94,8 @@ export interface SharedSpend { by: string; others: string[]; t: number; dur: num
 /** Rally: towers near the banner shoot faster for a while. */
 export interface Rally { x: number; y: number; r: number; t: number; dur: number }
 export interface PulseFlight { towerId: string; path: Vec[]; length: number; s: number; shared: boolean }
-/** War Dogs: horn and a marker at the bridge shortly before the pack arrives there. */
-export interface Warning { lane: LaneId; type: EnemyType; from: number; to: number; count: number; sounded: boolean }
+/** War Dogs: a marker at the bridge shortly before the pack arrives there. */
+export interface Warning { lane: LaneId; type: EnemyType; from: number; to: number; count: number }
 export interface FadingThread { path: Vec[]; t: number; dur: number }
 export interface Toast { text: string; kind: 'info' | 'good' | 'bad' | 'gold'; t: number }
 
@@ -372,7 +372,7 @@ function houndWarnings(wave: number): Warning[] {
   for (const g of BALANCE.waves[wave - 1].groups) {
     if (g.type !== 'hound' || g.lane !== 'king') continue;
     const arrive = g.start + BRIDGE_S / BALANCE.enemies.hound.speed;
-    out.push({ lane: g.lane, type: 'hound', from: Math.max(0, arrive - BALANCE.houndWarning), to: arrive + g.count * g.interval + 0.8, count: g.count, sounded: false });
+    out.push({ lane: g.lane, type: 'hound', from: Math.max(0, arrive - BALANCE.houndWarning), to: arrive + g.count * g.interval + 0.8, count: g.count });
   }
   return out;
 }
