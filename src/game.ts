@@ -1,6 +1,6 @@
 // Game state, rules (trace / pulse / bind / build) and the combat simulation.
 // Pure logic: no DOM, so it runs in tests and in the browser alike.
-import { BALANCE, TOTAL_WAVES, phaseRule, applyBalanceLevel, type EnemyType, type LaneId, type LevelId, type TowerType } from './balance';
+import { BALANCE, TOTAL_WAVES, phaseRule, applyBalanceLevel, type EnemyType, type LaneId, type LevelId, type RareType, type TowerType } from './balance';
 import {
   LANES, LANE_IDS, NODE, FOUNDATION_IDS, GATE, BRIDGE, dist, nearestOnLane, pointAt, routePolyline,
   polylineLength, pointAlong, setMapLevel, type Vec,
@@ -93,8 +93,18 @@ export interface Toast { text: string; kind: 'info' | 'good' | 'bad' | 'gold'; t
 
 export interface Spawn { type: EnemyType; lane: LaneId; at: number; side?: number }
 
+/** A rare creature this game will see (if any), and what happened to it. */
+export interface RareVisit { type: RareType; wave: number; lane: LaneId; at: number }
+export interface RareEvent { type: RareType; event: 'seen' | 'caught' | 'escaped'; wave: number }
+export const RARE_TYPES: RareType[] = ['moth', 'heron', 'tortoise', 'snail', 'hare'];
+export const isRare = (t: EnemyType): t is RareType => (RARE_TYPES as EnemyType[]).includes(t);
+
 export interface GameState {
   level: LevelId;
+  /** The rare creature due in this game, or null (most games). */
+  rare: RareVisit | null;
+  /** Sightings for the casebook, drained by the page. */
+  rareLog: RareEvent[];
   phase: Phase;
   paused: boolean;
   speed: number;
@@ -147,11 +157,23 @@ export function setLevel(level: LevelId) {
 /** Bonuses from redeemed rewards, applied at the start of a game. */
 export interface Perks { gold?: number; leaves?: number; castle?: number }
 
-export function newGame(level: LevelId = 'fields', perks: Perks = {}): GameState {
+/** Roll whether a game meets a rare creature: in which wave, on which road, and which one. */
+export function rollRare(random: () => number = Math.random): RareVisit | null {
+  const C = BALANCE.rares;
+  if (random() >= C.chance) return null;
+  const total = RARE_TYPES.reduce((n, t) => n + C.weights[t], 0);
+  let pick = random() * total, type: RareType = 'moth';
+  for (const t of RARE_TYPES) { pick -= C.weights[t]; if (pick < 0) { type = t; break; } }
+  return { type, wave: 2 + Math.floor(random() * (TOTAL_WAVES - 1)), lane: random() < 0.5 ? 'mill' : 'king', at: 6 + random() * 14 };
+}
+
+export function newGame(level: LevelId = 'fields', perks: Perks = {}, rares = false): GameState {
   setLevel(level);
   const castle = BALANCE.castleHp + (perks.castle ?? 0);
   const s: GameState = {
     level,
+    rare: rares ? rollRare() : null,
+    rareLog: [],
     phase: 'prep', paused: false, speed: 1, wave: 1,
     castleHp: castle, castleMax: castle, gold: BALANCE.startGold + (perks.gold ?? 0), leaves: BALANCE.startLeaves + (perks.leaves ?? 0),
     towers: [], traces: [], pulsesLeft: 0, pendingGrant: false, castleCd: 0,
@@ -351,6 +373,10 @@ export function startWave(s: GameState): boolean {
   s.pulsesLeft = rule(s).pulses;
   s.waveTime = 0;
   s.spawns = waveSpawns(s.wave);
+  if (s.rare && s.rare.wave === s.wave) {
+    s.spawns.push({ type: s.rare.type, lane: s.rare.lane, at: s.rare.at, side: 0 });
+    s.spawns.sort((a, b) => a.at - b.at);
+  }
   s.resetBanner = 0;
   s.warnings = houndWarnings(s.wave);
   s.stones = [];
@@ -509,6 +535,7 @@ export function hurt(s: GameState, e: Enemy, raw: number, ignoreArmour = false) 
     s.fallen.push({ type: e.type, x: p.x, y: p.y, dir: Math.cos(p.angle) >= -0.1 ? 1 : -1, t: 0 });
     if (e.type === 'bearer') dropStone(s, e);
     if (e.type === 'cairn') s.stones = s.stones.filter((st) => st.giantId !== e.id);
+    if (isRare(e.type)) s.rareLog.push({ type: e.type, event: 'caught', wave: s.wave });
   }
 }
 
@@ -544,6 +571,7 @@ function spawnEnemy(s: GameState, sp: Spawn) {
     e.mode = bearer ? 'follow' : 'march';
   }
   s.enemies.push(e);
+  if (isRare(sp.type)) s.rareLog.push({ type: sp.type, event: 'seen', wave: s.wave });
 }
 
 /** How fast a tower reloads: banners nearby quicken it a little, an active Rally doubles it. */
@@ -776,6 +804,12 @@ export function step(s: GameState, dtRaw: number) {
 
   // Reaching the gate
   for (const e of s.enemies) {
+    if (e.hp > 0 && e.s >= LANES[e.lane].length && isRare(e.type)) {
+      // rare creatures never harm the castle: they simply wander off
+      e.hp = 0;
+      s.rareLog.push({ type: e.type, event: 'escaped', wave: s.wave });
+      continue;
+    }
     if (e.hp > 0 && e.s >= LANES[e.lane].length) {
       e.hp = 0;
       s.castleHp = Math.max(0, s.castleHp - BALANCE.enemies[e.type].castleDamage);
@@ -791,7 +825,12 @@ export function step(s: GameState, dtRaw: number) {
     s.flights = [];
     return;
   }
-  if (s.spawns.length === 0 && s.enemies.length === 0) endWave(s);
+  if (s.spawns.length === 0 && s.enemies.every((e) => isRare(e.type))) {
+    // the wave is over: any rare creature still on the road slips away
+    for (const e of s.enemies) s.rareLog.push({ type: e.type as RareType, event: 'escaped', wave: s.wave });
+    s.enemies = [];
+    endWave(s);
+  }
 }
 
 function endWave(s: GameState) {

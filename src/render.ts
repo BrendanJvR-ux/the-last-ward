@@ -1,7 +1,7 @@
 // Live drawing on top of the ink sheet.
 import { BALANCE, phaseRule } from './balance';
 import { MAP_W, MAP_H, LANES, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, LEVEL, routePolyline, pointAt, type Vec } from './map';
-import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint } from './game';
+import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint, isRare } from './game';
 import type { LevelId } from './balance';
 import { owl } from './rewards';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
@@ -426,7 +426,13 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
           ctx.fillStyle = 'rgba(29,25,21,0.75)';
           for (let i = 0; i < 3; i++) { const t = (time * 1.6 + i / 3) % 1; ctx.beginPath(); ctx.ellipse(p.x - 6 + i * 6, p.y - 30 + t * 26, 1.3, 2, 0, 0, Math.PI * 2); ctx.fill(); }
         }
-        const top = e.type === 'cairn' ? (e.mode === 'kneel' ? 104 : 120) : e.type === 'bearer' ? 78 : e.type === 'hound' ? 52 : 64;
+        const top = e.type === 'cairn' ? (e.mode === 'kneel' ? 104 : 120) : e.type === 'bearer' ? 78 : e.type === 'hound' ? 52
+          : e.type === 'moth' ? 94 : e.type === 'heron' ? 92 : e.type === 'tortoise' ? 52 : e.type === 'snail' ? 104 : e.type === 'hare' ? 48 : 64;
+        if (isRare(e.type)) {
+          // a rare sight: little gold stars turning round it
+          ctx.fillStyle = P.gold;
+          for (let i = 0; i < 4; i++) { const a = time * 1.8 + i * (Math.PI / 2); const sx = p.x + Math.cos(a) * 26, sy = p.y - top / 2 + Math.sin(a) * 10; ctx.beginPath(); for (let j = 0; j < 8; j++) { const r = j % 2 ? 1.2 : 3.4, b = (j / 8) * Math.PI * 2; ctx.lineTo(sx + Math.cos(b) * r, sy + Math.sin(b) * r); } ctx.closePath(); ctx.fill(); }
+        }
         if (e.vulnT > 0 || e.shred > 0) {
           ctx.fillStyle = e.vulnT > 0 ? 'rgba(120,220,180,0.9)' : 'rgba(120,200,170,0.6)';
           for (let i = 0; i < 4; i++) { const a = time * 3 + i * 1.6; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * 12, p.y - top / 2 + Math.sin(a) * 6, 1.8, 0, Math.PI * 2); ctx.fill(); }

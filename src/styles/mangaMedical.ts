@@ -1,6 +1,6 @@
 // 11. Coloured manga, inside the body. Roads are blood vessels, the castle is the heart,
 // leylines are nerves from a ganglion, towers are immune cells, enemies are pathogens and a clot.
-import type { EnemyType, FieldTowerType as TowerType } from '../balance';
+import type { FieldEnemyType as EnemyType, FieldTowerType as TowerType } from '../balance';
 import { MAP_W, MAP_H, line, smooth, rng, type Style, type Vec } from './scene';
 import { INK, inked, tone, speedLines, sfx, panel, hardShadow } from './mangaKit';
 

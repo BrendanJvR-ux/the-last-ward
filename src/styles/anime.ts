@@ -1,6 +1,6 @@
 // 10. Pastoral anime: hand-painted gouache backgrounds with clean, cel-shaded figures.
 // Lush meadows, towering cumulus, clear water, red-roofed hill town, spirit-light magic.
-import type { EnemyType, FieldTowerType as TowerType } from '../balance';
+import type { FieldEnemyType as EnemyType, FieldTowerType as TowerType } from '../balance';
 import { MAP_W, MAP_H, line, smooth, rng, type Style, type Vec } from './scene';
 import { towerPath, enemyPath } from './shapes';
 

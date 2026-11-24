@@ -52,10 +52,10 @@ export interface EnemyLook { kneel?: boolean; alpha?: number; marked?: boolean }
 /** How large towers are drawn on the battlefield (icons in the margin are sized separately). */
 export const TOWER_SCALE = 1.55;
 
-export const ENEMY_SCALE: Record<EnemyType, number> = { levy: 1.6, bearer: 1.5, hound: 1.6, cairn: 1.3 };
+export const ENEMY_SCALE: Record<EnemyType, number> = { levy: 1.6, bearer: 1.5, hound: 1.6, cairn: 1.3, moth: 1.5, heron: 1.4, tortoise: 1.4, snail: 1.3, hare: 1.5 };
 
 /** The Cairn-Born is drawn a little smaller than its study so it fits the road. */
-const SIZE: Record<EnemyType, number> = { levy: 1, bearer: 1, hound: 1, cairn: 0.78 };
+const SIZE: Record<EnemyType, number> = { levy: 1, bearer: 1, hound: 1, cairn: 0.78, moth: 1, heron: 1, tortoise: 1, snail: 1, hare: 1 };
 
 export function drawEnemy(ctx: CanvasRenderingContext2D, type: EnemyType, x: number, y: number, dir: number, bob: number, hit: number, k = 1, look: EnemyLook = {}) {
   ctx.save();
@@ -86,7 +86,7 @@ export function enemyIconCanvas(type: EnemyType, size = 44): HTMLCanvasElement {
   cv.width = size * dpr; cv.height = size * dpr; cv.style.width = cv.style.height = `${size}px`;
   const ctx = cv.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  const k = type === 'cairn' ? size / 118 : type === 'hound' ? size / 60 : type === 'bearer' ? size / 58 : size / 44;
+  const k = type === 'cairn' ? size / 118 : type === 'hound' ? size / 60 : type === 'bearer' ? size / 58 : type === 'snail' ? size / 88 : type === 'levy' ? size / 44 : size / 66;
   const x = type === 'cairn' ? size * 0.4 : type === 'hound' ? size * 0.44 : size / 2;
   drawEnemy(ctx, type, x, size - 4, 1, 0, 0, k);
   return cv;

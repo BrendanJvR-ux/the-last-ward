@@ -10,7 +10,11 @@ export type CourtTowerType = 'gargoyle' | 'mangonel' | 'fountain' | 'banner';
 export type TowerType = FieldTowerType | CourtTowerType;
 export type LevelId = 'fields' | 'courtyard';
 /** `bearer` is the marked Fen Levy carrying the Cairn-Born's name-stone; it is spawned with every `cairn`. */
-export type EnemyType = 'levy' | 'bearer' | 'hound' | 'cairn';
+/** The enemies every wave is made of. The art-style studies draw only these. */
+export type FieldEnemyType = 'levy' | 'bearer' | 'hound' | 'cairn';
+/** Very rare creatures that wander onto the roads in some games, never harming the castle. */
+export type RareType = 'moth' | 'heron' | 'tortoise' | 'snail' | 'hare';
+export type EnemyType = FieldEnemyType | RareType;
 export type LaneId = 'mill' | 'king';
 
 export interface TowerStats {
@@ -220,7 +224,20 @@ export const BALANCE = {
     bearer: { name: 'Stone-Bearer', plural: 'Stone-Bearers', hp: 130, speed: 26, armour: 0, bounty: 8, castleDamage: 1, note: 'A goggled wanderer carrying the Cairn-Born\u2019s stolen name-stone. Where it falls, the giant kneels.' },
     hound: { name: 'War Dog', plural: 'War Dogs', hp: 24, speed: 108, armour: 0, bounty: 2, castleDamage: 1, note: 'Lean war dogs in studded collars, loosed by the hunt-master\u2019s horn. Hunt in packs.' },
     cairn: { name: 'Cairn-Born', plural: 'Cairn-Born', hp: 700, speed: 24, armour: 8, bounty: 45, castleDamage: 6, note: 'A walking citadel-fish with a stern face and an empty socket. Follows its name-stone; cannot be knocked back.' },
+    // ── Rare creatures: never part of a wave, never harm the castle ──
+    moth: { name: 'Lantern Moth', plural: 'Lantern Moths', hp: 70, speed: 58, armour: 0, bounty: 12, castleDamage: 0, note: 'A great moth with eyes on its wings, carrying a little lantern through the battle. Rare.' },
+    heron: { name: 'Clockwork Heron', plural: 'Clockwork Herons', hp: 110, speed: 74, armour: 3, bounty: 18, castleDamage: 0, note: 'A heron of brass gears and ink, stepping delicately between the fighting. Rare.' },
+    tortoise: { name: 'Teapot Tortoise', plural: 'Teapot Tortoises', hp: 300, speed: 18, armour: 6, bounty: 28, castleDamage: 0, note: 'An old tortoise whose shell is a steaming teapot. Slow, and very hard to crack. Rare.' },
+    snail: { name: 'Cathedral Snail', plural: 'Cathedral Snails', hp: 420, speed: 13, armour: 5, bounty: 40, castleDamage: 0, note: 'A snail carrying a whole cathedral, spires and all, on its back. Very rare.' },
+    hare: { name: 'Golden Hare', plural: 'Golden Hares', hp: 50, speed: 150, armour: 0, bounty: 60, castleDamage: 0, note: 'A hare of beaten gold leaf, gone in a blink. The rarest sight of all.' },
   } as Record<EnemyType, EnemyStats>,
+
+  /** Rare creatures: the chance a game has one, how often each kind is chosen, and the seals for catching it. */
+  rares: {
+    chance: 0.33,
+    weights: { moth: 5, heron: 4, tortoise: 3, snail: 2, hare: 1 } as Record<RareType, number>,
+    seals: { moth: 1, heron: 2, tortoise: 2, snail: 3, hare: 5 } as Record<RareType, number>,
+  },
 
   waves: [
     {

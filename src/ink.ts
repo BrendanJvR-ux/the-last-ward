@@ -322,7 +322,7 @@ export function towerInk(ctx: C, type: TowerType, x: number, y: number, m: 'trac
 
 // ── Enemies ─────────────────────────────────────────────────────────────────
 
-const ENEMY_SEED: Record<EnemyType, number> = { levy: 1, hound: 2, bearer: 3, cairn: 4 };
+const ENEMY_SEED: Record<EnemyType, number> = { levy: 1, hound: 2, bearer: 3, cairn: 4, moth: 5, heron: 6, tortoise: 7, snail: 8, hare: 9 };
 
 /** An enemy with its feet at (x, y). `bob` is its walk phase; the Cairn-Born can kneel. */
 export function enemyInk(ctx: C, type: EnemyType, x: number, y: number, dir: number, bob = 0, kneel = false) {
@@ -330,6 +330,10 @@ export function enemyInk(ctx: C, type: EnemyType, x: number, y: number, dir: num
   const R = seed(0, 0, ENEMY_SEED[type]);
   if (type === 'hound') {
     warDog(ctx, x, y, dir, bob);
+    return;
+  }
+  if (type === 'moth' || type === 'heron' || type === 'tortoise' || type === 'snail' || type === 'hare') {
+    rareInk(ctx, type, x, y, dir, bob);
     return;
   }
   ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
@@ -1246,5 +1250,126 @@ export function warDog(ctx: C, x: number, y: number, dir: number, bob: number) {
   // studded collar
   ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(11.5, -22); ctx.lineTo(14.5, -15.5); ctx.stroke();
   ctx.fillStyle = PAPER; for (const t of [0.25, 0.6, 0.9]) { ctx.beginPath(); ctx.arc(11.5 + 3 * t, -22 + 6.5 * t, 0.6, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+
+
+// ── Rare creatures ──────────────────────────────────────────────────────────
+
+/** One of the very rare creatures, feet (or shadow) at (x, y), facing `dir`. */
+export function rareInk(ctx: C, type: 'moth' | 'heron' | 'tortoise' | 'snail' | 'hare', x: number, y: number, dir: number, bob: number) {
+  const R = seed(0, 0, 40 + type.length);
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+  if (type === 'moth') {
+    // a great moth with eyes on its wings, carrying a lantern
+    groundWash(ctx, 0, 1, 14, 4, 0.3);
+    const h = -30 + Math.sin(bob * 0.7) * 4, f = Math.sin(bob * 2.2);
+    ctx.save(); ctx.translate(0, h);
+    for (const side of [-1, 1]) {
+      const wing = () => { ctx.beginPath(); ctx.moveTo(0, -2); ctx.quadraticCurveTo(side * 10, -22 - f * 4, side * 24, -14 - f * 5); ctx.quadraticCurveTo(side * 26, -2, side * 14, 2); ctx.quadraticCurveTo(side * 20, 10 + f * 2, side * 10, 14); ctx.quadraticCurveTo(side * 4, 8, 0, 2); ctx.closePath(); };
+      ctx.fillStyle = PAPER; wing(); ctx.fill();
+      hatch(ctx, wing, [-28, -28, 56, 44], side > 0 ? 0.7 : -0.7, 2, 0.4, INK, R);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; wing(); ctx.stroke();
+      ctx.fillStyle = PAPER; ctx.beginPath(); ctx.arc(side * 14, -10 - f * 3, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      eye(ctx, side * 14, -10 - f * 3, 3.6, 0);
+    }
+    ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(0, 2, 3.4, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = -6; k <= 10; k += 3) { ctx.moveTo(-3.2, k); ctx.lineTo(3.2, k); } ctx.stroke();
+    // feathered antennae
+    ctx.lineWidth = 0.7; ctx.beginPath();
+    for (const side of [-1, 1]) { ctx.moveTo(0, -8); ctx.quadraticCurveTo(side * 6, -18, side * 10, -20); for (let t = 0.3; t < 1; t += 0.15) { const px = side * 10 * t, py = -8 - 12 * t; ctx.moveTo(px, py); ctx.lineTo(px + side * 2, py - 2); } }
+    ctx.stroke();
+    // the lantern on a thread, glowing
+    ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, 12); ctx.lineTo(0, 20); ctx.stroke();
+    const g = ctx.createRadialGradient(0, 25, 0, 0, 25, 14); g.addColorStop(0, 'rgba(250,215,120,0.75)'); g.addColorStop(1, 'rgba(250,215,120,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 25, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f0cf7a'; ctx.strokeStyle = INK; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.rect(-3.5, 20, 7, 9); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4.5, 20); ctx.lineTo(0, 17); ctx.lineTo(4.5, 20); ctx.stroke();
+    ctx.restore();
+  } else if (type === 'heron') {
+    // a heron of brass gears, stepping delicately
+    groundWash(ctx, 0, 1, 14, 4, 0.35);
+    const st = Math.sin(bob) * 5;
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(-2, -24); ctx.lineTo(-4 + st * 0.4, -12); ctx.lineTo(-3 + st, 0); ctx.moveTo(2, -24); ctx.lineTo(4 - st * 0.4, -12); ctx.lineTo(3 - st, 0); ctx.stroke();
+    ctx.beginPath(); for (const fx of [-3 + st, 3 - st]) { ctx.moveTo(fx - 3, 0); ctx.lineTo(fx + 4, 0); } ctx.stroke();
+    const body = () => { ctx.beginPath(); ctx.ellipse(-2, -30, 13, 8, -0.15, 0, Math.PI * 2); };
+    ctx.fillStyle = PAPER; body(); ctx.fill(); hatch(ctx, body, [-16, -40, 28, 20], -0.8, 2.4, 0.4); ctx.lineWidth = 1.1; body(); ctx.stroke();
+    // gears showing through
+    for (const [gx, gy, gr, sp] of [[-5, -30, 5, 1], [3, -28, 3.4, -1.5]] as [number, number, number, number][]) {
+      ctx.save(); ctx.translate(gx, gy); ctx.rotate(bob * sp * 0.5);
+      ctx.fillStyle = '#e2c98a'; ctx.beginPath();
+      for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, r = i % 2 ? gr : gr + 1.4; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      ctx.closePath(); ctx.fill(); ctx.lineWidth = 0.7; ctx.stroke();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    // tail plumes, S-curved neck, dagger beak
+    ctx.lineWidth = 0.8; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-14, -30 + i); ctx.lineTo(-22, -26 + i * 2.2); } ctx.stroke();
+    ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(8, -34); ctx.bezierCurveTo(16, -40, 4, -48, 12, -56); ctx.stroke();
+    ctx.fillStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(13, -58, 4, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(16, -59); ctx.lineTo(30, -57); ctx.lineTo(16, -56); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(13.5, -58.6, 0.9, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(11, -60); ctx.quadraticCurveTo(4, -62, 0, -60); ctx.stroke();
+  } else if (type === 'tortoise') {
+    // an old tortoise whose shell is a steaming teapot
+    groundWash(ctx, 0, 1, 22, 5, 0.4);
+    const st = Math.sin(bob) * 2;
+    ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1;
+    for (const [lx, o] of [[-12, st], [10, -st]] as [number, number][]) { ctx.beginPath(); ctx.ellipse(lx + o, -3, 4, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    // head on a wrinkled neck
+    const head = () => { ctx.beginPath(); ctx.moveTo(14, -10); ctx.quadraticCurveTo(22, -12, 26, -8); ctx.quadraticCurveTo(27, -3, 22, -3); ctx.quadraticCurveTo(18, -4, 14, -5); ctx.closePath(); };
+    ctx.fillStyle = PAPER; head(); ctx.fill(); hatch(ctx, head, [14, -13, 14, 11], 1.2, 1.8, 0.4); ctx.lineWidth = 1; head(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(23, -8.5, 0.9, 0, Math.PI * 2); ctx.fill();
+    // the teapot shell, its spout behind and lid on top
+    const pot = () => { ctx.beginPath(); ctx.moveTo(-18, -5); ctx.quadraticCurveTo(-20, -24, 0, -26); ctx.quadraticCurveTo(20, -24, 18, -5); ctx.closePath(); };
+    ctx.fillStyle = PAPER; pot(); ctx.fill();
+    ctx.save(); pot(); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath();
+    for (const yy of [-10, -16]) { ctx.moveTo(-20, yy); ctx.quadraticCurveTo(0, yy + 2, 20, yy); }
+    ctx.stroke(); ctx.fillStyle = 'rgba(122,40,32,0.35)'; ctx.fillRect(-20, -16, 40, 6); ctx.restore();
+    ctx.save(); pot(); ctx.clip(); hatch(ctx, () => { ctx.beginPath(); ctx.rect(4, -28, 18, 26); }, [4, -28, 18, 26], -0.5, 2, 0.4); ctx.restore();
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2; pot(); ctx.stroke();
+    ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-16, -14); ctx.quadraticCurveTo(-26, -16, -28, -26); ctx.stroke();
+    ctx.fillStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, -26, 7, 2.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -29, 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // steam from the spout
+    ctx.lineWidth = 0.7;
+    for (let k = 0; k < 2; k++) { const t = (bob * 0.15 + k / 2) % 1; ctx.strokeStyle = `rgba(29,25,21,${0.7 * (1 - t)})`; ctx.beginPath(); for (let a = 0; a < 6; a += 0.3) { const r = 1 + a * 0.6; const px = -28 + Math.cos(a) * r - t * 4, py = -28 - t * 14 - a * 1.2 + Math.sin(a) * r * 0.5; a ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
+  } else if (type === 'snail') {
+    // a snail carrying a cathedral, spires and all
+    groundWash(ctx, 0, 1, 26, 5, 0.4);
+    const stretch = Math.sin(bob * 0.5) * 2;
+    const foot = () => { ctx.beginPath(); ctx.moveTo(-22, 0); ctx.quadraticCurveTo(0, 2, 20 + stretch, 0); ctx.quadraticCurveTo(28 + stretch, -2, 27 + stretch, -9); ctx.quadraticCurveTo(22 + stretch, -11, 16, -6); ctx.lineTo(-22, -4); ctx.closePath(); };
+    ctx.fillStyle = PAPER; foot(); ctx.fill(); hatch(ctx, foot, [-22, -12, 52, 14], 0.3, 2.4, 0.35); ctx.strokeStyle = INK; ctx.lineWidth = 1; foot(); ctx.stroke();
+    ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(24 + stretch, -9); ctx.lineTo(28 + stretch, -20); ctx.moveTo(22 + stretch, -9); ctx.lineTo(23 + stretch, -19); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(28 + stretch, -20.5, 1.4, 0, Math.PI * 2); ctx.arc(23 + stretch, -19.5, 1.2, 0, Math.PI * 2); ctx.fill();
+    // the shell: a spiral base, a nave and two spires
+    ctx.fillStyle = PAPER; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(-4, -12, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 0.7; ctx.beginPath(); for (let t = 0; t < 14; t += 0.2) { const r = 10 - t * 0.7; ctx.lineTo(-4 + Math.cos(t) * r, -12 + Math.sin(t) * r); } ctx.stroke();
+    const R2 = rng(17);
+    turret(ctx, -10, -18, 14, 18, 12, 'crescent', false, R2);
+    turret(ctx, 3, -18, 12, 26, 16, 'orb', true, R2);
+  } else {
+    // a hare of beaten gold leaf, gone in a blink
+    groundWash(ctx, 0, 1, 14, 3.5, 0.35);
+    const g = Math.sin(bob * 1.2);
+    const body = () => {
+      ctx.beginPath(); ctx.moveTo(-14, -8); ctx.quadraticCurveTo(-12, -20, 2, -18); ctx.quadraticCurveTo(10, -18, 13, -14);
+      ctx.lineTo(16, -26 - g); ctx.lineTo(18, -26 - g); ctx.lineTo(17, -16); ctx.lineTo(20, -28 - g); ctx.lineTo(22, -27 - g); ctx.lineTo(19, -15);
+      ctx.quadraticCurveTo(24, -12, 22, -9); ctx.lineTo(16, -9);
+      ctx.lineTo(14 + g * 6, -2); ctx.lineTo(10 + g * 6, -2); ctx.lineTo(9, -8);
+      ctx.lineTo(-4, -8); ctx.lineTo(-10 - g * 6, 0); ctx.lineTo(-15 - g * 6, 0); ctx.lineTo(-12, -6); ctx.closePath();
+    };
+    const gl = ctx.createLinearGradient(-14, -28, 20, 0); gl.addColorStop(0, '#f6dd8a'); gl.addColorStop(0.5, GOLD); gl.addColorStop(1, '#8a6418');
+    ctx.fillStyle = gl; body(); ctx.fill();
+    hatch(ctx, body, [-16, -30, 40, 30], -0.9, 2.4, 0.35);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.1; body(); ctx.stroke();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(18, -14, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff6d0'; ctx.beginPath(); ctx.arc(-15, -9, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // a glint running along the gold
+    const t = (bob * 0.3) % 1;
+    ctx.strokeStyle = `rgba(255,250,225,${0.9 * Math.sin(t * Math.PI)})`; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-10 + t * 26, -18); ctx.lineTo(-7 + t * 26, -12); ctx.stroke();
+  }
   ctx.restore();
 }

@@ -1,9 +1,9 @@
 import './style.css';
-import { BALANCE, TOTAL_WAVES, LEVEL_BALANCE, phaseRule, type TowerType, type EnemyType, type LevelId } from './balance';
+import { BALANCE, TOTAL_WAVES, LEVEL_BALANCE, phaseRule, type TowerType, type EnemyType, type LevelId, type RareType } from './balance';
 import {
   type GameState, newGame, step, rule, traceTower, untraceTower, undoTrace, clearTraces, canStartWave, startWave,
   pulseTower, pulseCheck, enemyPos, effectiveArmour, buildTower, buildCheck, placeGrant, bindTower, bindCheck, towerAt, towerById, emptyFoundations,
-  towerDamage, toast, traceCheck, setLevel,
+  towerDamage, toast, traceCheck, setLevel, RARE_TYPES,
 } from './game';
 import {
   MAP_W, MAP_H, NODE, FOUNDATION_IDS, INKWELL, snapToNetwork,
@@ -11,13 +11,15 @@ import {
 } from './map';
 import { render, renderVictory, towerIconCanvas, enemyIconCanvas, levelThumbnail, type ViewState } from './render';
 import { unlockAudio, playDoubleHorn, isMuted, setMuted } from './audio';
+import { entry, record, recordedCount, resetCasebook } from './casebook';
+import { LANES } from './map';
 import { REWARDS, EARN, seals, sealsEarned, owns, isActive, redeem, toggle, activePerks, award, awardWin, rewardIcon, resetRewards, type RewardId } from './rewards';
 
 // ── State ───────────────────────────────────────────────────────────────────
 /** Which sheet is open, and whether the main menu is showing over it. */
 let currentLevel: LevelId = 'fields';
 let menuOpen = true;
-let s: GameState = newGame(currentLevel, activePerks());
+let s: GameState = newGame(currentLevel, activePerks(), true);
 /** Waves already paid out in seals this game, and whether the win has been. */
 let paidWaves = 0;
 let paidWin = false;
@@ -256,6 +258,7 @@ function handleAction(e: Event) {
     case 'closeMenu': closeMenu(); break;
     case 'menuStart': menuView = 'levels'; renderMenu(); return;
     case 'menuRewards': menuView = 'rewards'; renderMenu(); return;
+    case 'menuCasebook': menuView = 'casebook'; renderMenu(); return;
     case 'menuExit': menuView = 'exit'; renderMenu(); return;
     case 'menuBack': menuView = 'title'; renderMenu(); return;
     case 'redeem': {
@@ -302,7 +305,7 @@ function togglePause() {
 function restart() {
   view.inspectId = null;
   const speed = s.speed;
-  s = newGame(currentLevel, activePerks());
+  s = newGame(currentLevel, activePerks(), true);
   s.speed = speed;
   paidWaves = 0; paidWin = false;
   bindConfirm = null;
@@ -579,7 +582,7 @@ function recordWin(id: LevelId, hp: number) {
 function menuCanClose() { return s.phase !== 'victory' && s.phase !== 'defeat' && (s.wave > 1 || s.phase === 'combat' || s.traces.length > 0 || s.gold !== BALANCE.startGold); }
 
 /** Which page of the menu is open. */
-type MenuView = 'title' | 'levels' | 'rewards' | 'exit';
+type MenuView = 'title' | 'levels' | 'rewards' | 'casebook' | 'exit';
 let menuView: MenuView = 'title';
 
 function renderMenu() {
@@ -596,6 +599,7 @@ function renderMenu() {
       <nav class="menu-buttons" aria-label="Main menu">
         <button data-act="menuStart" class="primary">Start</button>
         <button data-act="closeMenu" ${canResume ? '' : 'disabled'}>Resume${canResume ? `<small>${esc(here.sub)}: ${esc(here.name)}, wave ${s.wave}</small>` : '<small>no game in progress</small>'}</button>
+        <button data-act="menuCasebook">Rare creature casebook<small>${recordedCount()} of ${RARE_TYPES.length} recorded</small></button>
         <button data-act="menuRewards">Redeem rewards<small>${seals()} Wizard's Seal${seals() === 1 ? '' : 's'}</small></button>
         <button data-act="menuExit">Exit</button>
       </nav>`;
@@ -623,6 +627,24 @@ function renderMenu() {
       <p class="lede">Earn seals by holding the line: ${EARN.perWave} for every wave survived, ${EARN.levelWon} for winning a level, ${EARN.firstWin} more the first time you win it, and ${EARN.flawless} more if the castle takes no harm. Perks apply from the next level you start; owned rewards can be switched off and on.</p></header>
       <div class="rewards">${cards}</div>
       <p class="menu-back"><button data-act="menuBack">Back</button></p>`;
+  } else if (menuView === 'casebook') {
+    const rarity = (t: RareType) => { const w = BALANCE.rares.weights[t]; return w >= 4 ? 'Rare' : w >= 2 ? 'Very rare' : 'Rarest of all'; };
+    const entries = RARE_TYPES.map((t) => {
+      const e = entry(t), st = BALANCE.enemies[t];
+      if (!e || !e.seen) {
+        return `<article class="case-card unseen"><span class="cico" data-rare="${t}" data-seen="0"></span><div><p class="kicker">${rarity(t)}</p><h3>Not yet seen</h3><p class="sub">A page left blank for something that has not crossed your roads yet.</p></div></article>`;
+      }
+      const f = e.first!;
+      const when = new Date(f.date).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+      const where = LEVELS.find((L) => L.id === f.level)!;
+      return `<article class="case-card"><span class="cico" data-rare="${t}" data-seen="1"></span><div><p class="kicker">${rarity(t)} · ${BALANCE.rares.seals[t]} seal${BALANCE.rares.seals[t] === 1 ? '' : 's'} if caught</p><h3>${esc(st.name)}</h3><p>${esc(st.note)}</p>
+        <p class="sub">First seen ${esc(when)} · ${esc(where.sub)}: ${esc(where.name)}, wave ${f.wave}</p>
+        <p class="sub">Seen ${e.seen} time${e.seen === 1 ? '' : 's'} · caught ${e.caught}${e.escaped ? ` · slipped away ${e.escaped}` : ''}</p></div></article>`;
+    }).join('');
+    body = `<header><h1>Rare creature casebook</h1><p class="lede">Now and then, in some games but not most, something rare wanders onto the roads. It never harms the castle; catch it for gold and Wizard's Seals before it slips away. Every sighting is written down here.</p>
+      <p class="purse"><b>${recordedCount()}</b> of ${RARE_TYPES.length} recorded</p></header>
+      <div class="casebook">${entries}</div>
+      <p class="menu-back"><button data-act="menuBack">Back</button></p>`;
   } else {
     body = `<header><h1>The book is closed</h1><p class="lede">The wizard sets down his quill. You can close this tab now${canResume ? '; your game will wait on its page until you do' : ''}.</p></header>
       <p class="menu-back"><button data-act="menuBack" class="primary">Open the book again</button></p>`;
@@ -635,6 +657,15 @@ function renderMenu() {
   });
   hydrateIcons(menuEl);
   menuEl.querySelectorAll<HTMLElement>('[data-reward]').forEach((el) => el.replaceChildren(rewardIcon(el.dataset.reward as RewardId, 64)));
+  menuEl.querySelectorAll<HTMLElement>('[data-rare]').forEach((el) => {
+    const c = enemyIconCanvas(el.dataset.rare as EnemyType, 84);
+    if (el.dataset.seen === '0') {
+      // unseen: only an ink silhouette and a question mark
+      const g = c.getContext('2d')!;
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(58,34,18,0.96)'; g.fillRect(0, 0, c.width, c.height); g.restore();
+    }
+    el.replaceChildren(c);
+  });
   if (menuView !== 'rewards') (menuEl.querySelector('button.primary:not([disabled])') as HTMLButtonElement | null)?.focus({ preventScroll: true });
 }
 function openMenu() {
@@ -689,7 +720,26 @@ function payOut() {
   }
 }
 
+/** Write rare sightings into the casebook, pay for catches, and say what happened. */
+function noteRares() {
+  while (s.rareLog.length) {
+    const ev = s.rareLog.shift()!;
+    const name = BALANCE.enemies[ev.type].name;
+    const first = !entry(ev.type)?.seen;
+    record(ev.type, ev.event, s.level, ev.wave);
+    if (ev.event === 'seen') {
+      const lane = LANES[s.rare?.lane ?? 'mill'].name;
+      toast(s, `A rare sight: a ${name} on the ${lane}!${first ? ' A new page in your casebook.' : ''}`, 'gold');
+    } else if (ev.event === 'caught') {
+      const n = BALANCE.rares.seals[ev.type];
+      award(n);
+      toast(s, `Caught the ${name}: +${BALANCE.enemies[ev.type].bounty} gold, +${n} Wizard's Seal${n === 1 ? '' : 's'}.`, 'gold');
+    } else toast(s, `The ${name} slipped away.`, 'info');
+  }
+}
+
 function refresh(now: number) {
+  noteRares();
   payOut();
   const sig = signature();
   if (sig !== lastSig) {
@@ -736,6 +786,8 @@ Object.assign(window, {
   __refresh: () => refresh(performance.now()),
   __level: (id: LevelId) => startLevel(id),
   __seals: (n: number) => { award(n); if (menuOpen) renderMenu(); return seals(); },
-  __resetRewards: () => { resetRewards(); applyLooks(); if (menuOpen) renderMenu(); },
+  __resetRewards: () => { resetRewards(); resetCasebook(); applyLooks(); if (menuOpen) renderMenu(); },
+  /** Debug: make the current game's rare creature appear in the next wave. */
+  __rare: (type: RareType) => { s.rare = { type, wave: s.phase === 'prep' ? s.wave : s.wave + 1, lane: 'mill', at: 3 }; return s.rare; },
 });
 

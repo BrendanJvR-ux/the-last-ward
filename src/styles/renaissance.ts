@@ -1,6 +1,6 @@
 // 8. An Italian Renaissance panel painting: tempera and oil glazes, sfumato distance,
 // Tuscan architecture, sinopia underdrawing for the traces and tooled gold leaf for binds.
-import type { EnemyType, FieldTowerType as TowerType } from '../balance';
+import type { FieldEnemyType as EnemyType, FieldTowerType as TowerType } from '../balance';
 import { MAP_W, MAP_H, line, smooth, rng, type Style, type Vec } from './scene';
 
 const C = {

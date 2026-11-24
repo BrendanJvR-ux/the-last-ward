@@ -1,6 +1,6 @@
 // 12 & 13. Coloured manga in Japan: modern Tokyo and ancient Japan.
 // Towers become shrine guardians (hokora, stone lantern, temple bell, copper basin).
-import type { EnemyType, FieldTowerType as TowerType } from '../balance';
+import type { FieldEnemyType as EnemyType, FieldTowerType as TowerType } from '../balance';
 import { MAP_W, MAP_H, line, smooth, rng, type Style, type Vec } from './scene';
 import { INK, JP_FONT, inked, tone, speedLines, sfx, panel, hardShadow, clearSite } from './mangaKit';
 

@@ -25,6 +25,7 @@ The game opens on a **menu** (the **Menu** button returns to it at any time):
   | Crimson Ink | 6 | Traced threads run in crimson ink. |
 
   Perks apply from the next level you start; any reward you own can be switched off and on again.
+- **Rare creature casebook** records the very rare creatures you have met (see below).
 - **Exit** closes the book (the game waits on its page until you close the tab).
 
 1. **Gate Defence**: two roads across the fields to the castle gate (the Fen Levy and the war dogs), with the Bramble, Ember, Bell and Verdigris towers. Everything below describes this level unless it says otherwise.
@@ -103,6 +104,20 @@ Click (or tap) any enemy during a wave to see its health, armour and speed.
 
 Waves: Levy alone (1), War Dogs join (2), both together (3), a calmer wave to try your first bind (4), the Cairn-Born and its bearer on a quiet Mill Road (5), the pair on the Mill Road while the dogs threaten the bridge (6). The bookmark gives each wave a title and a line of verse; it does not tell you what is coming, where, or how many.
 
+### Rare creatures
+
+In about a third of games (`BALANCE.rares.chance`), one very rare creature wanders onto a road during a random wave from 2 onwards, ringed by little gold stars. It never harms the castle: if it reaches the gate, or is still on the road when the wave ends, it simply slips away. Catch it for gold and Wizard's Seals.
+
+| Creature | Rarity | Health · armour · speed | Caught |
+|---|---|---|---|
+| **Lantern Moth** (eyes on its wings, carrying a lantern) | rare | 70 · 0 · 58 | 12 gold, 1 seal |
+| **Clockwork Heron** (brass gears showing through) | rare | 110 · 3 · 74 | 18 gold, 2 seals |
+| **Teapot Tortoise** (its shell a steaming teapot) | rare | 300 · 6 · 18 | 28 gold, 2 seals |
+| **Cathedral Snail** (a cathedral for a shell) | very rare | 420 · 5 · 13 | 40 gold, 3 seals |
+| **Golden Hare** (beaten gold leaf) | rarest | 50 · 0 · 150 | 60 gold, 5 seals |
+
+The **Rare creature casebook** in the menu keeps a page for each: a silhouette until you first see it, then its picture, when and where you first saw it (date, level and wave), and how many times you have seen and caught it. It is kept in this browser.
+
 ## Towers
 
 | Tower | Attack | Pulse |
@@ -140,6 +155,7 @@ Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its 
 | `src/sprites.ts` | Tower and enemy sprites (walk cycles, the kneeling giant, ink spatter on hits) and margin icons. |
 | `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, the wizard, effects, warnings, inspect highlight, the victory plate. |
 | `src/audio.ts` | The synthesized double horn. |
+| `src/casebook.ts` | The rare creature casebook: first sighting, times seen, caught and slipped away (saved in localStorage). |
 | `src/rewards.ts` | Wizard's Seals: earning, the five rewards, what they change, and their little ink pictures (saved in localStorage). |
 | `src/main.ts` | The main menu and rewards screen, input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |
 | `src/style.css` | Layout and look, including the phone layout. |

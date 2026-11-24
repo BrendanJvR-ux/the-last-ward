@@ -3,7 +3,7 @@ import {
   MAP_W, MAP_H, LANES, LANE_IDS, RIVER, POND, BRIDGE, INKWELL, CASTLE, MILL, LEY_EDGES, NODE, FOUNDATION_IDS,
   routePolyline, pointAt, type Vec,
 } from '../map';
-import type { EnemyType, FieldTowerType as TowerType, LaneId } from '../balance';
+import type { FieldEnemyType as EnemyType, FieldTowerType as TowerType, LaneId } from '../balance';
 
 export type { Vec };
 export { MAP_W, MAP_H };
