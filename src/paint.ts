@@ -6,7 +6,7 @@ import {
   LEY_EDGES, NODE, FOUNDATION_IDS, pointAt, type Vec,
 } from './map';
 import {
-  inkSurreal, scribble, inkSmudge, foldCrease, inkCastle, inkInkwell, windmillBody, turret, paperVignette, groundWash, goose,
+  inkSurreal, scribble, inkSmudge, foldCrease, inkCastle, inkInkwell, windmillBody, windmillSails, turret, paperVignette, groundWash, goose,
   hatch, grow, limbs, proteaHead, seed, sepia, INK, INK2, PAPER, GOLD, type Seg,
 } from './ink';
 
@@ -993,6 +993,205 @@ function embankment(ctx: Ctx, pts: Vec[], R: () => number, half = 34) {
   }
 }
 
+
+// ── More life on the fen ────────────────────────────────────────────────────
+
+/** Rings of water round anything standing in the flood. */
+function wading(ctx: Ctx, x: number, y: number, w: number) {
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.6;
+  for (let k = 0; k < 2; k++) { ctx.beginPath(); ctx.ellipse(x, y + 1, w + k * 7, 3 + k * 2, 0, 0, Math.PI * 2); ctx.stroke(); }
+}
+/** A pollard willow: a squat trunk bursting into a crown of wands. */
+function pollardWillow(ctx: Ctx, x: number, y: number, R: () => number) {
+  wading(ctx, x, y, 12);
+  limbs(ctx, [{ x1: x, y1: y, x2: x + (R() - 0.5) * 4, y2: y - 26, w: 9 }], R, true);
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.7; ctx.beginPath();
+  for (let i = 0; i < 16; i++) { const a = -Math.PI / 2 + (i - 7.5) * 0.17, L = 18 + R() * 16, bx = x + (i - 7.5) * 0.8; ctx.moveTo(bx, y - 26); ctx.quadraticCurveTo(bx + Math.cos(a) * L * 0.4, y - 26 + Math.sin(a) * L * 0.6, bx + Math.cos(a) * L, y - 26 + Math.sin(a) * L + L * 0.25); }
+  ctx.stroke();
+  ctx.lineWidth = 0.4; ctx.beginPath();
+  for (let i = 0; i < 30; i++) { const lx = x - 22 + R() * 44, ly = y - 50 + R() * 26; ctx.moveTo(lx, ly); ctx.lineTo(lx + 2, ly + 4); }
+  ctx.stroke();
+}
+/** An eel-catcher's hut on stilts, with a ladder and nets hung to dry. */
+function stiltHut(ctx: Ctx, x: number, y: number, R: () => number) {
+  wading(ctx, x, y, 30);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.beginPath(); for (const px of [-20, -6, 8, 22]) { ctx.moveTo(x + px, y); ctx.lineTo(x + px * 0.9, y - 30); } ctx.stroke();
+  ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x - 20, y - 4); ctx.lineTo(x + 22, y - 26); ctx.moveTo(x + 22, y - 4); ctx.lineTo(x - 20, y - 26); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.fillRect(x - 24, y - 34, 50, 5); ctx.strokeRect(x - 24, y - 34, 50, 5);
+  ctx.fillRect(x - 18, y - 58, 36, 24); ctx.lineWidth = 1.1; ctx.strokeRect(x - 18, y - 58, 36, 24);
+  ctx.save(); ctx.beginPath(); ctx.rect(x - 18, y - 58, 36, 24); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = -16; k < 18; k += 4) { ctx.moveTo(x + k, y - 58); ctx.lineTo(x + k, y - 34); } ctx.stroke(); ctx.restore();
+  const roof = () => { ctx.beginPath(); ctx.moveTo(x - 24, y - 56); ctx.quadraticCurveTo(x, y - 84, x + 24, y - 56); ctx.closePath(); };
+  ctx.fillStyle = PAPER; roof(); ctx.fill(); hatch(ctx, roof, [x - 24, y - 84, 48, 28], -1.2, 1.8, 0.5, INK, R); ctx.strokeStyle = INK; ctx.lineWidth = 1.1; roof(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.fillRect(x - 4, y - 50, 8, 16);
+  // ladder
+  ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x + 26, y + 2); ctx.lineTo(x + 32, y - 32); ctx.moveTo(x + 32, y + 2); ctx.lineTo(x + 38, y - 32);
+  for (let k = 0; k < 6; k++) { const t = k / 6; ctx.moveTo(x + 26 + t * 6, y + 2 - t * 34); ctx.lineTo(x + 32 + t * 6, y + 2 - t * 34); } ctx.stroke();
+  // a net drying on a pole
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - 30, y - 34); ctx.lineTo(x - 48, y - 60); ctx.stroke();
+  ctx.lineWidth = 0.4; ctx.beginPath(); for (let k = 0; k < 6; k++) { ctx.moveTo(x - 46 + k * 2.5, y - 57 + k * 3.6); ctx.lineTo(x - 52 + k * 2.5, y - 30 + k); ctx.moveTo(x - 50, y - 50 + k * 4); ctx.lineTo(x - 34, y - 44 + k * 3); } ctx.stroke();
+}
+/** A drainage windpump on its bank, sails still. */
+function drainageMill(ctx: Ctx, x: number, y: number, R: () => number) {
+  const bank = () => { ctx.beginPath(); ctx.ellipse(x, y + 2, 44, 14, 0, 0, Math.PI * 2); };
+  ctx.fillStyle = PAPER; bank(); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1; bank(); ctx.stroke();
+  windmillBody(ctx, x, y);
+  windmillSails(ctx, x, y - 56, 0.3);
+  void R;
+}
+/** The top of a drowned church tower standing out of the flood. */
+function drownedTower(ctx: Ctx, x: number, y: number, R: () => number) {
+  wading(ctx, x, y, 30);
+  ctx.fillStyle = PAPER; ctx.fillRect(x - 18, y - 46, 36, 46);
+  ctx.save(); ctx.beginPath(); ctx.rect(x - 18, y - 46, 36, 46); ctx.clip();
+  ctx.strokeStyle = 'rgba(58,34,18,0.4)'; ctx.lineWidth = 0.5; for (let yy = y - 46; yy < y; yy += 7) { ctx.beginPath(); ctx.moveTo(x - 18, yy); ctx.lineTo(x + 18, yy); ctx.stroke(); }
+  ctx.fillStyle = sepia(0.3); ctx.fillRect(x + 6, y - 48, 14, 50); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.strokeRect(x - 18, y - 46, 36, 46);
+  for (let k = -18; k < 18; k += 9) { ctx.fillStyle = PAPER; ctx.fillRect(x + k, y - 54, 6, 8); ctx.strokeRect(x + k, y - 54, 6, 8); }
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(x - 5, y - 14); ctx.lineTo(x - 5, y - 30); ctx.arc(x, y - 30, 5, Math.PI, 0); ctx.lineTo(x + 5, y - 14); ctx.closePath(); ctx.fill();
+  // a weathercock still turning above the flood
+  ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y - 54); ctx.lineTo(x, y - 74); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 7, y - 74); ctx.quadraticCurveTo(x, y - 82, x + 8, y - 76); ctx.lineTo(x + 3, y - 72); ctx.closePath(); ctx.fillStyle = INK; ctx.fill();
+  // flood-wrack caught on the stones
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath(); for (let i = 0; i < 10; i++) { const bx = x - 20 + R() * 40; ctx.moveTo(bx, y - 2); ctx.lineTo(bx + (R() - 0.5) * 8, y - 6); } ctx.stroke();
+}
+/** A fish weir: hurdles of woven withies set in a V across the current. */
+function fishWeir(ctx: Ctx, x: number, y: number, a: number) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  for (const sd of [-1, 1]) {
+    ctx.beginPath(); for (let k = 0; k <= 6; k++) { ctx.moveTo(k * 6, sd * k * 4); ctx.lineTo(k * 6, sd * k * 4 - 8); } ctx.stroke();
+    ctx.lineWidth = 0.6; ctx.beginPath(); for (const o of [-2, -5]) { ctx.moveTo(0, o); for (let k = 0; k <= 6; k++) ctx.lineTo(k * 6, sd * k * 4 + o + (k % 2 ? 1 : -1)); } ctx.stroke(); ctx.lineWidth = 1.2;
+  }
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.ellipse(18, 0, 26, 18, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+/** Ducks paddling in a line, each with its wake. */
+function ducks(ctx: Ctx, x: number, y: number, n: number, dir: number) {
+  for (let i = 0; i < n; i++) {
+    const dx = x + i * 14 * -dir, dy = y + i * 2;
+    ctx.save(); ctx.translate(dx, dy); ctx.scale(dir, 1);
+    ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(-6, 0); ctx.quadraticCurveTo(-6, -5, 1, -4); ctx.lineTo(3, -7); ctx.arc(4.5, -7.5, 2, Math.PI, 0); ctx.lineTo(8, -7); ctx.lineTo(6, -5); ctx.quadraticCurveTo(7, 0, -6, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(-8, 1); ctx.lineTo(-18, 3); ctx.moveTo(-8, 1); ctx.lineTo(-16, -1); ctx.stroke();
+    ctx.restore();
+  }
+}
+/** A raft of water-lily pads with a flower or two. */
+function lilies(ctx: Ctx, x: number, y: number, R: () => number) {
+  for (let i = 0; i < 6; i++) {
+    const lx = x + (R() - 0.5) * 30, ly = y + (R() - 0.5) * 14, r = 4 + R() * 3, a = R() * 6;
+    ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.ellipse(lx, ly, r, r * 0.55, 0, a, a + Math.PI * 1.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.fillStyle = '#efe6d2'; ctx.beginPath(); for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; ctx.ellipse(x + Math.cos(a) * 2, y - 2 + Math.sin(a), 2.4, 1.2, a, 0, Math.PI * 2); } ctx.fill(); ctx.stroke();
+}
+/** Eel-nets strung between two poles. */
+function netPoles(ctx: Ctx, x: number, y: number) {
+  wading(ctx, x, y, 22);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x - 18, y); ctx.lineTo(x - 18, y - 30); ctx.moveTo(x + 18, y); ctx.lineTo(x + 18, y - 28); ctx.stroke();
+  ctx.lineWidth = 0.4; ctx.beginPath();
+  for (let k = 0; k <= 8; k++) { ctx.moveTo(x - 18 + k * 4.5, y - 28 + Math.sin(k / 8 * Math.PI) * 6); ctx.lineTo(x - 18 + k * 4.5, y - 4); }
+  for (let k = 0; k < 5; k++) { ctx.moveTo(x - 18, y - 26 + k * 5); ctx.quadraticCurveTo(x, y - 20 + k * 5, x + 18, y - 26 + k * 5); }
+  ctx.stroke();
+  ctx.fillStyle = INK; for (const fx of [x - 10, x + 2, x + 12]) { ctx.beginPath(); ctx.arc(fx, y - 26 + Math.sin(((fx - x + 18) / 36) * Math.PI) * 5, 1.4, 0, Math.PI * 2); ctx.fill(); }
+}
+
+// ── More life on the downs ──────────────────────────────────────────────────
+
+/** A dolmen: a great capstone on three uprights. */
+function dolmen(ctx: Ctx, x: number, y: number, R: () => number) {
+  groundWash(ctx, x + 10, y + 2, 46, 10, 0.4);
+  for (const [dx, h] of [[-22, 30], [20, 28], [0, 26]] as [number, number][]) {
+    const up = () => { ctx.beginPath(); ctx.moveTo(x + dx - 6, y); ctx.lineTo(x + dx - 5, y - h); ctx.lineTo(x + dx + 5, y - h - 2); ctx.lineTo(x + dx + 6, y); ctx.closePath(); };
+    ctx.fillStyle = '#d8c7a8'; up(); ctx.fill(); hatch(ctx, up, [x + dx - 7, y - h - 2, 14, h + 2], 0.9, 1.8, 0.45, INK, R); ctx.strokeStyle = INK; ctx.lineWidth = 1.1; up(); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(29,25,21,0.7)'; ctx.fillRect(x - 15, y - 24, 30, 22);
+  const cap = () => { ctx.beginPath(); ctx.moveTo(x - 36, y - 28); ctx.quadraticCurveTo(x - 20, y - 46, x + 10, y - 44); ctx.quadraticCurveTo(x + 36, y - 40, x + 34, y - 28); ctx.quadraticCurveTo(x, y - 22, x - 36, y - 28); ctx.closePath(); };
+  ctx.fillStyle = '#d8c7a8'; cap(); ctx.fill(); hatch(ctx, cap, [x - 36, y - 46, 72, 24], 0.3, 2, 0.45, INK, R); ctx.strokeStyle = INK; ctx.lineWidth = 1.3; cap(); ctx.stroke();
+}
+/** A short row of little stones running across the down. */
+function stoneRow(ctx: Ctx, x: number, y: number, a: number, R: () => number) {
+  for (let i = 0; i < 6; i++) stone(ctx, x + Math.cos(a) * i * 16, y + Math.sin(a) * i * 16, 12 + R() * 6, R);
+}
+/** A gorse bush: a spiky round clump with a few flowers. */
+function gorse(ctx: Ctx, x: number, y: number, r: number, R: () => number) {
+  groundWash(ctx, x + 3, y + 1, r * 1.2, r * 0.3, 0.3);
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.6; ctx.beginPath();
+  for (let i = 0; i < 40; i++) { const a = -Math.PI * R(), L = r * (0.4 + R() * 0.7), bx = x + (R() - 0.5) * r; ctx.moveTo(bx, y); ctx.lineTo(bx + Math.cos(a) * L, y + Math.sin(a) * L); }
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(195,150,52,0.85)'; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(x + (R() - 0.5) * r * 1.4, y - R() * r * 0.9, 1.3, 0, Math.PI * 2); ctx.fill(); }
+}
+/** Sheep grazing on the down. */
+function sheep(ctx: Ctx, x: number, y: number, dir: number) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); for (const lx of [-5, -2, 3, 6]) { ctx.moveTo(lx, -3); ctx.lineTo(lx, 3); } ctx.stroke();
+  ctx.fillStyle = '#efe6d2'; ctx.lineWidth = 0.8; ctx.beginPath();
+  for (let i = 0; i < 6; i++) ctx.arc(-6 + i * 2.6, -6 + (i % 2) * 1.5, 3.2, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(10, -4, 2.8, 2, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+/** A shepherd's hut on iron wheels. */
+function shepherdsHut(ctx: Ctx, x: number, y: number, R: () => number) {
+  groundWash(ctx, x + 6, y + 2, 36, 8, 0.35);
+  ctx.fillStyle = PAPER; ctx.fillRect(x - 26, y - 34, 52, 24);
+  ctx.save(); ctx.beginPath(); ctx.rect(x - 26, y - 34, 52, 24); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = -24; k < 26; k += 4) { ctx.moveTo(x + k, y - 34); ctx.lineTo(x + k, y - 10); } ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.strokeRect(x - 26, y - 34, 52, 24);
+  const roof = () => { ctx.beginPath(); ctx.moveTo(x - 30, y - 32); ctx.quadraticCurveTo(x, y - 50, x + 30, y - 32); ctx.closePath(); };
+  ctx.fillStyle = PAPER; roof(); ctx.fill(); hatch(ctx, roof, [x - 30, y - 50, 60, 18], 0, 2, 0.5, INK, R); ctx.lineWidth = 1.1; roof(); ctx.stroke();
+  ctx.fillStyle = INK; ctx.fillRect(x + 8, y - 30, 8, 18); ctx.fillRect(x - 14, y - 28, 8, 7);
+  ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x - 2, y - 52); ctx.lineTo(x - 2, y - 44); ctx.stroke();
+  for (const wx of [-16, 16]) { ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(x + wx, y - 4, 6, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 0.5; ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; ctx.moveTo(x + wx, y - 4); ctx.lineTo(x + wx + Math.cos(a) * 6, y - 4 + Math.sin(a) * 6); } ctx.stroke(); }
+}
+/** An old gibbet with crows on the arm. */
+function gibbet(ctx: Ctx, x: number, y: number, R: () => number) {
+  groundWash(ctx, x + 4, y + 1, 20, 5, 0.35);
+  limbs(ctx, [{ x1: x, y1: y, x2: x, y2: y - 66, w: 4 }, { x1: x - 2, y1: y - 62, x2: x + 28, y2: y - 62, w: 3 }, { x1: x, y1: y - 46, x2: x + 12, y2: y - 62, w: 2 }], R, false);
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x + 24, y - 62); ctx.lineTo(x + 24, y - 44); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x + 24, y - 38, 5, 7, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); for (let k = -4; k <= 4; k += 2.5) { ctx.moveTo(x + 24 + k, y - 45); ctx.lineTo(x + 24 + k * 0.8, y - 31); } ctx.stroke();
+  for (const cx of [x + 8, x + 18]) crow(ctx, cx, y - 64, 1);
+}
+/** A crow perched, or flying when `fly`. */
+function crow(ctx: Ctx, x: number, y: number, dir: number, fly = false) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1); ctx.fillStyle = INK;
+  if (fly) {
+    ctx.beginPath(); ctx.moveTo(-12, -3); ctx.quadraticCurveTo(-5, -9, 0, -1); ctx.quadraticCurveTo(5, -9, 12, -4); ctx.quadraticCurveTo(5, -4, 0, 1); ctx.quadraticCurveTo(-5, -4, -12, -3); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.ellipse(0, -5, 3.4, 5, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(2.4, -10, 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(4, -10.5); ctx.lineTo(7.5, -9.5); ctx.lineTo(4, -9); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-2, -2); ctx.lineTo(-6, 2); ctx.lineTo(-3, -1); ctx.fill();
+  }
+  ctx.restore();
+}
+/** An owl on top of a standing stone. */
+function owlStone(ctx: Ctx, x: number, y: number, R: () => number) {
+  stone(ctx, x, y, 40, R);
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 0.9;
+  const body = () => { ctx.beginPath(); ctx.ellipse(x, y - 47, 6, 8, 0, 0, Math.PI * 2); };
+  body(); ctx.fill(); hatch(ctx, body, [x - 6, y - 55, 12, 16], -0.6, 1.5, 0.4); body(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 5, y - 54); ctx.lineTo(x - 5, y - 59); ctx.lineTo(x - 2, y - 55); ctx.moveTo(x + 5, y - 54); ctx.lineTo(x + 5, y - 59); ctx.lineTo(x + 2, y - 55); ctx.stroke();
+  ctx.fillStyle = 'rgba(240,220,150,0.95)'; ctx.beginPath(); ctx.arc(x - 2.4, y - 52, 1.8, 0, Math.PI * 2); ctx.arc(x + 2.4, y - 52, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x - 2.4, y - 52, 0.8, 0, Math.PI * 2); ctx.arc(x + 2.4, y - 52, 0.8, 0, Math.PI * 2); ctx.fill();
+}
+/** A rising crescent moon and a few early stars. */
+function moonAndStars(ctx: Ctx, x: number, y: number, R: () => number) {
+  ctx.fillStyle = '#f3ead6'; ctx.strokeStyle = INK; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x, y, 18, 0.5, Math.PI * 2 - 0.5); ctx.arc(x + 8, y - 3, 15, Math.PI * 2 - 0.62, 0.62, true); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(58,34,18,0.6)'; ctx.lineWidth = 0.7;
+  for (let i = 0; i < 7; i++) { const sx = x - 70 + R() * 160, sy = y - 20 + R() * 50, r = 2 + R() * 2; ctx.beginPath(); ctx.moveTo(sx - r, sy); ctx.lineTo(sx + r, sy); ctx.moveTo(sx, sy - r); ctx.lineTo(sx, sy + r); ctx.stroke(); }
+}
+/** A broken burial urn with bones spilt in the grass. */
+function spiltUrn(ctx: Ctx, x: number, y: number, R: () => number) {
+  groundWash(ctx, x + 3, y + 1, 18, 4, 0.3);
+  const urn = () => { ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.quadraticCurveTo(x - 12, y - 10, x - 6, y - 16); ctx.lineTo(x + 2, y - 14); ctx.lineTo(x + 6, y - 4); ctx.closePath(); };
+  ctx.fillStyle = PAPER; urn(); ctx.fill(); hatch(ctx, urn, [x - 12, y - 16, 18, 16], 0.5, 1.8, 0.45, INK, R); ctx.strokeStyle = INK; ctx.lineWidth = 0.9; urn(); ctx.stroke();
+  ctx.lineWidth = 0.6; ctx.beginPath(); for (let k = 0; k < 3; k++) { ctx.moveTo(x - 10, y - 4 - k * 4); ctx.lineTo(x + 3, y - 3 - k * 4); } ctx.stroke();
+  ctx.fillStyle = '#efe6d2'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(x + 10 + i * 5, y - 1 + (i % 2) * 2, 3.4, 1.1, R() - 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+}
+
 // ── Level 4: the flooded fen ────────────────────────────────────────────────
 
 /** A half-drowned cottage roof standing out of the flood. */
@@ -1094,11 +1293,19 @@ function buildFen(scale: number): HTMLCanvasElement {
 
   // scenery in the open water: reed beds, punts, herons, drowned roofs, eel men's huts
   const taken: Spot[] = [];
+  for (const sp of scatter(R, 1, 60, plate, taken)) drownedTower(ctx, sp.x, sp.y, R);
+  for (const sp of scatter(R, 1, 56, plate, taken)) drainageMill(ctx, sp.x, sp.y, R);
+  for (const sp of scatter(R, 2, 52, plate, taken)) stiltHut(ctx, sp.x, sp.y, R);
+  for (const sp of scatter(R, 12, 26, plate, taken)) pollardWillow(ctx, sp.x, sp.y, R);
+  for (const sp of scatter(R, 4, 34, plate, taken)) fishWeir(ctx, sp.x - 18, sp.y, (R() - 0.5) * 0.6);
+  for (const sp of scatter(R, 4, 26, plate, taken)) netPoles(ctx, sp.x, sp.y);
+  for (const sp of scatter(R, 5, 34, plate, taken)) ducks(ctx, sp.x, sp.y, 3 + Math.floor(R() * 3), R() < 0.5 ? -1 : 1);
+  for (const sp of scatter(R, 14, 18, plate, taken)) lilies(ctx, sp.x, sp.y, R);
   const roofs = scatter(R, 3, 46, plate, taken);
   for (const sp of roofs) drownedRoof(ctx, sp.x, sp.y, R);
   for (const sp of scatter(R, 4, 34, plate, taken)) punt(ctx, sp.x, sp.y, (R() - 0.5) * 0.8);
   for (const sp of scatter(R, 7, 18, plate, taken)) standingHeron(ctx, sp.x, sp.y, R() < 0.5 ? -1 : 1);
-  for (const sp of scatter(R, 46, 16, plate, taken, 4000)) reeds(ctx, sp.x, sp.y, 6 + Math.floor(R() * 8), R);
+  for (const sp of scatter(R, 70, 14, plate, taken, 6000)) reeds(ctx, sp.x, sp.y, 6 + Math.floor(R() * 8), R);
   for (const sp of scatter(R, 6, 40, plate, taken)) scribble(ctx, sp.x - 36, sp.y - 14, 72, 3 + Math.floor(R() * 2), R);
   // mist lying in bands
   for (let i = 0; i < 7; i++) { const y = 120 + R() * 780; const g = ctx.createLinearGradient(0, y - 30, 0, y + 30); g.addColorStop(0, 'rgba(240,230,210,0)'); g.addColorStop(0.5, 'rgba(240,230,210,0.32)'); g.addColorStop(1, 'rgba(240,230,210,0)'); ctx.fillStyle = g; ctx.fillRect(0, y - 30, MAP_W, 60); }
@@ -1219,18 +1426,30 @@ function buildBarrows(scale: number): HTMLCanvasElement {
   const taken: Spot[] = [];
   type Item = { y: number; draw: () => void };
   const items: Item[] = [];
+  const horse = scatter(R, 1, 70, plate, taken)[0];
+  if (horse) chalkHorse(ctx, horse.x, horse.y);
+  const moon = scatter(R, 1, 62, plate, taken)[0];
   for (const sp of scatter(R, 4, 70, plate, taken)) { const w = 60 + R() * 50; items.push({ y: sp.y, draw: () => barrowMound(ctx, sp.x, sp.y, w, 26 + R() * 14, R, R() < 0.5) }); }
   for (const sp of scatter(R, 7, 34, plate, taken)) items.push({ y: sp.y, draw: () => barrowMound(ctx, sp.x, sp.y, 28 + R() * 10, 22 + R() * 8, R) });
   for (const sp of scatter(R, 12, 14, plate, taken)) { const h = 30 + R() * 26, l = (R() - 0.5) * 8; items.push({ y: sp.y, draw: () => stone(ctx, sp.x, sp.y, h, R, l) }); }
   for (const sp of scatter(R, 9, 26, plate, taken)) items.push({ y: sp.y, draw: () => yew(ctx, sp.x, sp.y, 16 + R() * 8, R) });
-  const horse = scatter(R, 1, 70, plate, taken)[0];
-  if (horse) chalkHorse(ctx, horse.x, horse.y);
+  for (const sp of scatter(R, 1, 50, plate, taken)) items.push({ y: sp.y, draw: () => shepherdsHut(ctx, sp.x, sp.y, R) });
+  for (const sp of scatter(R, 2, 44, plate, taken)) items.push({ y: sp.y, draw: () => dolmen(ctx, sp.x, sp.y, R) });
+  for (const sp of scatter(R, 2, 46, plate, taken)) { const a = (R() - 0.5) * 0.6; items.push({ y: sp.y, draw: () => stoneRow(ctx, sp.x - 40, sp.y, a, R) }); }
+  for (const sp of scatter(R, 2, 30, plate, taken)) items.push({ y: sp.y, draw: () => gibbet(ctx, sp.x, sp.y, R) });
+  for (const sp of scatter(R, 3, 18, plate, taken)) items.push({ y: sp.y, draw: () => owlStone(ctx, sp.x, sp.y, R) });
+  for (const sp of scatter(R, 16, 18, plate, taken)) { const r = 10 + R() * 8; items.push({ y: sp.y, draw: () => gorse(ctx, sp.x, sp.y, r, R) }); }
+  for (const sp of scatter(R, 6, 26, plate, taken)) { const n = 3 + Math.floor(R() * 3); items.push({ y: sp.y, draw: () => { for (let i = 0; i < n; i++) sheep(ctx, sp.x + (i % 3) * 16 - 16, sp.y + Math.floor(i / 3) * 12 - 4 + (i % 2) * 4, i % 2 ? 1 : -1); } }); }
+  for (const sp of scatter(R, 5, 18, plate, taken)) items.push({ y: sp.y, draw: () => spiltUrn(ctx, sp.x, sp.y, R) });
   for (const sp of scatter(R, 5, 40, plate, taken)) scribble(ctx, sp.x - 36, sp.y - 14, 72, 3 + Math.floor(R() * 2), R);
   items.push({ y: GATE.y + 60, draw: () => wardRing(ctx, GATE, R) });
   items.push({ y: INKWELL.y + 22, draw: () => inkInkwell(ctx, INKWELL) });
   items.sort((a, b) => a.y - b.y);
   for (const it of items) it.draw();
 
+  // crows over the downs, and the moon coming up
+  for (const sp of scatter(R, 6, 14, plate, taken)) crow(ctx, sp.x, sp.y, R() < 0.5 ? -1 : 1, true);
+  if (moon) moonAndStars(ctx, moon.x, moon.y, R);
   // dusk: the sky darkens from the east, and the sheet's edges sink into shadow
   const dusk = ctx.createLinearGradient(0, 0, 0, MAP_H);
   dusk.addColorStop(0, 'rgba(60,40,30,0.16)'); dusk.addColorStop(0.4, 'rgba(60,40,30,0.04)'); dusk.addColorStop(1, 'rgba(60,40,30,0.1)');
