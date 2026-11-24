@@ -7,7 +7,7 @@ import {
 } from './map';
 import {
   inkSurreal, scribble, inkSmudge, foldCrease, inkCastle, inkInkwell, windmillBody, turret, paperVignette, groundWash, goose,
-  hatch, grow, limbs, proteaHead, seed, INK, INK2, PAPER, type Seg,
+  hatch, grow, limbs, proteaHead, seed, INK, INK2, PAPER, GOLD, type Seg,
 } from './ink';
 
 /** How much larger than its study the castle is drawn. */
@@ -383,6 +383,39 @@ function pennant(ctx: Ctx, x: number, y: number, R: () => number) {
   ctx.fillStyle = PAPER; f(); ctx.fill(); hatch(ctx, f, [x, y - 48, 30, 18], 0.9, 1.6, 0.45); ctx.strokeStyle = INK; ctx.lineWidth = 0.9; f(); ctx.stroke();
 }
 
+/** The east curtain wall, seen side-on along the map's edge. */
+function eastWall(ctx: Ctx, x0: number, x1: number, y0: number, y1: number, R: () => number) {
+  ctx.fillStyle = PAPER; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let xx = x0 + 6; xx < x1; xx += 6) for (let yy = y0 + R() * 10; yy < y1; yy += 12) { ctx.moveTo(xx, yy); ctx.lineTo(xx, yy + 10); ctx.moveTo(xx, yy + 11); ctx.lineTo(xx - 6, yy + 11); }
+  ctx.stroke();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1;
+  for (let yy = y0; yy < y1 - 6; yy += 14) { ctx.fillRect(x1, yy, 5, 8); ctx.strokeRect(x1, yy, 5, 8); }
+  const g = ctx.createLinearGradient(x0, 0, x0 - 18, 0);
+  g.addColorStop(0, 'rgba(86,68,52,0.28)'); g.addColorStop(1, 'rgba(86,68,52,0)');
+  ctx.fillStyle = g; ctx.fillRect(x0 - 18, y0, 18, y1 - y0);
+}
+
+/** The east gate: a crenellated gatehouse with its portcullis down, where both roads end. */
+function eastGate(ctx: Ctx, x: number, base: number, R: () => number) {
+  turret(ctx, x, base, 58, 92, 0, 'none', false, R);
+  // the arch and its portcullis
+  const arch = () => { ctx.beginPath(); ctx.moveTo(x - 13, base); ctx.lineTo(x - 13, base - 26); ctx.arc(x, base - 26, 13, Math.PI, 0); ctx.lineTo(x + 13, base); ctx.closePath(); };
+  ctx.fillStyle = INK; arch(); ctx.fill();
+  ctx.save(); arch(); ctx.clip();
+  ctx.strokeStyle = PAPER; ctx.lineWidth = 1.2; ctx.beginPath();
+  for (let gx = x - 11; gx <= x + 11; gx += 4.4) { ctx.moveTo(gx, base - 40); ctx.lineTo(gx, base); }
+  for (let gy = base - 34; gy < base; gy += 7) { ctx.moveTo(x - 13, gy); ctx.lineTo(x + 13, gy); }
+  ctx.stroke();
+  ctx.fillStyle = PAPER; for (let gx = x - 11; gx <= x + 11; gx += 4.4) { ctx.beginPath(); ctx.moveTo(gx - 1.2, base - 2); ctx.lineTo(gx, base + 1); ctx.lineTo(gx + 1.2, base - 2); ctx.fill(); }
+  ctx.restore();
+  // a banner of the house over the arch
+  ctx.fillStyle = '#7a2826'; ctx.strokeStyle = INK; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(x - 7, base - 78); ctx.lineTo(x + 7, base - 78); ctx.lineTo(x + 7, base - 56); ctx.lineTo(x, base - 61); ctx.lineTo(x - 7, base - 56); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(x, base - 70, 3, 0.6, Math.PI * 2 - 0.6); ctx.arc(x + 1.2, base - 70.5, 2.4, Math.PI * 2 - 0.6, 0.6, true); ctx.fill();
+}
+
 function buildCourtyard(scale: number): HTMLCanvasElement {
   const cv = document.createElement('canvas');
   cv.width = MAP_W * scale; cv.height = MAP_H * scale;
@@ -430,11 +463,17 @@ function buildCourtyard(scale: number): HTMLCanvasElement {
   st.ley(ctx, LEY_EDGES.map((e) => e.pts), Object.values(NODE).filter((n) => !n.foundation && n.id !== 'ink').map((n) => ({ x: n.x, y: n.y })));
 
   // curtain walls: north (breached), west (gatehouse fallen), south
+  // curtain walls all the way round: north (breached), west (gatehouse fallen), south, east (the gate)
   wallBand(ctx, 0, 6, 838, 36, true, R);
-  wallBand(ctx, 962, 6, 1460, 36, true, R);
+  wallBand(ctx, 962, 6, 1562, 36, true, R);
   wallBand(ctx, 6, 36, 36, 420, false, R);
   wallBand(ctx, 6, 540, 36, 962, false, R);
-  wallBand(ctx, 0, 962, 1460, 994, true, R);
+  wallBand(ctx, 0, 962, 1562, 994, true, R);
+  eastWall(ctx, 1528, 1562, 6, 488, R);
+  eastWall(ctx, 1528, 1562, 556, 994, R);
+  // beyond the east wall: open country, the way the castle's people fled
+  ctx.strokeStyle = 'rgba(58,34,18,0.4)'; ctx.lineWidth = 0.6;
+  for (let i = 0; i < 26; i++) { const gx = 1570 + R() * 20, gy = 30 + R() * 940; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx - 2, gy - 5); ctx.moveTo(gx, gy); ctx.lineTo(gx + 2, gy - 5); ctx.stroke(); }
   // jagged broken ends of the north wall
   for (const [x, d] of [[838, -1], [962, 1]] as [number, number][]) {
     ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath();
@@ -459,14 +498,12 @@ function buildCourtyard(scale: number): HTMLCanvasElement {
     { y: 950, draw: () => stables(ctx, 1200, 950, R) },
     { y: 930, draw: () => haystack(ctx, 1338, 930, 14, R) },
     { y: 950, draw: () => haystack(ctx, 1062, 948, 12, R) },
-    { y: 900, draw: () => barrel(ctx, 1384, 900) },
-    { y: 912, draw: () => barrel(ctx, 1404, 914) },
-    { y: CASTLE.y + 160, draw: () => {
-      const ax = CASTLE.x - 50, ay = CASTLE.y + 25;
-      ctx.save(); ctx.translate(ax, ay); ctx.scale(CASTLE_SCALE, CASTLE_SCALE); ctx.translate(-ax, -ay);
-      inkCastle(ctx, CASTLE);
-      ctx.restore();
-    } },
+    { y: 930, draw: () => barrel(ctx, 1496, 930) },
+    { y: 946, draw: () => barrel(ctx, 1512, 948) },
+    // the east gate in the wall, a guard tower beside it, and a squat tower to the south
+    { y: 468, draw: () => turret(ctx, 1478, 468, 42, 160, 58, 'orb', true, R) },
+    { y: 548, draw: () => eastGate(ctx, 1545, 548, R) },
+    { y: 650, draw: () => turret(ctx, 1545, 650, 44, 70, 0, 'none', false, R) },
     { y: INKWELL.y + 22, draw: () => inkInkwell(ctx, INKWELL) },
   ];
   // a few fynbos shrubs between the flagstones
@@ -485,7 +522,7 @@ function buildCourtyard(scale: number): HTMLCanvasElement {
   label(ctx, 'the Breach', 1010, 66, 15);
   label(ctx, 'the Old Well', 1010, 396, 14);
   label(ctx, 'Stables', 1200, 978, 14);
-  label(ctx, 'the Keep', CASTLE.x - 6, CASTLE.y + 196, 15);
+  label(ctx, 'the East Gate', 1462, 594, 15);
   label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
 
   finishSheet(ctx, R, 'The Castle Courtyard', 'Defence of Goosebridge Castle · the second sheet');

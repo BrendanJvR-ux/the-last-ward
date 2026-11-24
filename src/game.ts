@@ -86,7 +86,7 @@ export interface Pool { towerId: string; ranges: { lane: LaneId; s0: number; s1:
 /** Rally: towers near the banner shoot faster for a while. */
 export interface Rally { x: number; y: number; r: number; t: number; dur: number }
 export interface PulseFlight { towerId: string; path: Vec[]; length: number; s: number }
-/** Barrow Hounds: horn and a marker at the bridge shortly before the pack arrives there. */
+/** War Dogs: horn and a marker at the bridge shortly before the pack arrives there. */
 export interface Warning { lane: LaneId; type: EnemyType; from: number; to: number; count: number; sounded: boolean }
 export interface FadingThread { path: Vec[]; t: number; dur: number }
 export interface Toast { text: string; kind: 'info' | 'good' | 'bad' | 'gold'; t: number }

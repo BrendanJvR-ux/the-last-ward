@@ -329,8 +329,7 @@ export function enemyInk(ctx: C, type: EnemyType, x: number, y: number, dir: num
   // a fixed seed per kind, so lines don't boil as the figure moves
   const R = seed(0, 0, ENEMY_SEED[type]);
   if (type === 'hound') {
-    groundWash(ctx, x, y + 1, 12, 3.5, 0.35);
-    airFish(ctx, x, y - 14 + Math.sin(bob * 1.3) * 2, 0.9, dir, bob * 2);
+    warDog(ctx, x, y, dir, bob);
     return;
   }
   ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
@@ -1196,4 +1195,56 @@ function courtBanner(ctx: C, x: number, y: number, time: number, R: R) {
   const ex = top[3].x + 3, ey = (top[3].y + bot[3].y) / 2;
   ctx.fillStyle = PAPER; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(ex, ey, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   eye(ctx, ex, ey, 4.2, 0.2);
+}
+
+
+/** A lean war dog at full gallop, in a studded collar. Feet at (x, y), facing `dir`; `bob` is the stride. */
+export function warDog(ctx: C, x: number, y: number, dir: number, bob: number) {
+  const R = seed(0, 0, 21);
+  groundWash(ctx, x, y + 1, 15, 3.5, 0.4);
+  ctx.save(); ctx.translate(x, y - Math.abs(Math.sin(bob)) * 2); ctx.scale(dir, 1);
+  const g = Math.sin(bob), h = Math.cos(bob);
+  // legs: front pair reach while the hind pair push, then swap
+  ctx.strokeStyle = INK; ctx.lineCap = 'round';
+  const leg = (hx: number, hy: number, a1: number, a2: number, w: number) => {
+    const kx = hx + Math.sin(a1) * 7, ky = hy + Math.cos(a1) * 7;
+    const fx = kx + Math.sin(a2) * 7, fy = Math.min(0, ky + Math.cos(a2) * 7);
+    ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.lineTo(fx + 2.5, fy); ctx.stroke();
+  };
+  leg(-9, -12, 0.6 + g * 0.6, -0.3 + g * 0.5, 1.6);   // far hind
+  leg(8, -11, -0.5 + h * 0.6, 0.4 + h * 0.4, 1.6);    // far fore
+  // body: deep chest, tucked waist
+  const body = () => {
+    ctx.beginPath(); ctx.moveTo(-13, -16);
+    ctx.quadraticCurveTo(-4, -21, 6, -19); ctx.quadraticCurveTo(12, -18, 13, -14);
+    ctx.quadraticCurveTo(13, -8, 8, -8); ctx.quadraticCurveTo(0, -11, -6, -10);
+    ctx.quadraticCurveTo(-12, -9, -14, -13); ctx.closePath();
+  };
+  ctx.fillStyle = PAPER; body(); ctx.fill();
+  hatch(ctx, body, [-15, -22, 30, 15], -0.9, 2.2, 0.35, INK, R);
+  // short coat: ticks along the back
+  ctx.save(); body(); ctx.clip(); ctx.fillStyle = sepia(0.35); ctx.fillRect(-16, -22, 32, 5); ctx.restore();
+  ctx.lineWidth = 1.1; body(); ctx.stroke();
+  // tail, raised in a curve
+  ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-13, -15); ctx.quadraticCurveTo(-20, -18 + g * 2, -21, -25 + g * 2); ctx.stroke();
+  // near legs
+  leg(-8, -11, -0.6 - g * 0.6, 0.3 - g * 0.5, 2);
+  leg(9, -10, 0.5 - h * 0.6, -0.4 - h * 0.4, 2);
+  // neck and head with a long muzzle and pricked ears
+  const head = () => {
+    ctx.beginPath(); ctx.moveTo(9, -17); ctx.quadraticCurveTo(13, -25, 18, -25);
+    ctx.lineTo(25, -22); ctx.lineTo(25, -20); ctx.lineTo(18, -19); ctx.quadraticCurveTo(14, -15, 12, -13); ctx.closePath();
+  };
+  ctx.fillStyle = PAPER; head(); ctx.fill();
+  hatch(ctx, head, [9, -27, 17, 15], 0.9, 2.2, 0.3);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.1; head(); ctx.stroke();
+  // a soft ear folded back along the skull
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(16.5, -24.5); ctx.quadraticCurveTo(13, -27, 11.5, -23.5); ctx.lineTo(14.5, -23); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(25, -21, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(19, -22.6, 0.9, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(24, -19.6); ctx.lineTo(19, -19.4); ctx.stroke();
+  // studded collar
+  ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(11.5, -22); ctx.lineTo(14.5, -15.5); ctx.stroke();
+  ctx.fillStyle = PAPER; for (const t of [0.25, 0.6, 0.9]) { ctx.beginPath(); ctx.arc(11.5 + 3 * t, -22 + 6.5 * t, 0.6, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
 }

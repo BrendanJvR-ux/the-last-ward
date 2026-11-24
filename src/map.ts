@@ -10,7 +10,7 @@ export const GUTTER_X = 800;
 export interface LevelGeometry {
   junction: Vec;
   gate: Vec;
-  /** A point on the King's lane where hounds are announced (the bridge, or the stable yard). */
+  /** A point on the King's lane where the dogs are announced (the bridge, or the stable yard). */
   choke: Vec;
   inkwell: Vec;
   castle: Vec;
@@ -82,11 +82,11 @@ const FIELDS_GEO: LevelGeometry = {
 
 // ── Level 2: the castle courtyard ──────────────────────────────────────────
 // The outer wall has fallen. The levy come through the ruined gatehouse in the west wall,
-// the hounds over the breach in the north wall; both meet at the keep stair before the keep door.
+// the dogs over the breach in the north wall; both meet by the gate stair before the east gate.
 const C_JUNCTION: Vec = { x: 1290, y: 520 };
-const C_GATE: Vec = { x: 1452, y: 520 };
+const C_GATE: Vec = { x: 1536, y: 520 };
 const C_STABLES: Vec = { x: 1180, y: 150 };
-const C_INKWELL: Vec = { x: 1488, y: 806 };
+const C_INKWELL: Vec = { x: 1402, y: 838 };
 const COURTYARD_GEO: LevelGeometry = {
   junction: C_JUNCTION, gate: C_GATE, choke: C_STABLES, inkwell: C_INKWELL,
   castle: { x: 1520, y: 520 }, mill: { x: -500, y: -500 }, pond: { x: -500, y: -500 }, river: [],
@@ -102,7 +102,7 @@ const COURTYARD_GEO: LevelGeometry = {
   leyNodes: [
     { id: 'ink', x: C_INKWELL.x - 34, y: C_INKWELL.y - 8 },
     { id: 'k0', x: 1385, y: 768, parent: 'ink', bow: 6 },
-    { id: 'f_stair', x: 1330, y: 640, parent: 'k0', bow: -6, foundation: { name: 'Keep Stair' } },
+    { id: 'f_stair', x: 1330, y: 640, parent: 'k0', bow: -6, foundation: { name: 'Gate Stair' } },
     // Wallward: north beside the keep, then west under the north wall
     { id: 'w1', x: 1412, y: 575, parent: 'k0', bow: -8 },
     { id: 'w2', x: 1410, y: 300, parent: 'w1', bow: 10 },
@@ -154,7 +154,7 @@ export const LANE_IDS: LaneId[] = ['mill', 'king'];
 export let LEVEL: LevelId = 'fields';
 export let JUNCTION: Vec = F_JUNCTION;
 export let GATE: Vec = F_GATE;
-/** Where hounds are announced on the King's lane (the bridge on level 1). */
+/** Where the dogs are announced on the King's lane (the bridge on level 1). */
 export let BRIDGE: Vec = F_BRIDGE;
 export let MILL: Vec = FIELDS_GEO.mill;
 export let POND: Vec = FIELDS_GEO.pond;

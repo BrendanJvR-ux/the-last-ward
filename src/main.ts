@@ -408,8 +408,8 @@ function renderMargin() {
   }
   if (s.phase === 'victory') h = s.level === 'fields'
     ? `<h2><small>The End of the first sheet</small>Goosebridge stands</h2><p class="hint">Every wave held in the fields. The fight moves inside the walls.</p><div class="start"><button data-act="play" data-level="courtyard" class="primary">On to the Castle Courtyard</button><button data-act="restart">Play the fields again</button></div>`
-    : `<h2><small>The End</small>The keep held</h2><p class="hint">Every wave held in the courtyard.</p><div class="start"><button data-act="menu" class="primary">Back to the menu</button><button data-act="restart">Play the courtyard again</button></div>`;
-  if (s.phase === 'defeat') h = `<h2><small>Wave ${s.wave}</small>${s.level === 'fields' ? 'The gate has fallen' : 'The keep door is broken'}</h2><p class="hint">Restart clears gold, leaves, binds and every thread.</p><div class="start"><button data-act="restart" class="primary">Restart this sheet</button><button data-act="menu">Main menu</button></div>`;
+    : `<h2><small>The End</small>The courtyard held</h2><p class="hint">Every wave held in the courtyard.</p><div class="start"><button data-act="menu" class="primary">Back to the menu</button><button data-act="restart">Play the courtyard again</button></div>`;
+  if (s.phase === 'defeat') h = `<h2><small>Wave ${s.wave}</small>${s.level === 'fields' ? 'The gate has fallen' : 'The east gate is broken'}</h2><p class="hint">Restart clears gold, leaves, binds and every thread.</p><div class="start"><button data-act="restart" class="primary">Restart this sheet</button><button data-act="menu">Main menu</button></div>`;
   const focused = document.activeElement as HTMLElement | null;
   const key = focused && margin.contains(focused) ? focused.getAttribute('data-act') + '|' + (focused.dataset.id ?? focused.dataset.f ?? focused.dataset.type ?? '') : null;
   margin.innerHTML = h;
@@ -428,13 +428,13 @@ function renderOverlay() {
     const bound = s.towers.filter((t) => t.bound).length;
     const stats = `<p class="sub">Castle ${s.castleHp}/${BALANCE.castleHp} · ${s.kills} foes turned back · ${bound} tower${bound === 1 ? '' : 's'} bound in gold</p>`;
     overlay.innerHTML = s.level === 'fields'
-      ? `<div class="plate"><p class="kicker">The first sheet</p><h2>The fields are held</h2><p class="caption">“The levy broke on the roads, and the hounds on the bridge. But the old wizard turned the page: the outer wall had already fallen.”</p>${stats}<button data-act="play" data-level="courtyard" class="primary">On to the Castle Courtyard</button> <button data-act="restart">Read it again</button></div>`
+      ? `<div class="plate"><p class="kicker">The first sheet</p><h2>The fields are held</h2><p class="caption">“The levy broke on the roads, and the dogs on the bridge. But the old wizard turned the page: the outer wall had already fallen.”</p>${stats}<button data-act="play" data-level="courtyard" class="primary">On to the Castle Courtyard</button> <button data-act="restart">Read it again</button></div>`
       : `<div class="plate"><p class="kicker">The End</p><h2>Defence of Goosebridge Castle</h2><p class="caption">“And so Goosebridge Castle held, and the old wizard let the ink dry on the final page.”</p>${stats}<button data-act="menu" class="primary">Back to the menu</button> <button data-act="restart">Read it again</button></div>`;
     recordWin(s.level, s.castleHp);
   } else if (s.phase === 'defeat') {
     overlay.hidden = false;
     overlay.className = 'defeat';
-    overlay.innerHTML = `<div class="plate"><p class="kicker">Wave ${s.wave}</p><h2>${s.level === 'fields' ? 'The gate has fallen' : 'The keep door is broken'}</h2><p class="caption">The ink ran dry before the last ward could hold. Turn back the page and try another thread.</p><button data-act="restart" class="primary">Restart this sheet</button> <button data-act="menu">Main menu</button></div>`;
+    overlay.innerHTML = `<div class="plate"><p class="kicker">Wave ${s.wave}</p><h2>${s.level === 'fields' ? 'The gate has fallen' : 'The east gate is broken'}</h2><p class="caption">The ink ran dry before the last ward could hold. Turn back the page and try another thread.</p><button data-act="restart" class="primary">Restart this sheet</button> <button data-act="menu">Main menu</button></div>`;
   } else if (s.paused) {
     overlay.hidden = false;
     overlay.className = 'paused';
@@ -542,8 +542,8 @@ function hydrateIcons(root: HTMLElement) {
 // ── Main menu ───────────────────────────────────────────────────────────────
 const menuEl = $('menu');
 const LEVELS: { id: LevelId; name: string; sub: string; blurb: string }[] = [
-  { id: 'fields', name: 'The Fields', sub: 'First sheet', blurb: 'Two roads cross the fields to Goosebridge Castle: the Fen Levy on the Mill Road, the Barrow Hounds over the bridge. Bramble, Ember, Bell and Verdigris hold the way.' },
-  { id: 'courtyard', name: 'The Castle Courtyard', sub: 'Second sheet', blurb: 'The outer wall has fallen. The levy pour through the ruined gatehouse and the hounds leap the breach. Defend the keep with gargoyles, mangonels, ink fountains and banners.' },
+  { id: 'fields', name: 'The Fields', sub: 'First sheet', blurb: 'Two roads cross the fields to Goosebridge Castle: the Fen Levy on the Mill Road, the war dogs over the bridge. Bramble, Ember, Bell and Verdigris hold the way.' },
+  { id: 'courtyard', name: 'The Castle Courtyard', sub: 'Second sheet', blurb: 'The outer wall has fallen. The levy pour through the ruined gatehouse and the dogs leap the breach. Hold the east gate with gargoyles, mangonels, ink fountains and banners.' },
 ];
 const thumbs = new Map<LevelId, HTMLCanvasElement>();
 
@@ -623,7 +623,7 @@ function refresh(now: number) {
   renderHud();
   renderToasts();
   renderInspect();
-  // The Barrow Hounds' double horn, once per warning
+  // The hunt-master's double horn, once per dog warning
   if (s.phase === 'combat') for (const w of s.warnings) if (!w.sounded && s.waveTime >= w.from) { w.sounded = true; playDoubleHorn(); }
   const k = canvas.width / MAP_W;
   ctx.setTransform(k, 0, 0, k, 0, 0);

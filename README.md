@@ -12,8 +12,8 @@ A single-map fantasy tower defence prototype, drawn as a sheet from an old noteb
 
 The game opens on a **main menu** (the **Menu** button returns to it at any time, and you can return to a game in progress). Pick a sheet:
 
-1. **The Fields**: two roads across the fields to the castle gate, with the Bramble, Ember, Bell and Verdigris towers. Everything below describes this sheet unless it says otherwise.
-2. **The Castle Courtyard**: the outer wall has fallen. The levy pour through the ruined gatehouse in the west wall (the Gatehouse Passage); the hounds leap the breach in the north wall (the Breach, announced by the horn at the stable yard). Both meet at the keep stair before the keep door. Four different towers defend it: the Gargoyle Perch, the Mangonel, the Ink Fountain and the Banner Tower. Same rules, same enemies, six new waves; 60 starting gold.
+1. **The Fields**: two roads across the fields to the castle gate (the Fen Levy and the war dogs), with the Bramble, Ember, Bell and Verdigris towers. Everything below describes this sheet unless it says otherwise.
+2. **The Castle Courtyard**: the outer wall has fallen. The levy pour through the ruined gatehouse in the west wall (the Gatehouse Passage); the war dogs leap the breach in the north wall (the Breach, announced by the horn at the stable yard). Both meet at the gate stair before the east gate, beside its guard tower. Curtain walls enclose the whole yard. Four different towers defend it: the Gargoyle Perch, the Mangonel, the Ink Fountain and the Banner Tower. Same rules, same enemies, six new waves; 60 starting gold.
 
 Winning the fields offers the courtyard straight away. Each sheet remembers your best result (castle health) in the browser.
 
@@ -27,7 +27,7 @@ Three separate decisions:
 |---|---|---|
 | **Trace** | Between waves | Drag a line of ink from the inkwell along a leyline to a tower. It prepares that tower for the *next wave only*. |
 | **Pulse** | During a wave | Click a traced tower to send a pulse down its thread. Its special ability fires when the pulse arrives. |
-| **Bind** | Between waves, from wave 4 | Spend 3 Gilded Leaves to bind one tower in gold. From then on it has its own free pulse every wave, with no trace and no shared charge. Bound towers can't be traced. |
+| **Bind** | Between waves, from wave 4 | Spend 3 Gilded Leaves to bind one tower in gold. From then on it has its own free pulse every wave, with no trace and no shared charge. Bound towers can't be traced; their leyline is gilded, a burnished vine of gold leaves. |
 
 Always: **shared pulses < traces < unbound towers.** Binding is refused if it would leave too few unbound towers to fill the traces (in waves 4–6 you need five towers before you can bind one).
 
@@ -70,7 +70,7 @@ Then open http://localhost:5173/ (the game) or http://localhost:5173/styles.html
 | Pause | **Pause** | `P` or `Space` |
 | Speed | **Speed ×1 / ×2** | |
 | Inspect an enemy | Click / tap it during a wave | |
-| Sound | **Sound on / off** (the hounds' horn) | |
+| Sound | **Sound on / off** (the hunt-master's horn) | |
 | Restart | **Restart** (immediate) | |
 | Wave preview | The ▴/▾ on the bookmark folds it (it folds itself during battle) | |
 | Cancel | | `Esc` closes a popover or drops a thread |
@@ -82,11 +82,11 @@ Click (or tap) any enemy during a wave to see its health, armour and speed.
 | Enemy | Health | Armour | Speed | Notes |
 |---|---|---|---|---|
 | **Fen Levy** | 36 | 2 | 40 | Fynbos root-walkers: protea-bud heads, one eye, bodies of tangled roots. Steady infantry that march down the Mill Road in tight files, three abreast, spaced so a Bramble hedge bunches the front ranks for the Ember Kiln's splash. |
-| **Barrow Hound** | 24 | 0 | 108 | Striped fish loosed from the barrows, swimming through the air in small shoals on the King's Road. A double horn call sounds and a warning appears at the bridge about 3.5 s before they reach it, enough to save an Ember pulse for the crossing. |
+| **War Dog** | 24 | 0 | 108 | Lean war dogs in studded collars, loosed in small packs on the King's Road. The hunt-master's double horn sounds and a warning appears at the bridge about 3.5 s before they reach it, enough to save an Ember pulse for the crossing. |
 | **Stone-Bearer** | 130 | 0 | 26 | A goggled wanderer with a spiky crest, patterned coat and oxblood sash, carrying the Cairn-Born's stolen name-stone. |
 | **Cairn-Born** | 700 | 8 | 24 | A walking citadel-fish with a stern human face, a little town on its back and an empty socket where its stone belonged, following its bearer. When the bearer falls, the giant walks to the stone, kneels there for 7 s blocking everything behind it on that road (both roads if on the shared stretch), then leaves the field and the queue is released. Time a pulse against the bearer to choose where the blockade forms. If the bearer reaches the gate, the giant marches on. Cannot be knocked back. |
 
-Waves: Levy alone (1), Hounds join (2), both together (3), a calmer wave to try your first bind (4), the Cairn-Born and its bearer on a quiet Mill Road (5), the pair on the Mill Road while Hounds threaten the bridge (6). The bookmark gives each wave a title and a line of verse; it does not tell you what is coming, where, or how many.
+Waves: Levy alone (1), War Dogs join (2), both together (3), a calmer wave to try your first bind (4), the Cairn-Born and its bearer on a quiet Mill Road (5), the pair on the Mill Road while the dogs threaten the bridge (6). The bookmark gives each wave a title and a line of verse; it does not tell you what is coming, where, or how many.
 
 ## Towers
 
@@ -105,7 +105,7 @@ Waves: Levy alone (1), Hounds join (2), both together (3), a calmer wave to try 
 | **Gargoyle Perch** (a winged stone gargoyle on a fluted pillar) | Long-range stone shards, single target, heavy and slow | **Stone Gaze**: everything nearby is turned to stone (stunned) for 4 s and chipped. The Cairn-Born only stiffens briefly. |
 | **Mangonel** (a throwing engine on a stone platform) | Lobbed boulders, splash, very long range, slow | **Boulder Barrage**: seven boulders land one after another on the thickest crowd in reach. |
 | **Ink Fountain** (a stone fountain; a striped fish spouts ink) | Gobs of ink that stain and slow the target | **Inkflood**: the nearby road floods with ink for 6 s; everything wading through crawls at a quarter speed and is slowly stained. |
-| **Banner Tower** (a tall pole with a swallow-tailed pennant) | Light arrows. Towers within reach of a banner always reload 25% faster | **Rally**: every tower nearby shoots twice as fast for 8 s. |
+| **Banner Tower** (a tall pole with a swallow-tailed pennant) | Light arrows. Every tower within a wide reach of a banner always reloads 25% faster | **Rally**: every tower across a broad swathe of the yard shoots twice as fast for 8 s. |
 
 ## Tuning
 

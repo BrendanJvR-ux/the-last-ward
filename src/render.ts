@@ -87,15 +87,21 @@ function goldRoute(ctx: CanvasRenderingContext2D, foundation: string, preview: b
     ctx.strokeStyle = P.goldLight; ctx.lineWidth = 10; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -time * 30; stroke(ctx, path);
     ctx.setLineDash([]);
   } else {
-    ctx.strokeStyle = '#5e4210'; ctx.lineWidth = 15; stroke(ctx, path);
-    ctx.strokeStyle = P.gold; ctx.lineWidth = 11; stroke(ctx, path);
-    ctx.strokeStyle = P.goldLight; ctx.lineWidth = 4; ctx.setLineDash([2, 6]); stroke(ctx, path); ctx.setLineDash([]);
-    ctx.fillStyle = P.goldLight; ctx.strokeStyle = '#5e4210'; ctx.lineWidth = 1;
-    for (let i = 6; i < path.length - 2; i += 7) {
+    // a soft, burnished gilt rather than bright gold
+    ctx.strokeStyle = 'rgba(74,58,28,0.75)'; ctx.lineWidth = 13; stroke(ctx, path);
+    ctx.strokeStyle = '#a88a4c'; ctx.lineWidth = 9; stroke(ctx, path);
+    ctx.strokeStyle = 'rgba(230,206,140,0.45)'; ctx.lineWidth = 3; ctx.setLineDash([2, 7]); stroke(ctx, path); ctx.setLineDash([]);
+    // leaves all along the way, alternating sides, a few small ones in between
+    ctx.lineWidth = 0.8;
+    for (let i = 2; i < path.length - 1; i += 2) {
       const p = path[i], q = path[i + 1];
-      const a = Math.atan2(q.y - p.y, q.x - p.x) + (i % 2 ? 0.9 : -0.9);
+      const side = (i / 2) % 2 ? 1 : -1, small = (i / 2) % 3 === 2;
+      const a = Math.atan2(q.y - p.y, q.x - p.x) + side * (0.75 + ((i * 7) % 5) * 0.08);
+      const L = small ? 9 : 13, W = small ? 3.2 : 4.6;
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
-      ctx.beginPath(); ctx.ellipse(11, 0, 7, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = small ? 'rgba(176,148,88,0.9)' : 'rgba(196,168,104,0.92)'; ctx.strokeStyle = 'rgba(74,58,28,0.85)';
+      ctx.beginPath(); ctx.moveTo(5, 0); ctx.quadraticCurveTo(5 + L * 0.45, -W, 5 + L, 0); ctx.quadraticCurveTo(5 + L * 0.45, W, 5, 0); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(5 + L * 0.85, 0); ctx.stroke();
       ctx.restore();
     }
   }
@@ -309,7 +315,7 @@ function drawAmbience(ctx: CanvasRenderingContext2D, time: number) {
   ctx.restore();
 }
 
-/** Barrow Hounds: horn rings and a banner at the bridge shortly before the pack arrives. */
+/** War Dogs: horn rings and a banner at the bridge shortly before the pack arrives. */
 function drawHoundWarnings(ctx: CanvasRenderingContext2D, s: GameState, time: number) {
   if (s.phase !== 'combat') return;
   for (const w of s.warnings) {

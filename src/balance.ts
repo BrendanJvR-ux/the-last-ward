@@ -105,7 +105,7 @@ export const BALANCE = {
   /** Tower types that can be built on the current level (set by applyBalanceLevel). */
   towerTypes: ['bramble', 'ember', 'bell', 'verdigris'] as TowerType[],
   /** Warning shown when hounds near the current level's choke point. */
-  houndWarnText: 'Horns! Hounds at the bridge',
+  houndWarnText: 'Horns! Dogs at the bridge',
 
   startingTowers: [
     { foundation: 'f_mill', type: 'bramble' },
@@ -194,9 +194,9 @@ export const BALANCE = {
     floodSlow: 0.25,
     floodDps: 12,
     /** Banner: towers within this range of a banner shoot this much faster; Rally doubles it. */
-    bannerAuraRadius: 185,
+    bannerAuraRadius: 260,
     bannerAura: 0.25,
-    rallyRadius: 300,
+    rallyRadius: 400,
     rallyDuration: 8,
     rallyRate: 2,
   },
@@ -212,13 +212,13 @@ export const BALANCE = {
     leaveBounty: 20,
   },
 
-  /** Barrow Hounds: the horn sounds and the bridge warning shows this many seconds before they reach the bridge. */
+  /** War Dogs: the horn sounds and the bridge warning shows this many seconds before they reach the bridge. */
   houndWarning: 3.5,
 
   enemies: {
     levy: { name: 'Fen Levy', plural: 'Fen Levy', hp: 36, speed: 40, armour: 2, bounty: 2, castleDamage: 1, note: 'Fynbos root-walkers with protea heads and a single eye. March in tight files.' },
     bearer: { name: 'Stone-Bearer', plural: 'Stone-Bearers', hp: 130, speed: 26, armour: 0, bounty: 8, castleDamage: 1, note: 'A goggled wanderer carrying the Cairn-Born\u2019s stolen name-stone. Where it falls, the giant kneels.' },
-    hound: { name: 'Barrow Hound', plural: 'Barrow Hounds', hp: 24, speed: 108, armour: 0, bounty: 2, castleDamage: 1, note: 'Striped fish loosed from the barrows, swimming through the air. Hunt in shoals.' },
+    hound: { name: 'War Dog', plural: 'War Dogs', hp: 24, speed: 108, armour: 0, bounty: 2, castleDamage: 1, note: 'Lean war dogs in studded collars, loosed by the hunt-master\u2019s horn. Hunt in packs.' },
     cairn: { name: 'Cairn-Born', plural: 'Cairn-Born', hp: 700, speed: 24, armour: 8, bounty: 45, castleDamage: 6, note: 'A walking citadel-fish with a stern face and an empty socket. Follows its name-stone; cannot be knocked back.' },
   } as Record<EnemyType, EnemyStats>,
 
@@ -233,7 +233,7 @@ export const BALANCE = {
     },
     {
       title: 'Horns at the Bridge',
-      lesson: 'Something old is loosed from the barrows. Listen for the horn.',
+      lesson: 'The hunt-master has loosed his dogs on the King\u2019s Road. Listen for the horn.',
       groups: [
         { type: 'levy', lane: 'mill', count: 5, abreast: 3, start: 1, interval: 1.5 },
         { type: 'hound', lane: 'king', count: 6, start: 20, interval: 0.4 },
@@ -241,7 +241,7 @@ export const BALANCE = {
     },
     {
       title: 'Mud and Teeth',
-      lesson: 'The fen marches and the barrows bay, both at once.',
+      lesson: 'The fen marches and the kennels bay, both at once.',
       groups: [
         { type: 'levy', lane: 'mill', count: 5, abreast: 3, start: 1, interval: 1.5 },
         { type: 'hound', lane: 'king', count: 3, start: 9, interval: 0.4 },
@@ -318,7 +318,7 @@ const COURTYARD: LevelBalance = {
     { foundation: 'f_herb', type: 'mangonel' },
     { foundation: 'f_stable', type: 'fountain' },
   ],
-  houndWarnText: 'Horns! Hounds in the stable yard',
+  houndWarnText: 'Horns! Dogs in the stable yard',
   waves: [
     {
       title: 'The Gatehouse Falls',

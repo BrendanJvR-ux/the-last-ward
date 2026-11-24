@@ -41,7 +41,7 @@ function hornNote(start: number, dur: number, freq: number) {
   }
 }
 
-/** The double horn call of the Barrow Hounds. */
+/** The hunt-master's double horn, loosing the war dogs. */
 export function playDoubleHorn() {
   if (muted || !ctx) return;
   const t = ctx.currentTime + 0.02;

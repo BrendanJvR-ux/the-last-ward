@@ -86,8 +86,8 @@ export function enemyIconCanvas(type: EnemyType, size = 44): HTMLCanvasElement {
   cv.width = size * dpr; cv.height = size * dpr; cv.style.width = cv.style.height = `${size}px`;
   const ctx = cv.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  const k = type === 'cairn' ? size / 118 : type === 'hound' ? size / 44 : type === 'bearer' ? size / 58 : size / 44;
-  const x = type === 'cairn' ? size * 0.4 : size / 2;
+  const k = type === 'cairn' ? size / 118 : type === 'hound' ? size / 60 : type === 'bearer' ? size / 58 : size / 44;
+  const x = type === 'cairn' ? size * 0.4 : type === 'hound' ? size * 0.44 : size / 2;
   drawEnemy(ctx, type, x, size - 4, 1, 0, 0, k);
   return cv;
 }
