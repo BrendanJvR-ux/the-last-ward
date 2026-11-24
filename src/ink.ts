@@ -761,7 +761,8 @@ export const inkSurreal: Style = {
   enemy(ctx, type, x, y, dir) { enemyInk(ctx, type, x, y, dir); },
   castle(ctx, at) { inkCastle(ctx, at); },
   mill(ctx, at) { windmillBody(ctx, at.x, at.y + 20); windmillSails(ctx, at.x, at.y - 36, 0.4); },
-  inkwell(ctx, at) { inkInkwell(ctx, at); },
+  // the gallery shows the keeper of the inkwell too (the game draws him live, so he can move)
+  inkwell(ctx, at) { inkInkwell(ctx, at); wizard(ctx, at.x + 62, at.y + 26, -1, 0, false); },
   pulse(ctx, at, trail) {
     const R = rng(3);
     ctx.strokeStyle = INK; ctx.lineCap = 'round';
