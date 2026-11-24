@@ -3,6 +3,7 @@ import { BALANCE, phaseRule } from './balance';
 import { MAP_W, MAP_H, LANES, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, LEVEL, routePolyline, pointAt, type Vec } from './map';
 import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint } from './game';
 import type { LevelId } from './balance';
+import { owl } from './rewards';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
 import { P, drawTowerIcon, drawEnemy, drawNameStone, litGrad, softShadow, ENEMY_SCALE, TOWER_SCALE } from './sprites';
 import { inkFoundation, inkFlame, windmillSails, wizard, grow, limbs, hatch, seed, PAPER, type Seg } from './ink';
@@ -25,9 +26,15 @@ export interface ViewState {
   touch: boolean;
   /** Enemy being inspected. */
   inspectId: number | null;
+  /** Redeemed looks: an owl beside the wizard, crimson ink for threads. */
+  owl?: boolean;
+  crimson?: boolean;
 }
 
 const INK = '#1e1008';
+/** Thread ink for this frame: black, or crimson with the reward. */
+let threadInk = INK;
+let showOwl = false;
 /** The keeper of the inkwell stands just east of it. */
 const wizardAt = () => ({ x: INKWELL.x + 62, y: INKWELL.y + 26 });
 const staticLayers = new Map<LevelId, HTMLCanvasElement>();
@@ -54,7 +61,7 @@ function inkThread(ctx: CanvasRenderingContext2D, path: Vec[], time: number, alp
   ctx.strokeStyle = mode === 'dry' ? 'rgba(40,25,10,0.2)' : 'rgba(30,16,8,0.28)';
   ctx.lineWidth = 15;
   stroke(ctx, path);
-  const col = mode === 'dry' ? '#4a3626' : mode === 'fading' ? '#3a3640' : INK;
+  const col = mode === 'dry' ? (threadInk === INK ? '#4a3626' : '#5a2a22') : mode === 'fading' ? '#3a3640' : threadInk;
   ctx.strokeStyle = col; ctx.fillStyle = col;
   let acc = 0;
   for (let i = 1; i < path.length; i++) {
@@ -340,6 +347,8 @@ function drawHoundWarnings(ctx: CanvasRenderingContext2D, s: GameState, time: nu
 }
 
 export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState, time: number) {
+  threadInk = v.crimson ? '#6e1418' : INK;
+  showOwl = !!v.owl;
   base(ctx);
 
   // a bolder leyline from the inkwell to every tower you own, so your towers are easy to find
@@ -357,7 +366,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   if (v.gesture.active && v.gesture.path.length > 1) {
     inkThread(ctx, v.gesture.path, time, v.gesture.slipping > 0 ? 0.45 : 1, 'wet');
     const end = v.gesture.path[v.gesture.path.length - 1];
-    ctx.save(); ctx.fillStyle = INK;
+    ctx.save(); ctx.fillStyle = threadInk;
     ctx.beginPath(); ctx.arc(end.x, end.y, 7 + Math.sin(time * 10), 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(30,16,8,0.2)'; ctx.beginPath(); ctx.arc(end.x, end.y, 14, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
@@ -445,6 +454,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   sprites.push({ y: WINDMILL.y, draw: () => drawSails(ctx, time) });
   const wz = wizardAt();
   sprites.push({ y: wz.y, draw: () => wizard(ctx, wz.x, wz.y, -1, time, v.gesture.active || s.flights.length > 0) });
+  if (showOwl) sprites.push({ y: INKWELL.y + 26, draw: () => owl(ctx, INKWELL.x - 40, INKWELL.y + 26, time) });
   sprites.sort((a, b) => a.y - b.y);
   for (const sp of sprites) sp.draw();
 
@@ -557,10 +567,10 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
     const gold = !!s.towers.find((x) => x.id === f.towerId)?.bound;
     const back = flightPoint({ ...f, s: Math.max(0, f.s - 40) });
     ctx.save();
-    ctx.strokeStyle = gold ? P.gold : INK; ctx.lineCap = 'round'; ctx.lineWidth = 9;
+    ctx.strokeStyle = gold ? P.gold : threadInk; ctx.lineCap = 'round'; ctx.lineWidth = 9;
     ctx.beginPath(); ctx.moveTo(back.x, back.y); ctx.lineTo(p.x, p.y); ctx.stroke();
     ctx.shadowColor = gold ? 'rgba(240,210,122,1)' : 'rgba(120,140,230,0.9)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = gold ? P.goldLight : INK;
+    ctx.fillStyle = gold ? P.goldLight : threadInk;
     ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(230,236,255,0.8)';
     ctx.beginPath(); ctx.arc(p.x - 3, p.y - 3, 3, 0, Math.PI * 2); ctx.fill();
@@ -596,6 +606,7 @@ export function renderVictory(ctx: CanvasRenderingContext2D, s: GameState, time:
   }
   drawSails(ctx, time);
   wizard(ctx, wizardAt().x, wizardAt().y, -1, time, false);
+  if (showOwl) owl(ctx, INKWELL.x - 40, INKWELL.y + 26, time);
   drawGoose(ctx, 1380, 520, 1.6, -1);
   drawGoose(ctx, 1330, 540, 1.4, 1);
 }

@@ -14,7 +14,17 @@ The game opens on a **menu** (the **Menu** button returns to it at any time):
 
 - **Start** chooses a level: **Level 1: Gate Defence** or **Level 2: The Castle Courtyard**, each with a drawn thumbnail, its four towers and your best result.
 - **Resume** returns to the game in progress.
-- **Redeem rewards** is a placeholder for rewards still to come.
+- **Redeem rewards** spends **Wizard's Seals**. You earn 1 seal for every wave held, 5 for winning a level, 5 more the first time you win it, and 3 more for a flawless defence (no castle health lost). Seals buy lasting rewards, kept in this browser:
+
+  | Reward | Seals | What it does |
+  |---|---|---|
+  | Deep Inkwell | 8 | Begin every level with 30 more gold. |
+  | Gilded Start | 10 | Begin every level with one Gilded Leaf. |
+  | Stout Walls | 14 | The castle starts every level with 5 more health. |
+  | Owl Familiar | 5 | A small ink owl sits by the inkwell. |
+  | Crimson Ink | 6 | Traced threads run in crimson ink. |
+
+  Perks apply from the next level you start; any reward you own can be switched off and on again.
 - **Exit** closes the book (the game waits on its page until you close the tab).
 
 1. **Gate Defence**: two roads across the fields to the castle gate (the Fen Levy and the war dogs), with the Bramble, Ember, Bell and Verdigris towers. Everything below describes this level unless it says otherwise.
@@ -130,7 +140,8 @@ Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its 
 | `src/sprites.ts` | Tower and enemy sprites (walk cycles, the kneeling giant, ink spatter on hits) and margin icons. |
 | `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, the wizard, effects, warnings, inspect highlight, the victory plate. |
 | `src/audio.ts` | The synthesized double horn. |
-| `src/main.ts` | The main menu, input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |
+| `src/rewards.ts` | Wizard's Seals: earning, the five rewards, what they change, and their little ink pictures (saved in localStorage). |
+| `src/main.ts` | The main menu and rewards screen, input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |
 | `src/style.css` | Layout and look, including the phone layout. |
 | `tests/` | Acceptance-rule tests, balance tests and the scripted player. |
 | `scripts/deploy.sh` | Builds and publishes the game to the `gh-pages` branch. |

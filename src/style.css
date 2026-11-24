@@ -368,3 +368,19 @@ body[data-menu] #app { filter: saturate(0.85); }
 .menu-buttons button small { font-size: 12.5px; font-style: italic; opacity: 0.75; }
 .menu .menu-back { text-align: center; margin: 16px 0 0; }
 .menu .menu-back button { min-width: 160px; min-height: 44px; }
+
+/* Rewards page */
+.menu-rewards { max-width: 980px; }
+.menu .purse { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 20px; margin: 8px 0 4px; }
+.menu .purse small { font-size: 13px; color: var(--ink-soft); }
+.menu .seal { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #e8c766, #a87c2a 70%); border: 1.5px solid var(--ink); box-shadow: inset 0 0 0 3px rgba(255, 240, 200, 0.35); }
+.rewards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 12px; margin-top: 10px; }
+.reward-card { display: flex; gap: 12px; align-items: flex-start; border: 1px solid rgba(58, 34, 18, 0.45); border-radius: 4px; background: rgba(255, 250, 238, 0.45); padding: 10px 12px; }
+.reward-card.owned { border-color: var(--gold); background: rgba(240, 220, 160, 0.25); }
+.reward-card .rico { flex: none; width: 64px; height: 64px; }
+.reward-card h3 { margin: 0 0 2px; font-style: italic; font-size: 18px; }
+.reward-card p { margin: 0 0 8px; }
+.reward-card .kicker { font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 2px; }
+.reward-card button { min-height: 40px; display: inline-flex; flex-direction: column; align-items: center; padding: 4px 12px; }
+.reward-card button small { font-size: 11.5px; font-style: italic; opacity: 0.8; }
+.menu-flash { text-align: center; font-style: italic; margin: 10px 0 0; color: #6a4c12; }

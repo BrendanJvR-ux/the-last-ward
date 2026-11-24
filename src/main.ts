@@ -11,12 +11,16 @@ import {
 } from './map';
 import { render, renderVictory, towerIconCanvas, enemyIconCanvas, levelThumbnail, type ViewState } from './render';
 import { unlockAudio, playDoubleHorn, isMuted, setMuted } from './audio';
+import { REWARDS, EARN, seals, sealsEarned, owns, isActive, redeem, toggle, activePerks, award, awardWin, rewardIcon, resetRewards, type RewardId } from './rewards';
 
 // ── State ───────────────────────────────────────────────────────────────────
 /** Which sheet is open, and whether the main menu is showing over it. */
 let currentLevel: LevelId = 'fields';
 let menuOpen = true;
-let s: GameState = newGame(currentLevel);
+let s: GameState = newGame(currentLevel, activePerks());
+/** Waves already paid out in seals this game, and whether the win has been. */
+let paidWaves = 0;
+let paidWin = false;
 const view: ViewState = {
   hoverFoundation: null,
   selectedFoundation: null,
@@ -254,6 +258,15 @@ function handleAction(e: Event) {
     case 'menuRewards': menuView = 'rewards'; renderMenu(); return;
     case 'menuExit': menuView = 'exit'; renderMenu(); return;
     case 'menuBack': menuView = 'title'; renderMenu(); return;
+    case 'redeem': {
+      const r = redeem(id as RewardId);
+      renderMenu();
+      const name = REWARDS.find((x) => x.id === id)!.name;
+      if (r.ok) { applyLooks(); flashMenu(`${name} is yours.`); } else flashMenu(r.reason);
+      (menuEl.querySelector(`[data-act="toggleReward"][data-id="${id}"]`) as HTMLButtonElement | null)?.focus({ preventScroll: true });
+      return;
+    }
+    case 'toggleReward': toggle(id as RewardId); applyLooks(); renderMenu(); (menuEl.querySelector(`[data-id="${id}"]`) as HTMLButtonElement | null)?.focus({ preventScroll: true }); return;
     case 'ribbon': ribbonFolded = !ribbonFolded; break;
   }
   lastSig = '';
@@ -289,8 +302,9 @@ function togglePause() {
 function restart() {
   view.inspectId = null;
   const speed = s.speed;
-  s = newGame(currentLevel);
+  s = newGame(currentLevel, activePerks());
   s.speed = speed;
+  paidWaves = 0; paidWin = false;
   bindConfirm = null;
   grantType = BALANCE.towerTypes[0];
   view.bindPreview = null;
@@ -433,7 +447,7 @@ function renderOverlay() {
     overlay.hidden = false;
     overlay.className = 'victory';
     const bound = s.towers.filter((t) => t.bound).length;
-    const stats = `<p class="sub">Castle ${s.castleHp}/${BALANCE.castleHp} · ${s.kills} foes turned back · ${bound} tower${bound === 1 ? '' : 's'} bound in gold</p>`;
+    const stats = `<p class="sub">Castle ${s.castleHp}/${s.castleMax} · ${s.kills} foes turned back · ${bound} tower${bound === 1 ? '' : 's'} bound in gold</p>`;
     overlay.innerHTML = s.level === 'fields'
       ? `<div class="plate"><p class="kicker">Level 1 · Gate Defence</p><h2>The gate is held</h2><p class="caption">“The levy broke on the roads, and the dogs on the bridge. But the old wizard turned the page: the outer wall had already fallen.”</p>${stats}<button data-act="play" data-level="courtyard" class="primary">On to Level 2: the Castle Courtyard</button> <button data-act="restart">Read it again</button></div>`
       : `<div class="plate"><p class="kicker">The End</p><h2>Defence of Goosebridge Castle</h2><p class="caption">“And so Goosebridge Castle held, and the old wizard let the ink dry on the final page.”</p>${stats}<button data-act="menu" class="primary">Back to the menu</button> <button data-act="restart">Read it again</button></div>`;
@@ -455,8 +469,8 @@ function renderOverlay() {
 }
 
 function renderHud() {
-  $('hp').textContent = `${s.castleHp}/${BALANCE.castleHp}`;
-  ($('hpbar') as HTMLElement).style.width = `${(s.castleHp / BALANCE.castleHp) * 100}%`;
+  $('hp').textContent = `${s.castleHp}/${s.castleMax}`;
+  ($('hpbar') as HTMLElement).style.width = `${(s.castleHp / s.castleMax) * 100}%`;
   $('wave').textContent = `${Math.min(s.wave, TOTAL_WAVES)}/${TOTAL_WAVES}`;
   $('gold').textContent = String(s.gold);
   $('leaves').innerHTML = s.phase === 'victory' || s.phase === 'defeat' ? `${s.leaves}`
@@ -582,7 +596,7 @@ function renderMenu() {
       <nav class="menu-buttons" aria-label="Main menu">
         <button data-act="menuStart" class="primary">Start</button>
         <button data-act="closeMenu" ${canResume ? '' : 'disabled'}>Resume${canResume ? `<small>${esc(here.sub)}: ${esc(here.name)}, wave ${s.wave}</small>` : '<small>no game in progress</small>'}</button>
-        <button data-act="menuRewards">Redeem rewards</button>
+        <button data-act="menuRewards">Redeem rewards<small>${seals()} Wizard's Seal${seals() === 1 ? '' : 's'}</small></button>
         <button data-act="menuExit">Exit</button>
       </nav>`;
   } else if (menuView === 'levels') {
@@ -590,15 +604,25 @@ function renderMenu() {
       const best = readRecord(L.id);
       const towers = LEVEL_BALANCE[L.id].towerTypes;
       return `<article class="level-card"><div class="thumb" data-thumb="${L.id}"></div><div class="lc-body">
-        <p class="kicker">${esc(L.sub)}${best !== null ? ` · <span class="won">held, castle ${best}/${BALANCE.castleHp}</span>` : ''}</p>
+        <p class="kicker">${esc(L.sub)}${best !== null ? ` · <span class="won">held, castle health ${best}</span>` : ''}</p>
         <h2>${esc(L.name)}</h2><p>${esc(L.blurb)}</p>
         <div class="lc-towers">${towers.map((ty) => `<span class="ico" data-tower="${ty}" title="${esc(BALANCE.towers[ty].name)}"></span>`).join('')}</div>
         <button data-act="play" data-level="${L.id}" class="primary">${s.level === L.id && canResume ? 'Start this level again' : `Begin ${esc(L.sub)}`}</button></div></article>`;
     }).join('');
     body = `<header><h1>Choose a level</h1></header><div class="levels">${cards}</div><p class="menu-back"><button data-act="menuBack">Back</button></p>`;
   } else if (menuView === 'rewards') {
-    body = `<header><h1>Redeem rewards</h1><p class="lede">Rewards are coming soon. Gilded leaves and trophies you earn on the battlefield will be redeemable here.</p></header>
-      <p class="menu-back"><button data-act="menuBack" class="primary">Back</button></p>`;
+    const cards = REWARDS.map((r) => {
+      const have = owns(r.id), on = isActive(r.id), afford = seals() >= r.cost;
+      const btn = have
+        ? `<button data-act="toggleReward" data-id="${r.id}" aria-pressed="${on}" class="${on ? 'gild' : ''}">${on ? 'In use ✓' : 'Switched off'}<small>${on ? 'click to switch off' : 'click to use it again'}</small></button>`
+        : `<button data-act="redeem" data-id="${r.id}" class="primary" ${afford ? '' : 'disabled'}>Redeem for ${r.cost} seals${afford ? '' : `<small>you need ${r.cost - seals()} more</small>`}</button>`;
+      return `<article class="reward-card ${have ? 'owned' : ''}"><span class="rico" data-reward="${r.id}"></span><div><p class="kicker">${r.kind === 'perk' ? 'Perk' : 'Look'}${have ? ' · yours' : ` · ${r.cost} seals`}</p><h3>${esc(r.name)}</h3><p>${esc(r.text)}</p>${btn}</div></article>`;
+    }).join('');
+    body = `<header><h1>Redeem rewards</h1>
+      <p class="purse"><span class="seal" aria-hidden="true"></span><b>${seals()}</b> Wizard's Seal${seals() === 1 ? '' : 's'} to spend <small>(${sealsEarned()} earned in all)</small></p>
+      <p class="lede">Earn seals by holding the line: ${EARN.perWave} for every wave survived, ${EARN.levelWon} for winning a level, ${EARN.firstWin} more the first time you win it, and ${EARN.flawless} more if the castle takes no harm. Perks apply from the next level you start; owned rewards can be switched off and on.</p></header>
+      <div class="rewards">${cards}</div>
+      <p class="menu-back"><button data-act="menuBack">Back</button></p>`;
   } else {
     body = `<header><h1>The book is closed</h1><p class="lede">The wizard sets down his quill. You can close this tab now${canResume ? '; your game will wait on its page until you do' : ''}.</p></header>
       <p class="menu-back"><button data-act="menuBack" class="primary">Open the book again</button></p>`;
@@ -610,7 +634,8 @@ function renderMenu() {
     c.getContext('2d')!.drawImage(src, 0, 0); el.replaceChildren(c);
   });
   hydrateIcons(menuEl);
-  (menuEl.querySelector('button.primary:not([disabled])') as HTMLButtonElement | null)?.focus({ preventScroll: true });
+  menuEl.querySelectorAll<HTMLElement>('[data-reward]').forEach((el) => el.replaceChildren(rewardIcon(el.dataset.reward as RewardId, 64)));
+  if (menuView !== 'rewards') (menuEl.querySelector('button.primary:not([disabled])') as HTMLButtonElement | null)?.focus({ preventScroll: true });
 }
 function openMenu() {
   menuOpen = true; menuEl.hidden = false; document.body.dataset.menu = '1';
@@ -638,7 +663,34 @@ let ribbonFolded = false;
 let ribbonPhase = '';
 let overlaySig = '';
 
+/** Redeemed looks show at once; perks wait for the next game. */
+function applyLooks() { view.owl = isActive('owl'); view.crimson = isActive('crimson'); }
+applyLooks();
+
+/** A short line under the menu's buttons after redeeming. */
+function flashMenu(text: string) {
+  const p = document.createElement('p'); p.className = 'menu-flash'; p.setAttribute('role', 'status'); p.textContent = text;
+  menuEl.querySelector('.menu-panel')?.appendChild(p);
+}
+
+/** Pay seals for waves held and for the win, once each per game. */
+function payOut() {
+  const held = s.phase === 'victory' ? TOTAL_WAVES : s.wave - 1;
+  if (held > paidWaves && s.phase !== 'defeat') {
+    const n = (held - paidWaves) * EARN.perWave;
+    paidWaves = held;
+    award(n);
+    if (s.phase !== 'victory') toast(s, `+${n} Wizard's Seal${n === 1 ? '' : 's'} for holding the wave.`, 'gold');
+  }
+  if (s.phase === 'victory' && !paidWin) {
+    paidWin = true;
+    const n = awardWin(s.level, s.castleHp === s.castleMax) + EARN.perWave;
+    toast(s, `+${n} Wizard's Seals for holding the level. Spend them in the menu under Redeem rewards.`, 'gold');
+  }
+}
+
 function refresh(now: number) {
+  payOut();
   const sig = signature();
   if (sig !== lastSig) {
     lastSig = sig;
@@ -683,5 +735,7 @@ Object.assign(window, {
   },
   __refresh: () => refresh(performance.now()),
   __level: (id: LevelId) => startLevel(id),
+  __seals: (n: number) => { award(n); if (menuOpen) renderMenu(); return seals(); },
+  __resetRewards: () => { resetRewards(); applyLooks(); if (menuOpen) renderMenu(); },
 });
 

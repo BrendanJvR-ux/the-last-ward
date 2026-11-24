@@ -100,6 +100,8 @@ export interface GameState {
   speed: number;
   wave: number;
   castleHp: number;
+  /** Castle health at the start (more with the Stout Walls reward). */
+  castleMax: number;
   gold: number;
   leaves: number;
   towers: Tower[];
@@ -142,12 +144,16 @@ export function setLevel(level: LevelId) {
   BRIDGE_S = LANES.king.cum[LANES.king.pts.indexOf(BRIDGE)];
 }
 
-export function newGame(level: LevelId = 'fields'): GameState {
+/** Bonuses from redeemed rewards, applied at the start of a game. */
+export interface Perks { gold?: number; leaves?: number; castle?: number }
+
+export function newGame(level: LevelId = 'fields', perks: Perks = {}): GameState {
   setLevel(level);
+  const castle = BALANCE.castleHp + (perks.castle ?? 0);
   const s: GameState = {
     level,
     phase: 'prep', paused: false, speed: 1, wave: 1,
-    castleHp: BALANCE.castleHp, gold: BALANCE.startGold, leaves: BALANCE.startLeaves,
+    castleHp: castle, castleMax: castle, gold: BALANCE.startGold + (perks.gold ?? 0), leaves: BALANCE.startLeaves + (perks.leaves ?? 0),
     towers: [], traces: [], pulsesLeft: 0, pendingGrant: false, castleCd: 0,
     enemies: [], projectiles: [], hedges: [], fires: [], pools: [], rallies: [], rings: [], flights: [], spawns: [],
     warnings: [], stones: [], fallen: [], fading: [], toasts: [], waveTime: 0, time: 0, nextId: 1, kills: 0, leaked: 0, leakLog: [], resetBanner: 0,
