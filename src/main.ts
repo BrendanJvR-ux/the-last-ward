@@ -148,6 +148,8 @@ canvas.addEventListener('pointermove', (e) => {
   const f = hitFoundation(p);
   view.hoverFoundation = f;
   const t = f ? towerAt(s, f) : undefined;
+  if (previewable(t)) previewFrom('canvas', t!.id);
+  else if (previewSource === 'canvas') previewFrom(null, null);
   canvas.style.cursor =
     s.phase === 'prep' && (dist(p, INKWELL) < 78) ? 'grab'
       : s.phase === 'combat' && t && pulseCheck(s, t.id).ok ? 'pointer'
@@ -177,7 +179,7 @@ canvas.addEventListener('pointerup', (e) => {
   downAt = null;
 });
 canvas.addEventListener('pointercancel', () => { cancelGesture(); downAt = null; });
-canvas.addEventListener('pointerleave', () => { if (!view.gesture.active) view.hoverFoundation = null; });
+canvas.addEventListener('pointerleave', () => { if (!view.gesture.active) view.hoverFoundation = null; if (previewSource === 'canvas') previewFrom(null, null); });
 
 // ── Popover (build / tower info) ────────────────────────────────────────────
 function openPopover(f: string) {
@@ -275,18 +277,43 @@ function handleAction(e: Event) {
   lastSig = '';
 }
 margin.addEventListener('click', handleAction);
+margin.addEventListener('toggle', (e) => {
+  const d = e.target as HTMLDetailsElement;
+  const k = d.dataset?.fold as 'build' | 'bind' | undefined;
+  if (k) foldOpen[k] = d.open;
+}, true);
 overlay.addEventListener('click', handleAction);
 ribbon.addEventListener('click', handleAction);
 margin.addEventListener('pointerover', (e) => {
   const el = (e.target as HTMLElement).closest('[data-bindf]') as HTMLElement | null;
   if (!bindConfirm) view.bindPreview = el ? el.dataset.bindf! : null;
+  const pulse = (e.target as HTMLElement).closest('[data-act="pulse"]') as HTMLElement | null;
+  if (pulse) previewFrom('margin', pulse.dataset.id!);
+  else if (previewSource === 'margin' && !(e.target as HTMLElement).closest('.tower-row')) previewFrom(null, null);
 });
-margin.addEventListener('pointerout', () => { if (!bindConfirm) view.bindPreview = null; });
+margin.addEventListener('pointerout', (e) => {
+  if (!bindConfirm) view.bindPreview = null;
+  const to = (e as PointerEvent).relatedTarget as HTMLElement | null;
+  if (previewSource === 'margin' && !to?.closest?.('[data-act="pulse"]') && document.activeElement?.getAttribute('data-act') !== 'pulse') previewFrom(null, null);
+});
 margin.addEventListener('focusin', (e) => {
   const el = (e.target as HTMLElement).closest('[data-bindf]') as HTMLElement | null;
   if (el && !bindConfirm) view.bindPreview = el.dataset.bindf!;
+  const pulse = (e.target as HTMLElement).closest('[data-act="pulse"]') as HTMLElement | null;
+  if (pulse) previewFrom('margin', pulse.dataset.id!);
 });
-margin.addEventListener('focusout', () => { if (!bindConfirm) view.bindPreview = null; });
+margin.addEventListener('focusout', () => { if (!bindConfirm) view.bindPreview = null; if (previewSource === 'margin') previewFrom(null, null); });
+
+/** Who is asking for a pulse preview: a Pulse control in the margin, or the pointer over a tower on the map. */
+let previewSource: 'margin' | 'canvas' | null = null;
+function previewFrom(src: 'margin' | 'canvas' | null, towerId: string | null) {
+  previewSource = towerId ? src : null;
+  view.pulsePreview = towerId;
+}
+/** A tower whose pulse can be previewed: prepared (traced) or bound, and not yet spent this wave. */
+function previewable(t: GameState['towers'][number] | undefined) {
+  return !!t && (t.traced || t.bound) && !t.committed && (s.phase === 'prep' || s.phase === 'combat');
+}
 
 $('btnPause').addEventListener('click', togglePause);
 $('btnSpeed').addEventListener('click', () => { s.speed = s.speed === 1 ? 2 : 1; });
@@ -367,10 +394,34 @@ function towerRow(t: GameState['towers'][number], mode: 'prep' | 'combat'): stri
       : `<button data-act="trace" data-id="${t.id}" aria-pressed="false" ${full || s.pendingGrant ? 'disabled' : ''} title="Prepare without dragging">Trace</button>`;
   } else {
     const c = pulseCheck(s, t.id);
-    btn = t.committed ? `<button disabled class="spent">Pulse sent</button>` : `<button data-act="pulse" data-id="${t.id}" class="pulse ${t.bound ? 'gild' : ''}" ${c.ok ? '' : 'disabled'}>${t.bound ? 'Free pulse' : 'Pulse'}</button>`;
+    btn = t.committed ? `<button disabled class="spent">Pulse sent<small>still attacking</small></button>`
+      : !t.bound && s.pulsesLeft <= 0 ? `<button disabled class="spent dry" title="The shared pulse was spent on another tower">No pulse left<small>still attacking</small></button>`
+        : `<button data-act="pulse" data-id="${t.id}" class="pulse ${t.bound ? 'gild' : ''}" ${c.ok ? '' : 'disabled'} aria-describedby="pulse-help">${t.bound ? 'Free pulse' : 'Pulse'}</button>`;
   }
   return `<li class="tower-row ${t.traced ? 'is-traced' : ''} ${t.bound ? 'is-bound' : ''}"><span class="ico" data-tower="${t.type}"></span><span class="tw"><b>${esc(tname(t.type))}</b><small>${esc(fname(t.foundation))}</small>${badges}</span>${btn}</li>`;
 }
+
+/** In battle: say plainly whom the shared pulse is for, and once spent, what that means for the others. */
+function sharedNote(): string {
+  const r = rule(s);
+  const prepared = s.towers.filter((t) => t.traced);
+  const names = prepared.map((t) => tname(t.type));
+  if (s.pulsesLeft > 0) {
+    if (prepared.length < 2) return '';
+    const list = names.length === 2 ? `${names[0]} and ${names[1]}` : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+    return `<p class="coach">${r.pulses === 1 ? `Your ${list} share <b>one pulse</b> this wave.` : `Your ${list} share <b>${s.pulsesLeft} pulse${s.pulsesLeft === 1 ? '' : 's'}</b> this wave.`} Fire now, wait for a crowd, or save it for the other.</p>`;
+  }
+  const used = prepared.filter((t) => t.committed).map((t) => tname(t.type));
+  const dry = prepared.filter((t) => !t.committed).map((t) => tname(t.type));
+  if (!used.length) return '';
+  return `<p class="coach spent">The shared pulse went to the <b>${used.join(' and the ')}</b>.${dry.length ? ` The ${dry.join(' and the ')}'s thread is dry for this wave.` : ''} Every tower keeps attacking on its own.</p>`;
+}
+
+/** First-time help: Level 1, wave 1, before it starts. */
+const onboarding = () => s.level === 'fields' && s.wave === 1;
+/** Build and Bind are folded away during the first preparation; the player may open them. */
+let foldOpen = { build: false, bind: false };
+let foldWave = -1;
 
 /** Towers that can be pulsed this wave, gilded first: the order the number keys use. */
 function pulseable() { return [...s.towers.filter((t) => t.bound), ...s.towers.filter((t) => t.traced)]; }
@@ -391,17 +442,20 @@ function renderMargin() {
         <div class="flist">${emptyFoundations(s).map((f) => `<button data-act="grant" data-f="${f}" data-type="${grantType}">${esc(fname(f))}</button>`).join('')}</div></div>`;
     }
     // Threads
+    const coach = onboarding();
+    if (foldWave !== s.wave) { foldWave = s.wave; foldOpen = { build: false, bind: false }; }
     h += `<section class="card threads"><h3>Threads <span class="need">${s.traces.length} of ${r.traces}</span></h3>
-      <p class="hint">Press the <b>inkwell</b> beside the castle, follow a leyline and release on a tower. Each thread prepares one tower for the next wave only.</p>
+      ${coach ? '<p class="coach lead">All towers attack. Trace two. During the wave, choose one to pulse.</p>' : ''}
+      <p class="hint">Press the <b>inkwell</b> beside the castle, follow a leyline and release on a tower${coach ? ', or use the <b>Trace</b> buttons below' : ''}. Each thread prepares one tower for the next wave only.</p>
       <ul class="towers">${s.towers.map((t) => towerRow(t, 'prep')).join('')}</ul>
       <div class="row"><button data-act="undo" ${s.traces.length ? '' : 'disabled'}>Undo last</button><button data-act="clear" ${s.traces.length ? '' : 'disabled'}>Clear all</button></div></section>`;
     // Build
     const empties = emptyFoundations(s);
-    h += `<section class="card"><h3>Build <span class="need">${s.gold} gold</span></h3>
+    h += (coach ? `<details class="card fold" data-fold="build" ${foldOpen.build ? 'open' : ''}><summary><h3>Build <span class="need">${s.gold} gold</span></h3></summary>` : `<section class="card"><h3>Build <span class="need">${s.gold} gold</span></h3>`) + `
       <p class="hint">Click an empty foundation on the map, or pick one here. ${BALANCE.towerTypes.map((ty) => `${esc(tname(ty).split(' ')[0])} ${BALANCE.towers[ty].cost}`).join(' · ')}.</p>
-      <div class="flist">${empties.map((f) => `<button data-act="select" data-f="${f}" ${s.pendingGrant ? 'disabled' : ''}>${esc(fname(f))}</button>`).join('') || '<em>Every foundation is built.</em>'}</div></section>`;
+      <div class="flist">${empties.map((f) => `<button data-act="select" data-f="${f}" ${s.pendingGrant ? 'disabled' : ''}>${esc(fname(f))}</button>`).join('') || '<em>Every foundation is built.</em>'}</div>${coach ? '</details>' : '</section>'}`;
     // Bind
-    h += `<section class="card bind"><h3>Bind a tower <span class="need gilt">${s.leaves} / ${BALANCE.bindCost} leaves</span></h3>`;
+    h += coach ? `<details class="card bind fold" data-fold="bind" ${foldOpen.bind ? 'open' : ''}><summary><h3>Bind a tower <span class="need gilt">${s.leaves} / ${BALANCE.bindCost} leaves</span></h3></summary>` : `<section class="card bind"><h3>Bind a tower <span class="need gilt">${s.leaves} / ${BALANCE.bindCost} leaves</span></h3>`;
     const confirmT = bindConfirm ? towerById(s, bindConfirm) : undefined;
     if (confirmT) {
       h += `<div class="confirm"><p><b>Bind the ${esc(tname(confirmT.type))} at ${esc(fname(confirmT.foundation))} in gold?</b></p>
@@ -419,14 +473,15 @@ function renderMargin() {
           return `<button data-act="bindAsk" data-id="${t.id}" data-bindf="${t.foundation}" ${c.ok ? '' : 'disabled'} title="${esc(c.reason)}"><b>${esc(tname(t.type))}</b><small>${esc(fname(t.foundation))}</small></button>`;
         }).join('')}${s.towers.filter((t) => t.bound).map((t) => `<button disabled class="bound"><b>${esc(tname(t.type))}</b><small>${esc(fname(t.foundation))} · bound in gold</small></button>`).join('')}</div>`;
     }
-    h += `</section>`;
+    h += coach ? '</details>' : '</section>';
     const c = canStartWave(s);
     h += `<div class="start"><button data-act="start" class="primary" ${c.ok ? '' : 'disabled'}>Start wave ${s.wave}</button><p class="sub">${c.ok ? 'Building, tracing and binding lock once the wave begins.' : esc(c.reason)}</p></div>`;
   } else if (s.phase === 'combat') {
     h += `<h2><small>In battle</small>Wave ${s.wave}: ${esc(def.title)}</h2>
       <section class="card pulses"><h3>Pulses <span class="need">${s.pulsesLeft} of ${r.pulses}</span></h3>
       <div class="beads" aria-hidden="true">${Array.from({ length: r.pulses }, (_, i) => `<i class="${i < s.pulsesLeft ? 'on' : ''}"></i>`).join('')}</div>
-      <p class="hint">Click a tower with a wet ink drop (or press its number) to send a pulse from the inkwell. Shared charges never recharge and vanish at wave end. Gilded towers fire their own free pulse. Every tower keeps attacking on its own.</p>
+      ${sharedNote()}
+      <p class="hint" id="pulse-help">Hover or focus a Pulse button (or the tower on the map) to preview what it would do; nothing is spent until you click. Click a tower with a wet ink drop, or press its number, to send the pulse. Shared charges never recharge and vanish at wave end. Gilded towers fire their own free pulse. Every tower keeps attacking on its own.</p>
       <ul class="towers">${pulseable().map((t, i) => towerRow(t, 'combat').replace('<span class="ico"', `<kbd>${i + 1}</kbd><span class="ico"`)).join('')}</ul></section>
       <section class="card"><h3>Unthreaded towers</h3><ul class="towers dim">${s.towers.filter((t) => !t.traced && !t.bound).map((t) => `<li class="tower-row"><span class="ico" data-tower="${t.type}"></span><span class="tw"><b>${esc(tname(t.type))}</b><small>${esc(fname(t.foundation))} · attacking</small></span></li>`).join('') || '<li class="sub">None</li>'}</ul></section>`;
   }
@@ -739,6 +794,8 @@ function noteRares() {
 }
 
 function refresh(now: number) {
+  view.coachTrace = onboarding() && s.phase === 'prep';
+  if (view.pulsePreview && !previewable(towerById(s, view.pulsePreview))) previewFrom(null, null);
   noteRares();
   payOut();
   const sig = signature();

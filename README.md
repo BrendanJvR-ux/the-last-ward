@@ -58,6 +58,14 @@ The castle defends itself too: a weak, short-range volley at anything that reach
 
 Every tower attacks on its own, traced or not. Shared pulse charges never recharge during a wave and never carry over; each tower fires at most once per wave. Every ink thread fades at the end of every wave; gold stays.
 
+### Learning it in the first wave
+
+Level 1, wave 1 teaches the core rule through play. The margin opens with *"All towers attack. Trace two. During the wave, choose one to pulse."* above the towers, the towers still to be traced are ringed on the map, and the Build and Bind sections start folded (they open with a click; from wave 2 the usual panels return). Both freehand tracing and the Trace buttons work.
+
+**Previewing a pulse is free.** Hover or keyboard-focus a tower's Pulse button, or hover the tower on the map, and its pulse is previewed: the tower is ringed, its area (a circle, a stretch of road, the spot a hedge would grow, the crowd a mangonel would aim at, or the towers a banner would rally) is marked in a light ink line, and the enemies it could affect are outlined: a solid ring for those affected now, a dashed ring for those it should catch by the time the ink arrives or the effect has run. A short label says what it would do. Nothing is spent, nothing pauses, and clicks, taps and number keys work as before.
+
+**Every pulse reports what it did**, beside its tower, from what actually happened: "3 enemies knocked back and dazed", "2 enemies set burning", "No enemies in range", "5 towers shoot twice as fast for 8 s". Lasting effects add a closing line when they end ("The hedge held 9 enemies", "The fire burned 4 enemies"). When the shared charge is spent, the label says so, a dashed thread runs to the other prepared towers with "Thread dry: the shared pulse is spent · still attacking on its own", their ink drop dries, and the margin explains that every tower keeps attacking.
+
 ## Run it locally
 
 Needs Node.js 20 or newer.
@@ -159,5 +167,5 @@ Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its 
 | `src/rewards.ts` | Wizard's Seals: earning, the five rewards, what they change, and their little ink pictures (saved in localStorage). |
 | `src/main.ts` | The main menu and rewards screen, input (the trace gesture, pulses), the margin, HUD, ribbon bookmark, popovers and overlays. |
 | `src/style.css` | Layout and look, including the phone layout. |
-| `tests/` | Acceptance-rule tests, balance tests and the scripted player. |
+| `tests/` | Acceptance-rule tests, balance tests and the scripted player; `pulse.test.ts` covers free previews, one charge per shared pulse, result wording and attacks carrying on. |
 | `scripts/deploy.sh` | Builds and publishes the game to the `gh-pages` branch. |

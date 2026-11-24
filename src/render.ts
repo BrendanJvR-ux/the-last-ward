@@ -1,7 +1,7 @@
 // Live drawing on top of the ink sheet.
 import { BALANCE, phaseRule } from './balance';
 import { MAP_W, MAP_H, LANES, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, LEVEL, routePolyline, pointAt, type Vec } from './map';
-import { type GameState, type Tower, enemyPos, posOf, towerAt, flightPoint, isRare } from './game';
+import { type GameState, type Tower, enemyPos, posOf, towerAt, towerById, flightPoint, isRare, pulsePreview, type PulsePreview } from './game';
 import type { LevelId } from './balance';
 import { owl } from './rewards';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
@@ -29,6 +29,10 @@ export interface ViewState {
   /** Redeemed looks: an owl beside the wizard, crimson ink for threads. */
   owl?: boolean;
   crimson?: boolean;
+  /** Tower whose pulse is being previewed (hovering or focusing its Pulse control, or the tower). */
+  pulsePreview?: string | null;
+  /** First-time help: ring the towers still to be traced. */
+  coachTrace?: boolean;
 }
 
 const INK = '#1e1008';
@@ -158,6 +162,11 @@ function drawTowerState(ctx: CanvasRenderingContext2D, s: GameState, t: Tower, t
     if (t.committed) {
       ctx.fillStyle = '#4a3626'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#e8dcbc'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-1, 4); ctx.lineTo(5, -4); ctx.stroke();
+    } else if (s.phase === 'combat' && s.pulsesLeft === 0) {
+      // the shared charge went to another tower: this thread is dry for the wave (the tower still attacks)
+      ctx.fillStyle = 'rgba(120,98,74,0.55)'; ctx.strokeStyle = 'rgba(58,34,18,0.7)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, -13); ctx.quadraticCurveTo(9, 0, 7, 5); ctx.arc(0, 4, 7.2, 0.15, Math.PI - 0.15); ctx.quadraticCurveTo(-9, 0, 0, -13); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-9, 9); ctx.lineTo(9, -9); ctx.stroke();
     } else {
       const k = ready ? 1 + 0.15 * Math.sin(time * 7) : 1;
       ctx.scale(k, k);
@@ -369,6 +378,12 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
     ctx.save(); ctx.fillStyle = threadInk;
     ctx.beginPath(); ctx.arc(end.x, end.y, 7 + Math.sin(time * 10), 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(30,16,8,0.2)'; ctx.beginPath(); ctx.arc(end.x, end.y, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  if (v.coachTrace && s.phase === 'prep' && s.traces.length < phaseRule(s.wave).traces) {
+    // first preparation: a slow dashed ring round each tower that can still be traced
+    ctx.save(); ctx.strokeStyle = 'rgba(58,34,18,0.55)'; ctx.lineWidth = 1.6; ctx.setLineDash([5, 6]); ctx.lineDashOffset = -time * 12;
+    for (const t of s.towers) if (!t.traced && !t.bound) { const p = posOf(t); ctx.beginPath(); ctx.ellipse(p.x, p.y, 52, 24, 0, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
   }
   if (s.phase === 'prep' && !s.pendingGrant && s.traces.length < phaseRule(s.wave).traces) {
@@ -584,6 +599,9 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   }
 
   drawAmbience(ctx, time);
+  if (v.pulsePreview) { const pv = pulsePreview(s, v.pulsePreview); if (pv) drawPulsePreview(ctx, s, pv, time); }
+  drawSharedSpend(ctx, s);
+  drawPulseResults(ctx, s);
   drawHoundWarnings(ctx, s, time);
   if (LEVEL === 'fields') drawGoose(ctx, BRIDGE.x + 26, BRIDGE.y - 40, 0.8, 1);
 }
@@ -615,4 +633,131 @@ export function renderVictory(ctx: CanvasRenderingContext2D, s: GameState, time:
   if (showOwl) owl(ctx, INKWELL.x - 40, INKWELL.y + 26, time);
   drawGoose(ctx, 1380, 520, 1.6, -1);
   drawGoose(ctx, 1330, 540, 1.4, 1);
+}
+
+// ── Pulse preview and results ───────────────────────────────────────────────
+
+const PV_INK = 'rgba(58,34,18,0.78)';
+
+/** A paper label in ink, with an optional second line, placed beside a point and kept on the sheet. */
+function inkChip(ctx: CanvasRenderingContext2D, x: number, y: number, text: string, note: string | undefined, alpha: number, side: 1 | -1, size = 15, maxW = 330) {
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.font = `italic 600 ${size}px ${SERIF}`;
+  const lines = wrap(ctx, text, maxW);
+  ctx.font = `italic ${size - 3}px ${SERIF}`;
+  const notes = note ? wrap(ctx, note, maxW) : [];
+  ctx.font = `italic 600 ${size}px ${SERIF}`;
+  let w = Math.max(...lines.map((l) => ctx.measureText(l).width));
+  ctx.font = `italic ${size - 3}px ${SERIF}`;
+  for (const n of notes) w = Math.max(w, ctx.measureText(n).width);
+  const h = lines.length * (size + 3) + notes.length * (size) + 10;
+  let bx = side > 0 ? x : x - w - 16;
+  bx = Math.max(24, Math.min(MAP_W - w - 40, bx));
+  const by = Math.max(24, Math.min(MAP_H - h - 24, y - h / 2));
+  ctx.fillStyle = 'rgba(239,233,218,0.95)'; roundRect(ctx, bx, by, w + 16, h, 4); ctx.fill();
+  ctx.strokeStyle = PV_INK; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.textAlign = 'left'; ctx.fillStyle = '#2a1a0e';
+  ctx.font = `italic 600 ${size}px ${SERIF}`;
+  lines.forEach((l, i) => ctx.fillText(l, bx + 8, by + 5 + (i + 1) * (size + 3) - 4));
+  ctx.font = `italic ${size - 3}px ${SERIF}`; ctx.fillStyle = 'rgba(42,26,14,0.75)';
+  notes.forEach((l, i) => ctx.fillText(l, bx + 8, by + 5 + lines.length * (size + 3) + (i + 1) * size - 3));
+  ctx.restore();
+}
+
+function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const words = text.split(' '), out: string[] = [];
+  let line = '';
+  for (const w of words) { const t = line ? `${line} ${w}` : w; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
+  if (line) out.push(line);
+  return out;
+}
+
+/** An ink outline round an enemy: solid if affected now, dashed if only once the ink lands. */
+function outlineEnemy(ctx: CanvasRenderingContext2D, s: GameState, id: number, dashed: boolean) {
+  const e = s.enemies.find((x) => x.id === id);
+  if (!e) return;
+  const p = enemyPos(e);
+  const rx = e.type === 'cairn' ? 46 : 18, ry = e.type === 'cairn' ? 62 : e.type === 'hound' ? 22 : 30;
+  ctx.save(); ctx.strokeStyle = PV_INK; ctx.lineWidth = dashed ? 1.2 : 1.6; ctx.setLineDash(dashed ? [3, 4] : []);
+  ctx.beginPath(); ctx.ellipse(p.x, p.y - ry * 0.9, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+
+function drawPulsePreview(ctx: CanvasRenderingContext2D, s: GameState, pv: PulsePreview, time: number) {
+  const p = pv.centre;
+  ctx.save();
+  // the tower itself, ringed
+  ctx.strokeStyle = PV_INK; ctx.lineWidth = 2; ctx.setLineDash([8, 5]); ctx.lineDashOffset = -time * 14;
+  ctx.beginPath(); ctx.ellipse(p.x, p.y, 54, 25, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+  if (pv.radius) {
+    // the reach of the pulse: a faint hatched disc with a dashed edge
+    ctx.fillStyle = 'rgba(58,34,18,0.06)'; ctx.beginPath(); ctx.arc(p.x, p.y, pv.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = PV_INK; ctx.lineWidth = 1.4; ctx.setLineDash([7, 6]); ctx.beginPath(); ctx.arc(p.x, p.y, pv.radius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (pv.road) {
+    // the stretch of road that would burn or flood
+    ctx.lineCap = 'round';
+    ctx.fillStyle = 'rgba(58,34,18,0.12)';
+    for (let i = 0; i < pv.road.length; i += 1) { const q = pv.road[i]; ctx.beginPath(); ctx.arc(q.x, q.y, 18, 0, Math.PI * 2); ctx.fill(); }
+    ctx.strokeStyle = PV_INK; ctx.lineWidth = 1.2; ctx.setLineDash([2, 5]);
+    for (let i = 1; i < pv.road.length; i++) { const a = pv.road[i - 1], b = pv.road[i]; if (Math.hypot(a.x - b.x, a.y - b.y) < 20) { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); } }
+    ctx.setLineDash([]);
+  }
+  if (pv.hedge) {
+    // where the hedge would grow: a dashed bar across the road
+    const { at } = pv.hedge;
+    const nx = -Math.sin(at.angle), ny = Math.cos(at.angle);
+    // a parchment halo first, so the mark reads even over a tower's hatching
+    ctx.strokeStyle = 'rgba(239,233,218,0.92)'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(at.x - nx * 32, at.y - ny * 32); ctx.lineTo(at.x + nx * 32, at.y + ny * 32); ctx.stroke();
+    ctx.strokeStyle = PV_INK; ctx.lineWidth = 2.6; ctx.lineCap = 'butt'; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.moveTo(at.x - nx * 30, at.y - ny * 30); ctx.lineTo(at.x + nx * 30, at.y + ny * 30); ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineWidth = 1; for (let k = -24; k <= 24; k += 8) { const hx = at.x + nx * k, hy = at.y + ny * k; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + 3, hy - 6); ctx.stroke(); }
+  }
+  if (pv.crowd) {
+    ctx.strokeStyle = PV_INK; ctx.lineWidth = 1.4; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(pv.crowd.at.x, pv.crowd.at.y - 16, pv.crowd.r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (pv.towers) for (const id of pv.towers) {
+    const t = towerById(s, id); if (!t) continue;
+    const q = posOf(t);
+    ctx.strokeStyle = 'rgba(160,120,40,0.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(q.x, q.y, 46, 21, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
+  for (const id of pv.now) outlineEnemy(ctx, s, id, false);
+  for (const id of pv.later) outlineEnemy(ctx, s, id, true);
+  const legend = pv.later.length ? 'solid ring: affected now · dashed: by the time it takes effect' : pv.type === 'banner' ? 'gold ring: towers it would quicken' : 'preview only: nothing is spent until you click';
+  // the label sits below the tower, clear of the hedge spot, the road and the tower itself
+  const side: 1 | -1 = p.x > MAP_W * 0.62 ? -1 : 1;
+  inkChip(ctx, p.x + side * 36, p.y + 62, pv.summary, legend, 1, side, 14, 300);
+}
+
+function drawPulseResults(ctx: CanvasRenderingContext2D, s: GameState) {
+  const stacked = new Map<string, number>();
+  for (const r of s.pulseResults) {
+    const t = towerById(s, r.towerId); if (!t) continue;
+    const p = posOf(t);
+    const k = stacked.get(r.towerId) ?? 0; stacked.set(r.towerId, k + 1);
+    const a = Math.min(1, r.t / 0.2, (r.dur - r.t) / 0.5);
+    const side: 1 | -1 = p.x > MAP_W * 0.62 ? -1 : 1;
+    inkChip(ctx, p.x + side * 52, p.y - 130 - r.t * 6 + k * 44, r.text, r.note, Math.max(0, a), side, 16, 280);
+  }
+}
+
+/** The shared charge was spent: a fading thread runs from the pulsed tower to each other prepared tower, now dry. */
+function drawSharedSpend(ctx: CanvasRenderingContext2D, s: GameState) {
+  const sp = s.sharedSpend; if (!sp) return;
+  const by = towerById(s, sp.by); if (!by) return;
+  const a = Math.min(1, (sp.dur - sp.t) / 0.8);
+  const b = posOf(by);
+  for (const id of sp.others) {
+    const o = towerById(s, id); if (!o) continue;
+    const q = posOf(o);
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.strokeStyle = PV_INK; ctx.lineWidth = 1.4; ctx.setLineDash([3, 6]);
+    ctx.beginPath(); ctx.moveTo(b.x + 38, b.y - 102); ctx.quadraticCurveTo((b.x + q.x) / 2, Math.min(b.y, q.y) - 170, q.x + 38, q.y - 102); ctx.stroke();
+    ctx.restore();
+    inkChip(ctx, q.x + (q.x > MAP_W * 0.62 ? -52 : 52), q.y - 60, 'Thread dry: the shared pulse is spent', 'still attacking on its own', a, q.x > MAP_W * 0.62 ? -1 : 1, 13, 240);
+  }
 }

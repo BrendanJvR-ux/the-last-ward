@@ -74,18 +74,26 @@ export interface Projectile {
   slow?: number;
   /** Arc height for lobbed shots (mangonel boulders). */
   arc?: number;
+  /** Boulder Barrage this boulder belongs to. */
+  volley?: number;
   t: number;
   dur: number;
 }
 
-export interface Hedge { towerId: string; at: Vec; angle: number; stops: { lane: LaneId; s: number }[]; t: number; dur: number }
-export interface Fire { towerId: string; ranges: { lane: LaneId; s0: number; s1: number }[]; pts: Vec[]; t: number; dur: number }
+export interface Hedge { towerId: string; at: Vec; angle: number; stops: { lane: LaneId; s: number }[]; t: number; dur: number; laneName: string; held: number[] }
+export interface Fire { towerId: string; ranges: { lane: LaneId; s0: number; s1: number }[]; pts: Vec[]; t: number; dur: number; hit: number[] }
 export interface Ring { x: number; y: number; r: number; t: number; dur: number; kind: 'bell' | 'toll' | 'splash' | 'arrive' | 'spawn' | 'tarnish' | 'corrode' | 'gaze' | 'rally' | 'thud' | 'ink' }
 /** Inkflood: a slowing pool of ink on the road. */
-export interface Pool { towerId: string; ranges: { lane: LaneId; s0: number; s1: number }[]; pts: Vec[]; t: number; dur: number }
+export interface Pool { towerId: string; ranges: { lane: LaneId; s0: number; s1: number }[]; pts: Vec[]; t: number; dur: number; hit: number[] }
+/** What a pulse achieved, shown briefly beside its tower. `note` adds a second, smaller line. */
+export interface PulseResult { towerId: string; text: string; note?: string; t: number; dur: number }
+/** A Boulder Barrage in flight: counts the distinct enemies its boulders strike. */
+export interface Volley { id: number; towerId: string; left: number; hit: number[]; shared: boolean }
+/** A shared pulse was just spent: the other prepared towers lose their chance this wave. */
+export interface SharedSpend { by: string; others: string[]; t: number; dur: number }
 /** Rally: towers near the banner shoot faster for a while. */
 export interface Rally { x: number; y: number; r: number; t: number; dur: number }
-export interface PulseFlight { towerId: string; path: Vec[]; length: number; s: number }
+export interface PulseFlight { towerId: string; path: Vec[]; length: number; s: number; shared: boolean }
 /** War Dogs: horn and a marker at the bridge shortly before the pack arrives there. */
 export interface Warning { lane: LaneId; type: EnemyType; from: number; to: number; count: number; sounded: boolean }
 export interface FadingThread { path: Vec[]; t: number; dur: number }
@@ -133,6 +141,9 @@ export interface GameState {
   fallen: Fallen[];
   fading: FadingThread[];
   toasts: Toast[];
+  pulseResults: PulseResult[];
+  volleys: Volley[];
+  sharedSpend: SharedSpend | null;
   waveTime: number;
   time: number;
   nextId: number;
@@ -178,7 +189,7 @@ export function newGame(level: LevelId = 'fields', perks: Perks = {}, rares = fa
     castleHp: castle, castleMax: castle, gold: BALANCE.startGold + (perks.gold ?? 0), leaves: BALANCE.startLeaves + (perks.leaves ?? 0),
     towers: [], traces: [], pulsesLeft: 0, pendingGrant: false, castleCd: 0,
     enemies: [], projectiles: [], hedges: [], fires: [], pools: [], rallies: [], rings: [], flights: [], spawns: [],
-    warnings: [], stones: [], fallen: [], fading: [], toasts: [], waveTime: 0, time: 0, nextId: 1, kills: 0, leaked: 0, leakLog: [], resetBanner: 0,
+    warnings: [], stones: [], fallen: [], fading: [], toasts: [], pulseResults: [], volleys: [], sharedSpend: null, waveTime: 0, time: 0, nextId: 1, kills: 0, leaked: 0, leakLog: [], resetBanner: 0,
   };
   for (const t of BALANCE.startingTowers) addTower(s, t.foundation, t.type);
   return s;
@@ -404,9 +415,14 @@ export function pulseTower(s: GameState, towerId: string): boolean {
   if (!c.ok) { if (c.reason) toast(s, c.reason, 'bad'); return false; }
   const t = towerById(s, towerId)!;
   t.committed = true;
-  if (!t.bound) s.pulsesLeft -= 1;
+  const shared = !t.bound;
+  if (shared) {
+    s.pulsesLeft -= 1;
+    // with the last shared charge gone, every other prepared tower's thread is dry for this wave
+    if (s.pulsesLeft === 0) s.sharedSpend = { by: t.id, others: s.towers.filter((o) => o.traced && !o.committed && o.id !== t.id).map((o) => o.id), t: 0, dur: 3.5 };
+  }
   const path = routePolyline(t.foundation);
-  s.flights.push({ towerId, path, length: polylineLength(path), s: 0 });
+  s.flights.push({ towerId, path, length: polylineLength(path), s: 0, shared });
   return true;
 }
 
@@ -430,42 +446,68 @@ function roadNear(p: Vec, radius: number): { ranges: Fire['ranges']; pts: Vec[] 
   return { ranges, pts };
 }
 
-function applyPulse(s: GameState, t: Tower) {
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const alive = (e: Enemy) => e.hp > 0 && e.s > 0 && e.mode !== 'leave';
+const onRanges = (e: Enemy, ranges: Fire['ranges']) => ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1);
+
+/** Where a Bramble's hedge would grow: the nearest road point; on the shared stretch it blocks both lanes. */
+function hedgeSpot(p: Vec): { at: Vec & { angle: number }; stops: Hedge['stops']; laneName: string } {
+  let best: { lane: LaneId; s: number; d: number; point: Vec } | null = null;
+  for (const id of LANE_IDS) {
+    const n = nearestOnLane(LANES[id], p);
+    if (!best || n.d < best.d) best = { lane: id, ...n };
+  }
+  const lane = LANES[best!.lane];
+  const stops: Hedge['stops'] = [];
+  let laneName = lane.name;
+  if (best!.s >= lane.junctionS) {
+    const fromGate = lane.length - best!.s;
+    for (const id of LANE_IDS) stops.push({ lane: id, s: LANES[id].length - fromGate });
+    laneName = 'the shared road by the gate';
+  } else stops.push({ lane: best!.lane, s: best!.s });
+  return { at: pointAt(lane, best!.s), stops, laneName };
+}
+
+/** Show what a pulse did, beside its tower. */
+function result(s: GameState, t: Tower, text: string, shared: boolean, note?: string) {
+  s.pulseResults = s.pulseResults.filter((r) => r.towerId !== t.id || r.t > 0.2);
+  s.pulseResults.push({ towerId: t.id, text, note: note ?? (shared ? 'Shared pulse spent · every tower keeps attacking' : undefined), t: 0, dur: 3.4 });
+}
+
+function applyPulse(s: GameState, t: Tower, shared = false) {
   const p = posOf(t);
   const P = BALANCE.pulses;
   t.flash = 1;
   s.rings.push({ x: p.x, y: p.y, r: 40, t: 0, dur: 0.5, kind: 'arrive' });
+  const none = 'No enemies in range';
   if (t.type === 'bramble') {
-    // Nearest road point; on the shared stretch the hedge blocks both lanes.
-    let best: { lane: LaneId; s: number; d: number; point: Vec } | null = null;
-    for (const id of LANE_IDS) {
-      const n = nearestOnLane(LANES[id], p);
-      if (!best || n.d < best.d) best = { lane: id, ...n };
-    }
-    const lane = LANES[best!.lane];
-    const stops: Hedge['stops'] = [];
-    if (best!.s >= lane.junctionS) {
-      const fromGate = lane.length - best!.s;
-      for (const id of LANE_IDS) stops.push({ lane: id, s: LANES[id].length - fromGate });
-    } else stops.push({ lane: best!.lane, s: best!.s });
-    const at = pointAt(lane, best!.s);
-    s.hedges.push({ towerId: t.id, at, angle: at.angle, stops, t: 0, dur: P.hedgeDuration });
+    const h = hedgeSpot(p);
+    s.hedges.push({ towerId: t.id, at: h.at, angle: h.at.angle, stops: h.stops, t: 0, dur: P.hedgeDuration, laneName: h.laneName, held: [] });
+    const coming = s.enemies.filter((e) => alive(e) && h.stops.some((st) => st.lane === e.lane && e.s < st.s)).length;
+    result(s, t, `Hedge grown across ${h.laneName.startsWith('the ') ? h.laneName : `the ${h.laneName}`}`, shared,
+      coming ? `${plural(coming, 'enemy', 'enemies')} on the road behind it${shared ? ' · shared pulse spent' : ''}` : (shared ? 'No one behind it yet · shared pulse spent' : 'No one behind it yet'));
   } else if (t.type === 'ember') {
     const { ranges, pts } = roadNear(p, P.fireRadius);
-    s.fires.push({ towerId: t.id, ranges, pts, t: 0, dur: P.fireDuration });
+    const now = s.enemies.filter((e) => alive(e) && onRanges(e, ranges));
+    s.fires.push({ towerId: t.id, ranges, pts, t: 0, dur: P.fireDuration, hit: now.map((e) => e.id) });
+    result(s, t, now.length ? `${plural(now.length, 'enemy', 'enemies')} set burning` : none, shared,
+      now.length ? undefined : `the road burns for ${P.fireDuration} s${shared ? ' · shared pulse spent' : ''}`);
   } else if (t.type === 'gargoyle') {
     // Stone Gaze: everything nearby turns to stone; giants only stiffen.
     s.rings.push({ x: p.x, y: p.y - 60, r: P.gazeRadius, t: 0, dur: 1.1, kind: 'gaze' });
+    let n = 0;
     for (const e of s.enemies) {
-      if (e.hp <= 0 || e.mode === 'leave' || dist(enemyPos(e), p) > P.gazeRadius) continue;
+      if (!alive(e) || dist(enemyPos(e), p) > P.gazeRadius) continue;
       const d = e.type === 'cairn' ? P.gazeGiantStun : P.gazeStun;
       e.stun = Math.max(e.stun, d);
       e.petrifyT = Math.max(e.petrifyT ?? 0, d);
       hurt(s, e, P.gazeDamage, true);
+      n++;
     }
+    result(s, t, n ? `${plural(n, 'enemy', 'enemies')} turned to stone` : none, shared);
   } else if (t.type === 'mangonel') {
     // Boulder Barrage: a volley onto the thickest crowd in reach, landing one after another.
-    const near = s.enemies.filter((e) => e.hp > 0 && e.s > 0 && e.mode !== 'leave' && dist(enemyPos(e), p) <= P.barrageRadius);
+    const near = s.enemies.filter((e) => alive(e) && dist(enemyPos(e), p) <= P.barrageRadius);
     let centre: Vec | null = null, most = -1;
     for (const e of near) {
       const ep = enemyPos(e);
@@ -473,39 +515,142 @@ function applyPulse(s: GameState, t: Tower) {
       if (n > most) { most = n; centre = ep; }
     }
     if (centre) {
+      const id = s.nextId++;
+      s.volleys.push({ id, towerId: t.id, left: P.barrageCount, hit: [], shared });
       for (let i = 0; i < P.barrageCount; i++) {
         const a = i * 2.39996, r = (i === 0 ? 0 : 18 + (i % 3) * 16);
         const tx = centre.x + Math.cos(a) * r, ty = centre.y + Math.sin(a) * r * 0.7;
         s.projectiles.push({
           kind: 'mangonel', x: p.x, y: p.y - 50, sx: p.x, sy: p.y - 50, tx, ty, targetId: null, speed: 0,
-          damage: P.barrageDamage, splash: P.barrageSplash, arc: 110, t: 0, dur: 0.7 + i * 0.28,
+          damage: P.barrageDamage, splash: P.barrageSplash, arc: 110, t: 0, dur: 0.7 + i * 0.28, volley: id,
         });
       }
-    }
+    } else result(s, t, none, shared);
   } else if (t.type === 'fountain') {
     const { ranges, pts } = roadNear(p, P.floodRadius);
-    s.pools.push({ towerId: t.id, ranges, pts, t: 0, dur: P.floodDuration });
+    const now = s.enemies.filter((e) => alive(e) && onRanges(e, ranges));
+    s.pools.push({ towerId: t.id, ranges, pts, t: 0, dur: P.floodDuration, hit: now.map((e) => e.id) });
     s.rings.push({ x: p.x, y: p.y, r: P.floodRadius, t: 0, dur: 0.8, kind: 'ink' });
+    result(s, t, now.length ? `${plural(now.length, 'enemy', 'enemies')} slowed in the ink` : none, shared,
+      now.length ? undefined : `the ink lies for ${P.floodDuration} s${shared ? ' · shared pulse spent' : ''}`);
   } else if (t.type === 'banner') {
     s.rallies.push({ x: p.x, y: p.y, r: P.rallyRadius, t: 0, dur: P.rallyDuration });
     s.rings.push({ x: p.x, y: p.y, r: P.rallyRadius, t: 0, dur: 1.0, kind: 'rally' });
+    const k = s.towers.filter((o) => dist(posOf(o), p) <= P.rallyRadius).length;
+    result(s, t, `${plural(k, 'tower shoots', 'towers shoot')} twice as fast for ${P.rallyDuration} s`, shared);
   } else if (t.type === 'verdigris') {
     s.rings.push({ x: p.x, y: p.y, r: P.tarnishRadius, t: 0, dur: 1.4, kind: 'tarnish' });
-    for (const e of s.enemies) if (dist(enemyPos(e), p) <= P.tarnishRadius) e.vulnT = P.tarnishDuration;
+    let n = 0;
+    for (const e of s.enemies) if (alive(e) && dist(enemyPos(e), p) <= P.tarnishRadius) { e.vulnT = P.tarnishDuration; n++; }
+    result(s, t, n ? `${plural(n, 'enemy', 'enemies')} tarnished: no armour, +${Math.round(P.tarnishVulnerability * 100)}% damage` : none, shared);
   } else {
     s.rings.push({ x: p.x, y: p.y, r: P.tollRadius, t: 0, dur: 0.9, kind: 'toll' });
+    let moved = 0, giants = 0;
     for (const e of s.enemies) {
-      const ep = enemyPos(e);
-      if (dist(ep, p) <= P.tollRadius) {
-        // Stone giants do not budge.
-        if (e.type !== 'cairn') {
-          e.s = Math.max(0, e.s - P.tollKnockback);
-          e.stun = Math.max(e.stun, P.tollStun);
-        }
-        hurt(s, e, P.tollDamage, true);
-      }
+      if (!alive(e) || dist(enemyPos(e), p) > P.tollRadius) continue;
+      // Stone giants do not budge.
+      if (e.type !== 'cairn') {
+        e.s = Math.max(0, e.s - P.tollKnockback);
+        e.stun = Math.max(e.stun, P.tollStun);
+        moved++;
+      } else giants++;
+      hurt(s, e, P.tollDamage, true);
     }
+    const g = giants ? (giants === 1 ? 'the giant would not budge' : `${giants} giants would not budge`) : '';
+    result(s, t, moved ? `${plural(moved, 'enemy', 'enemies')} knocked back and dazed` : giants ? g.charAt(0).toUpperCase() + g.slice(1) : none, shared,
+      moved && giants ? `${g}${shared ? ' · shared pulse spent' : ''}` : undefined);
   }
+}
+
+// ── Pulse preview ───────────────────────────────────────────────────────────
+
+/** What a pulse would do, for the hover preview. Pure: it changes nothing. */
+export interface PulsePreview {
+  towerId: string;
+  type: TowerType;
+  centre: Vec;
+  /** Seconds for the ink to run from the inkwell to the tower. */
+  flight: number;
+  /** Area pulses: the circle of effect. */
+  radius?: number;
+  /** Road pulses (fire, flood): the stretch of road affected. */
+  road?: Vec[];
+  /** Hedge: where it would grow. */
+  hedge?: { at: Vec & { angle: number }; laneName: string };
+  /** Mangonel: the crowd it would aim at now. */
+  crowd?: { at: Vec; r: number };
+  /** Banner: towers that would be rallied. */
+  towers?: string[];
+  /** Enemies it would affect if it landed this instant. */
+  now: number[];
+  /** Enemies not affected now that should be by the time the ink arrives (or that the effect will catch later). */
+  later: number[];
+  summary: string;
+}
+
+/** Where an enemy should be `dt` seconds from now, ignoring hedges and blocks. */
+function predicted(e: Enemy, dt: number): Vec {
+  const st = BALANCE.enemies[e.type];
+  const k = e.slowT ? BALANCE.pulses.inkSlow : 1;
+  const moving = Math.max(0, dt - Math.max(0, e.stun));
+  return enemyPos({ ...e, s: Math.min(LANES[e.lane].length, e.s + st.speed * k * moving) });
+}
+
+export function pulsePreview(s: GameState, towerId: string): PulsePreview | null {
+  const t = towerById(s, towerId);
+  if (!t) return null;
+  const P = BALANCE.pulses;
+  const p = posOf(t);
+  const flight = polylineLength(routePolyline(t.foundation)) / BALANCE.pulseSpeed;
+  const foes = s.enemies.filter(alive);
+  const name = BALANCE.towers[t.type].pulseName;
+  const fl = `${flight.toFixed(1)} s`;
+  const out: PulsePreview = { towerId, type: t.type, centre: p, flight, now: [], later: [], summary: '' };
+  const enemies = (n: number) => plural(n, 'enemy', 'enemies');
+  const areaSplit = (inNow: (e: Enemy) => boolean, inLater: (e: Enemy) => boolean) => {
+    out.now = foes.filter(inNow).map((e) => e.id);
+    out.later = foes.filter((e) => !inNow(e) && inLater(e)).map((e) => e.id);
+  };
+  if (t.type === 'bramble') {
+    const h = hedgeSpot(p);
+    out.hedge = { at: h.at, laneName: h.laneName };
+    // the hedge holds whoever reaches it while it stands: those already near it, and those further back
+    const behind = foes.filter((e) => h.stops.some((st) => st.lane === e.lane && e.s < st.s));
+    const soon = (e: Enemy) => h.stops.some((st) => st.lane === e.lane && st.s - e.s <= BALANCE.enemies[e.type].speed * P.hedgeDuration);
+    out.now = behind.filter(soon).map((e) => e.id);
+    out.later = behind.filter((e) => !soon(e)).map((e) => e.id);
+    const road = h.laneName.startsWith('the ') ? h.laneName : `the ${h.laneName}`;
+    out.summary = out.now.length
+      ? `${name} on ${road} · would hold ${enemies(out.now.length)} that reach it while it stands (${P.hedgeDuration} s)${out.later.length ? `; ${out.later.length} more further back` : ''}`
+      : out.later.length ? `${name} on ${road} · ${enemies(out.later.length)} coming, but none close enough to be held in its ${P.hedgeDuration} s` : `${name} on ${road} · no one on that road behind it yet`;
+  } else if (t.type === 'ember' || t.type === 'fountain') {
+    const r = t.type === 'ember' ? P.fireRadius : P.floodRadius;
+    const { ranges, pts } = roadNear(p, r);
+    out.road = pts;
+    areaSplit((e) => onRanges(e, ranges), (e) => { const q = predicted(e, flight + (t.type === 'ember' ? P.fireDuration : P.floodDuration) * 0.5); return ranges.some((rg) => rg.lane === e.lane) && dist(q, p) <= r; });
+    out.summary = `${name} · ${out.now.length ? `${enemies(out.now.length)} on that road now` : 'no enemies on that road now'}${out.later.length ? ` · ${out.later.length} more walking into it` : ''} · ink lands in ${fl}`;
+  } else if (t.type === 'mangonel') {
+    const near = foes.filter((e) => dist(enemyPos(e), p) <= P.barrageRadius);
+    let centre: Vec | null = null, most = -1;
+    for (const e of near) { const ep = enemyPos(e); const n = near.filter((o) => dist(enemyPos(o), ep) <= P.barrageSplash).length; if (n > most) { most = n; centre = ep; } }
+    out.radius = P.barrageRadius;
+    if (centre) {
+      out.crowd = { at: centre, r: P.barrageSplash + 34 };
+      areaSplit((e) => dist(enemyPos(e), centre!) <= P.barrageSplash + 34, (e) => dist(predicted(e, flight + 1.2), centre!) <= P.barrageSplash + 34);
+    }
+    out.summary = centre ? `${name} · aims at the thickest crowd when the ink lands (${fl}); ${enemies(out.now.length)} there now` : `${name} · no enemies in reach now`;
+  } else if (t.type === 'banner') {
+    out.radius = P.rallyRadius;
+    out.towers = s.towers.filter((o) => dist(posOf(o), p) <= P.rallyRadius).map((o) => o.id);
+    out.summary = `${name} · ${plural(out.towers.length, 'tower', 'towers')} would shoot twice as fast for ${P.rallyDuration} s`;
+  } else {
+    const r = t.type === 'bell' ? P.tollRadius : t.type === 'verdigris' ? P.tarnishRadius : P.gazeRadius;
+    out.radius = r;
+    areaSplit((e) => dist(enemyPos(e), p) <= r, (e) => dist(predicted(e, flight), p) <= r);
+    const verb = t.type === 'bell' ? 'knocked back' : t.type === 'verdigris' ? 'tarnished' : 'turned to stone';
+    out.summary = `${name} · ${out.now.length ? `${enemies(out.now.length)} in reach now` : 'no enemies in reach now'}${out.later.length ? ` · ${out.later.length} more by the time the ink lands (${fl})` : ` · ink lands in ${fl}`} · they would be ${verb}`;
+  }
+  return out;
 }
 
 // ── Combat simulation ───────────────────────────────────────────────────────
@@ -640,6 +785,9 @@ export function step(s: GameState, dtRaw: number) {
   s.fallen = s.fallen.filter((f) => f.t < 1.6);
   for (const r of s.rings) r.t += dt;
   s.rings = s.rings.filter((r) => r.t < r.dur);
+  for (const r of s.pulseResults) r.t += dt;
+  s.pulseResults = s.pulseResults.filter((r) => r.t < r.dur);
+  if (s.sharedSpend) { s.sharedSpend.t += dt; if (s.sharedSpend.t >= s.sharedSpend.dur) s.sharedSpend = null; }
   for (const t of s.towers) t.flash = Math.max(0, t.flash - dt * 1.5);
   if (s.phase === 'prep' && s.resetBanner > 0) s.resetBanner = Math.max(0, s.resetBanner - dt);
   if (s.phase !== 'combat') return;
@@ -654,17 +802,20 @@ export function step(s: GameState, dtRaw: number) {
     f.s += BALANCE.pulseSpeed * dt;
     if (f.s >= f.length) {
       const t = towerById(s, f.towerId);
-      if (t) applyPulse(s, t);
+      if (t) applyPulse(s, t, f.shared);
     }
   }
   s.flights = s.flights.filter((f) => f.s < f.length);
 
   // Hedges and fires
   for (const h of s.hedges) h.t += dt;
+  for (const h of s.hedges) if (h.t >= h.dur) endResult(s, h.towerId, h.held.length ? `The hedge held ${plural(h.held.length, 'enemy', 'enemies')}` : 'The hedge held no one');
   s.hedges = s.hedges.filter((h) => h.t < h.dur);
   for (const f of s.fires) f.t += dt;
+  for (const f of s.fires) if (f.t >= f.dur) endResult(s, f.towerId, f.hit.length ? `The fire burned ${plural(f.hit.length, 'enemy', 'enemies')}` : 'The fire burned no one');
   s.fires = s.fires.filter((f) => f.t < f.dur);
   for (const pl of s.pools) pl.t += dt;
+  for (const pl of s.pools) if (pl.t >= pl.dur) endResult(s, pl.towerId, pl.hit.length ? `The ink slowed ${plural(pl.hit.length, 'enemy', 'enemies')}` : 'The ink slowed no one');
   s.pools = s.pools.filter((pl) => pl.t < pl.dur);
   for (const r of s.rallies) r.t += dt;
   s.rallies = s.rallies.filter((r) => r.t < r.dur);
@@ -691,7 +842,10 @@ export function step(s: GameState, dtRaw: number) {
     let ns = e.s + st.speed * k * dt;
     for (const h of s.hedges) {
       for (const stop of h.stops) {
-        if (stop.lane === e.lane && e.s <= stop.s - 2 && ns > stop.s - 10) ns = Math.min(ns, Math.max(e.s, stop.s - 10));
+        if (stop.lane === e.lane && e.s <= stop.s - 2 && ns > stop.s - 10) {
+          ns = Math.min(ns, Math.max(e.s, stop.s - 10));
+          if (!h.held.includes(e.id)) h.held.push(e.id);
+        }
       }
     }
     for (const b of giantBlocks) {
@@ -717,13 +871,19 @@ export function step(s: GameState, dtRaw: number) {
   // Burning road
   for (const f of s.fires) {
     for (const e of s.enemies) {
-      if (f.ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1)) hurt(s, e, BALANCE.pulses.fireDps * dt, true);
+      if (f.ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1)) {
+        if (!f.hit.includes(e.id)) f.hit.push(e.id);
+        hurt(s, e, BALANCE.pulses.fireDps * dt, true);
+      }
     }
   }
   // Ink pools stain whatever wades through them
   for (const pl of s.pools) {
     for (const e of s.enemies) {
-      if (pl.ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1)) hurt(s, e, BALANCE.pulses.floodDps * dt, true);
+      if (pl.ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1)) {
+        if (!pl.hit.includes(e.id)) pl.hit.push(e.id);
+        hurt(s, e, BALANCE.pulses.floodDps * dt, true);
+      }
     }
   }
 
@@ -785,7 +945,16 @@ export function step(s: GameState, dtRaw: number) {
     if (k >= 1) {
       if (pr.splash > 0) {
         s.rings.push({ x: pr.tx, y: pr.ty, r: pr.splash, t: 0, dur: 0.35, kind: pr.kind === 'mangonel' ? 'thud' : 'splash' });
-        for (const e of s.enemies) if (e.hp > 0 && dist(enemyPos(e), { x: pr.tx, y: pr.ty }) <= pr.splash) hurt(s, e, pr.damage);
+        const v = pr.volley !== undefined ? s.volleys.find((x) => x.id === pr.volley) : undefined;
+        for (const e of s.enemies) if (e.hp > 0 && dist(enemyPos(e), { x: pr.tx, y: pr.ty }) <= pr.splash) {
+          if (v && !v.hit.includes(e.id)) v.hit.push(e.id);
+          hurt(s, e, pr.damage);
+        }
+        if (v && --v.left <= 0) {
+          const t = towerById(s, v.towerId);
+          if (t) result(s, t, v.hit.length ? `Boulders struck ${plural(v.hit.length, 'enemy', 'enemies')}` : 'The boulders hit nothing', v.shared);
+          s.volleys = s.volleys.filter((x) => x !== v);
+        }
       } else {
         const e = s.enemies.find((x) => x.id === pr.targetId && x.hp > 0);
         if (e) {
@@ -851,6 +1020,8 @@ function endWave(s: GameState) {
   s.fires = [];
   s.pools = [];
   s.rallies = [];
+  s.volleys = [];
+  s.sharedSpend = null;
   s.projectiles = [];
   s.warnings = [];
   s.stones = [];
@@ -863,6 +1034,11 @@ function endWave(s: GameState) {
   if (s.wave === BALANCE.reinforcementWave && unboundCount(s) <= BALANCE.reinforcementIfTowersAtMost) {
     s.pendingGrant = true;
   }
+}
+
+/** A follow-up line when a lasting effect (hedge, fire, ink) ends: what it did over its whole life. */
+function endResult(s: GameState, towerId: string, text: string) {
+  s.pulseResults.push({ towerId, text, t: 0, dur: 2.8 });
 }
 
 /** Pulse flight progress for rendering: point along the thread. */
