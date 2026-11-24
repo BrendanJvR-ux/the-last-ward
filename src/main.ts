@@ -570,8 +570,10 @@ function renderMargin() {
   }
   if (s.phase === 'victory') h = s.level === 'fields'
     ? `<h2><small>Level 1 complete</small>The gate held</h2><p class="hint">Every wave held at the gate. The fight moves inside the walls.</p><div class="start"><button data-act="play" data-level="courtyard" class="primary">On to Level 2: the Castle Courtyard</button><button data-act="restart">Play Gate Defence again</button></div>`
-    : `<h2><small>Level 2 complete</small>The courtyard held</h2><p class="hint">Every wave held in the courtyard.</p><div class="start"><button data-act="menu" class="primary">Back to the menu</button><button data-act="restart">Play the courtyard again</button></div>`;
-  if (s.phase === 'defeat') h = `<h2><small>Wave ${s.wave}</small>${s.level === 'fields' ? 'The gate has fallen' : 'The east gate is broken'}</h2><p class="hint">Restart clears gold, leaves, binds and every thread.</p><div class="start"><button data-act="restart" class="primary">Restart this level</button><button data-act="menu">Main menu</button></div>`;
+    : s.level === 'courtyard'
+      ? `<h2><small>Level 2 complete</small>The courtyard held</h2><p class="hint">Every wave held in the courtyard. The fight goes indoors.</p><div class="start"><button data-act="play" data-level="keep" class="primary">On to Level 3: the Keep</button><button data-act="restart">Play the courtyard again</button></div>`
+      : `<h2><small>Level 3 complete</small>The study held</h2><p class="hint">Every wave held in the keep.</p><div class="start"><button data-act="menu" class="primary">Back to the menu</button><button data-act="restart">Play the keep again</button></div>`;
+  if (s.phase === 'defeat') h = `<h2><small>Wave ${s.wave}</small>${s.level === 'fields' ? 'The gate has fallen' : s.level === 'keep' ? 'The study door is broken' : 'The east gate is broken'}</h2><p class="hint">Restart clears gold, leaves, binds and every thread.</p><div class="start"><button data-act="restart" class="primary">Restart this level</button><button data-act="menu">Main menu</button></div>`;
   const focused = document.activeElement as HTMLElement | null;
   const key = focused && margin.contains(focused) ? focused.getAttribute('data-act') + '|' + (focused.dataset.id ?? focused.dataset.f ?? focused.dataset.type ?? '') : null;
   margin.innerHTML = h;
@@ -591,12 +593,14 @@ function renderOverlay() {
     const stats = `<p class="sub">Castle ${s.castleHp}/${s.castleMax} · ${s.kills} foes turned back · ${bound} tower${bound === 1 ? '' : 's'} bound in gold</p>`;
     overlay.innerHTML = s.level === 'fields'
       ? `<div class="plate"><p class="kicker">Level 1 · Gate Defence</p><h2>The gate is held</h2><p class="caption">“The levy broke on the roads, and the dogs on the bridge. But the old wizard turned the page: the outer wall had already fallen.”</p>${stats}<button data-act="play" data-level="courtyard" class="primary">On to Level 2: the Castle Courtyard</button> <button data-act="restart">Read it again</button></div>`
+      : s.level === 'courtyard'
+      ? `<div class="plate"><p class="kicker">Level 2 · The Castle Courtyard</p><h2>The courtyard is held</h2><p class="caption">“The dogs fell back over the breach and the levy broke at the gate stair. But smoke was rising inside the keep.”</p>${stats}<button data-act="play" data-level="keep" class="primary">On to Level 3: the Keep</button> <button data-act="restart">Read it again</button></div>`
       : `<div class="plate"><p class="kicker">The End</p><h2>Defence of Goosebridge Castle</h2><p class="caption">“And so Goosebridge Castle held, and the old wizard let the ink dry on the final page.”</p>${stats}<button data-act="menu" class="primary">Back to the menu</button> <button data-act="restart">Read it again</button></div>`;
     recordWin(s.level, s.castleHp);
   } else if (s.phase === 'defeat') {
     overlay.hidden = false;
     overlay.className = 'defeat';
-    overlay.innerHTML = `<div class="plate"><p class="kicker">Wave ${s.wave}</p><h2>${s.level === 'fields' ? 'The gate has fallen' : 'The east gate is broken'}</h2><p class="caption">The ink ran dry before the last ward could hold. Turn back the page and try another thread.</p><button data-act="restart" class="primary">Restart this level</button> <button data-act="menu">Main menu</button></div>`;
+    overlay.innerHTML = `<div class="plate"><p class="kicker">Wave ${s.wave}</p><h2>${s.level === 'fields' ? 'The gate has fallen' : s.level === 'keep' ? 'The study door is broken' : 'The east gate is broken'}</h2><p class="caption">The ink ran dry before the last ward could hold. Turn back the page and try another thread.</p><button data-act="restart" class="primary">Restart this level</button> <button data-act="menu">Main menu</button></div>`;
   } else if (s.paused) {
     overlay.hidden = false;
     overlay.className = 'paused';
@@ -706,6 +710,7 @@ const menuEl = $('menu');
 const LEVELS: { id: LevelId; name: string; sub: string; blurb: string }[] = [
   { id: 'fields', name: 'Gate Defence', sub: 'Level 1', blurb: 'Two roads cross the fields to Goosebridge Castle: the Fen Levy on the Mill Road, the war dogs over the bridge. Bramble, Ember, Bell and Verdigris hold the way.' },
   { id: 'courtyard', name: 'The Castle Courtyard', sub: 'Level 2', blurb: 'The outer wall has fallen. The levy pour through the ruined gatehouse and the dogs leap the breach. Hold the east gate with gargoyles, mangonels, ink fountains and banners.' },
+  { id: 'keep', name: 'The Keep', sub: 'Level 3', blurb: 'Inside the keep itself, seen in cut-away. The levy climb the Great Stair, the dogs come up from the cellars, and every floor leads to the wizard\u2019s study. Hold the stairs with suits of armour, flapping libraries, chandeliers and the great hearth.' },
 ];
 const thumbs = new Map<LevelId, HTMLCanvasElement>();
 
@@ -819,7 +824,7 @@ function startLevel(id: LevelId) {
   restart();
   iconCache.clear();
   ribbonSig = ''; overlaySig = '';
-  toast(s, id === 'fields' ? 'Level 1: Gate Defence. Hold the roads to the castle gate.' : 'Level 2: the Castle Courtyard. New towers to raise.', 'info');
+  toast(s, id === 'fields' ? 'Level 1: Gate Defence. Hold the roads to the castle gate.' : id === 'courtyard' ? 'Level 2: the Castle Courtyard. New towers to raise.' : 'Level 3: the Keep. Hold the stairs to the wizard\u2019s study.', 'info');
 }
 menuEl.addEventListener('click', handleAction);
 $('btnMenu').addEventListener('click', openMenu);

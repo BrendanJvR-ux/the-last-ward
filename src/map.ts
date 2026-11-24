@@ -129,7 +129,54 @@ const COURTYARD_GEO: LevelGeometry = {
   ],
 };
 
-export const LEVEL_GEOMETRY: Record<LevelId, LevelGeometry> = { fields: FIELDS_GEO, courtyard: COURTYARD_GEO };
+// ── Level 3: the keep, seen in cut-away ────────────────────────────────────
+// Four floors stacked like an architect's section. The levy come in at the broken door on the
+// ground floor (west) and up the Great Stair; the dogs come up from the cellars (east). The two
+// stairs meet on the landing of the Great Hall, and one grand stair climbs to the top floor and
+// along it to the study door, where the wizard keeps his inkwell.
+/** Floor lines of the keep (the top of each floor), ground to top. */
+export const KEEP_FLOORS = [910, 690, 470, 250];
+const K_JUNCTION: Vec = { x: 800, y: 450 };
+const K_GATE: Vec = { x: 1392, y: 230 };
+const K_CELLAR: Vec = { x: 1300, y: 890 };
+const K_INKWELL: Vec = { x: 1462, y: 192 };
+const K_SHARED: Vec[] = [K_JUNCTION, { x: 1000, y: 450 }, { x: 1160, y: 230 }, K_GATE];
+const KEEP_GEO: LevelGeometry = {
+  junction: K_JUNCTION, gate: K_GATE, choke: K_CELLAR, inkwell: K_INKWELL,
+  castle: { x: -500, y: -500 }, mill: { x: -500, y: -500 }, pond: { x: -500, y: -500 }, river: [],
+  laneNames: { mill: 'Great Stair', king: 'Cellar Stair' },
+  millPts: [{ x: -40, y: 890 }, { x: 300, y: 890 }, { x: 480, y: 670 }, { x: 620, y: 670 }, ...K_SHARED],
+  kingPts: [{ x: 1640, y: 890 }, K_CELLAR, { x: 1120, y: 670 }, { x: 980, y: 670 }, ...K_SHARED],
+  leyNodes: [
+    { id: 'ink', x: K_INKWELL.x - 34, y: K_INKWELL.y - 6 },
+    // down the east tower
+    { id: 'e1', x: 1500, y: 330, parent: 'ink', bow: 8 },
+    { id: 'f_gallery', x: 1120, y: 465, parent: 'e1', bow: -10, foundation: { name: 'Minstrels\u2019 Gallery' } },
+    { id: 'e2', x: 1500, y: 560, parent: 'e1', bow: -6 },
+    { id: 'f_eastledge', x: 1180, y: 560, parent: 'e2', bow: 8, foundation: { name: 'East Landing' } },
+    { id: 'f_solar', x: 1240, y: 685, parent: 'e2', bow: -8, foundation: { name: 'The Solar' } },
+    { id: 'e3', x: 1490, y: 800, parent: 'e2', bow: 6 },
+    { id: 'f_buttery', x: 1180, y: 905, parent: 'e3', bow: 10, foundation: { name: 'Buttery' } },
+    // west under the roof, then down the west tower
+    { id: 't1', x: 1250, y: 120, parent: 'ink', bow: -6 },
+    { id: 'f_studyledge', x: 1270, y: 300, parent: 't1', bow: 10, foundation: { name: 'Study Stair' } },
+    { id: 't2', x: 900, y: 110, parent: 't1', bow: 8 },
+    { id: 'f_tower', x: 1000, y: 245, parent: 't2', bow: -8, foundation: { name: 'Top Landing' } },
+    { id: 'f_bell', x: 900, y: 300, parent: 't2', bow: 10, foundation: { name: 'Bell Loft' } },
+    { id: 't3', x: 560, y: 120, parent: 't2', bow: -8 },
+    { id: 'w1', x: 120, y: 330, parent: 't3', bow: 10 },
+    { id: 'f_minstrel', x: 560, y: 465, parent: 'w1', bow: -8, foundation: { name: 'Tapestry Room' } },
+    { id: 'f_hall', x: 690, y: 465, parent: 'w1', bow: 12, foundation: { name: 'Great Hall' } },
+    { id: 'w2', x: 100, y: 560, parent: 'w1', bow: -8 },
+    { id: 'f_westledge', x: 420, y: 560, parent: 'w2', bow: 8, foundation: { name: 'West Landing' } },
+    { id: 'f_library', x: 360, y: 685, parent: 'w2', bow: -10, foundation: { name: 'Library' } },
+    { id: 'f_armoury', x: 800, y: 685, parent: 'w2', bow: -16, foundation: { name: 'Armoury' } },
+    { id: 'w3', x: 100, y: 800, parent: 'w2', bow: 8 },
+    { id: 'f_kitchen', x: 420, y: 905, parent: 'w3', bow: 10, foundation: { name: 'Kitchen' } },
+  ],
+};
+
+export const LEVEL_GEOMETRY: Record<LevelId, LevelGeometry> = { fields: FIELDS_GEO, courtyard: COURTYARD_GEO, keep: KEEP_GEO };
 
 export interface Lane {
   id: LaneId;

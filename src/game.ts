@@ -80,15 +80,15 @@ export interface Projectile {
   dur: number;
 }
 
-export interface Hedge { towerId: string; at: Vec; angle: number; stops: { lane: LaneId; s: number }[]; t: number; dur: number; laneName: string; held: number[] }
+export interface Hedge { towerId: string; at: Vec; angle: number; stops: { lane: LaneId; s: number }[]; t: number; dur: number; laneName: string; held: number[]; kind?: 'hedge' | 'shield' }
 export interface Fire { towerId: string; ranges: { lane: LaneId; s0: number; s1: number }[]; pts: Vec[]; t: number; dur: number; hit: number[] }
-export interface Ring { x: number; y: number; r: number; t: number; dur: number; kind: 'bell' | 'toll' | 'splash' | 'arrive' | 'spawn' | 'tarnish' | 'corrode' | 'gaze' | 'rally' | 'thud' | 'ink' }
+export interface Ring { x: number; y: number; r: number; t: number; dur: number; kind: 'bell' | 'toll' | 'splash' | 'arrive' | 'spawn' | 'tarnish' | 'corrode' | 'gaze' | 'rally' | 'thud' | 'ink' | 'pages' }
 /** Inkflood: a slowing pool of ink on the road. */
 export interface Pool { towerId: string; ranges: { lane: LaneId; s0: number; s1: number }[]; pts: Vec[]; t: number; dur: number; hit: number[] }
 /** What a pulse achieved, shown briefly beside its tower. `note` adds a second, smaller line. */
 export interface PulseResult { towerId: string; text: string; note?: string; t: number; dur: number }
 /** A Boulder Barrage in flight: counts the distinct enemies its boulders strike. */
-export interface Volley { id: number; towerId: string; left: number; hit: number[]; shared: boolean }
+export interface Volley { id: number; towerId: string; left: number; hit: number[]; shared: boolean; what?: 'boulders' | 'chandelier' }
 /** A shared pulse was just spent: the other prepared towers lose their chance this wave. */
 export interface SharedSpend { by: string; others: string[]; t: number; dur: number }
 /** Rally: towers near the banner shoot faster for a while. */
@@ -468,6 +468,18 @@ function hedgeSpot(p: Vec): { at: Vec & { angle: number }; stops: Hedge['stops']
   return { at: pointAt(lane, best!.s), stops, laneName };
 }
 
+/** The point with the most enemies around it (within `splash`), among those within `reach` of `p`. */
+function crowdCentre(s: GameState, p: Vec, reach: number, splash: number): Vec | null {
+  const near = s.enemies.filter((e) => alive(e) && dist(enemyPos(e), p) <= reach);
+  let centre: Vec | null = null, most = -1;
+  for (const e of near) {
+    const ep = enemyPos(e);
+    const n = near.filter((o) => dist(enemyPos(o), ep) <= splash).length;
+    if (n > most) { most = n; centre = ep; }
+  }
+  return centre;
+}
+
 /** Show what a pulse did, beside its tower. */
 function result(s: GameState, t: Tower, text: string, shared: boolean, note?: string) {
   s.pulseResults = s.pulseResults.filter((r) => r.towerId !== t.id || r.t > 0.2);
@@ -480,14 +492,16 @@ function applyPulse(s: GameState, t: Tower, shared = false) {
   t.flash = 1;
   s.rings.push({ x: p.x, y: p.y, r: 40, t: 0, dur: 0.5, kind: 'arrive' });
   const none = 'No enemies in range';
-  if (t.type === 'bramble') {
+  if (t.type === 'bramble' || t.type === 'armour') {
     const h = hedgeSpot(p);
-    s.hedges.push({ towerId: t.id, at: h.at, angle: h.at.angle, stops: h.stops, t: 0, dur: P.hedgeDuration, laneName: h.laneName, held: [] });
+    const shield = t.type === 'armour';
+    s.hedges.push({ towerId: t.id, at: h.at, angle: h.at.angle, stops: h.stops, t: 0, dur: shield ? P.shieldDuration : P.hedgeDuration, laneName: h.laneName, held: [], kind: shield ? 'shield' : 'hedge' });
+    if (shield) for (const e of s.enemies) if (alive(e) && dist(enemyPos(e), h.at) <= 40) hurt(s, e, P.shieldDamage);
     const coming = s.enemies.filter((e) => alive(e) && h.stops.some((st) => st.lane === e.lane && e.s < st.s)).length;
-    result(s, t, `Hedge grown across ${h.laneName.startsWith('the ') ? h.laneName : `the ${h.laneName}`}`, shared,
+    result(s, t, `${shield ? 'Shield wall raised on' : 'Hedge grown across'} ${h.laneName.startsWith('the ') ? h.laneName : `the ${h.laneName}`}`, shared,
       coming ? `${plural(coming, 'enemy', 'enemies')} on the road behind it${shared ? ' · shared pulse spent' : ''}` : (shared ? 'No one behind it yet · shared pulse spent' : 'No one behind it yet'));
-  } else if (t.type === 'ember') {
-    const { ranges, pts } = roadNear(p, P.fireRadius);
+  } else if (t.type === 'ember' || t.type === 'hearth') {
+    const { ranges, pts } = roadNear(p, t.type === 'hearth' ? P.draughtRadius : P.fireRadius);
     const now = s.enemies.filter((e) => alive(e) && onRanges(e, ranges));
     s.fires.push({ towerId: t.id, ranges, pts, t: 0, dur: P.fireDuration, hit: now.map((e) => e.id) });
     result(s, t, now.length ? `${plural(now.length, 'enemy', 'enemies')} set burning` : none, shared,
@@ -505,18 +519,34 @@ function applyPulse(s: GameState, t: Tower, shared = false) {
       n++;
     }
     result(s, t, n ? `${plural(n, 'enemy', 'enemies')} turned to stone` : none, shared);
-  } else if (t.type === 'mangonel') {
-    // Boulder Barrage: a volley onto the thickest crowd in reach, landing one after another.
-    const near = s.enemies.filter((e) => alive(e) && dist(enemyPos(e), p) <= P.barrageRadius);
-    let centre: Vec | null = null, most = -1;
-    for (const e of near) {
-      const ep = enemyPos(e);
-      const n = near.filter((o) => dist(enemyPos(o), ep) <= P.barrageSplash).length;
-      if (n > most) { most = n; centre = ep; }
+  } else if (t.type === 'books') {
+    // Paper Storm: pages everywhere; enemies nearby are blinded, slowed and cut.
+    s.rings.push({ x: p.x, y: p.y - 40, r: P.stormRadius, t: 0, dur: 1.2, kind: 'pages' });
+    let n = 0;
+    for (const e of s.enemies) {
+      if (!alive(e) || dist(enemyPos(e), p) > P.stormRadius) continue;
+      e.slowT = Math.max(e.slowT ?? 0, P.stormSlow);
+      hurt(s, e, P.stormDamage, true);
+      n++;
     }
+    result(s, t, n ? `${plural(n, 'enemy', 'enemies')} blinded and slowed by pages` : none, shared);
+  } else if (t.type === 'chandelier') {
+    // The Fall: one great crash onto the thickest crowd in reach.
+    const centre = crowdCentre(s, p, P.fallRadius, P.fallSplash);
     if (centre) {
       const id = s.nextId++;
-      s.volleys.push({ id, towerId: t.id, left: P.barrageCount, hit: [], shared });
+      s.volleys.push({ id, towerId: t.id, left: 1, hit: [], shared, what: 'chandelier' });
+      s.projectiles.push({
+        kind: 'chandelier', x: p.x, y: p.y - 80, sx: p.x, sy: p.y - 80, tx: centre.x, ty: centre.y, targetId: null, speed: 0,
+        damage: P.fallDamage, splash: P.fallSplash, arc: 140, t: 0, dur: 0.7, volley: id,
+      });
+    } else result(s, t, none, shared);
+  } else if (t.type === 'mangonel') {
+    // Boulder Barrage: a volley onto the thickest crowd in reach, landing one after another.
+    const centre = crowdCentre(s, p, P.barrageRadius, P.barrageSplash);
+    if (centre) {
+      const id = s.nextId++;
+      s.volleys.push({ id, towerId: t.id, left: P.barrageCount, hit: [], shared, what: 'boulders' });
       for (let i = 0; i < P.barrageCount; i++) {
         const a = i * 2.39996, r = (i === 0 ? 0 : 18 + (i % 3) * 16);
         const tx = centre.x + Math.cos(a) * r, ty = centre.y + Math.sin(a) * r * 0.7;
@@ -611,32 +641,33 @@ export function pulsePreview(s: GameState, towerId: string): PulsePreview | null
     out.now = foes.filter(inNow).map((e) => e.id);
     out.later = foes.filter((e) => !inNow(e) && inLater(e)).map((e) => e.id);
   };
-  if (t.type === 'bramble') {
+  if (t.type === 'bramble' || t.type === 'armour') {
     const h = hedgeSpot(p);
     out.hedge = { at: h.at, laneName: h.laneName };
+    const holdFor = t.type === 'armour' ? P.shieldDuration : P.hedgeDuration;
     // the hedge holds whoever reaches it while it stands: those already near it, and those further back
     const behind = foes.filter((e) => h.stops.some((st) => st.lane === e.lane && e.s < st.s));
-    const soon = (e: Enemy) => h.stops.some((st) => st.lane === e.lane && st.s - e.s <= BALANCE.enemies[e.type].speed * P.hedgeDuration);
+    const soon = (e: Enemy) => h.stops.some((st) => st.lane === e.lane && st.s - e.s <= BALANCE.enemies[e.type].speed * holdFor);
     out.now = behind.filter(soon).map((e) => e.id);
     out.later = behind.filter((e) => !soon(e)).map((e) => e.id);
     const road = h.laneName.startsWith('the ') ? h.laneName : `the ${h.laneName}`;
     out.summary = out.now.length
-      ? `${name} on ${road} · would hold ${enemies(out.now.length)} that reach it while it stands (${P.hedgeDuration} s)${out.later.length ? `; ${out.later.length} more further back` : ''}`
-      : out.later.length ? `${name} on ${road} · ${enemies(out.later.length)} coming, but none close enough to be held in its ${P.hedgeDuration} s` : `${name} on ${road} · no one on that road behind it yet`;
-  } else if (t.type === 'ember' || t.type === 'fountain') {
-    const r = t.type === 'ember' ? P.fireRadius : P.floodRadius;
+      ? `${name} on ${road} · would hold ${enemies(out.now.length)} that reach it while it stands (${holdFor} s)${out.later.length ? `; ${out.later.length} more further back` : ''}`
+      : out.later.length ? `${name} on ${road} · ${enemies(out.later.length)} coming, but none close enough to be held in its ${holdFor} s` : `${name} on ${road} · no one on that road behind it yet`;
+  } else if (t.type === 'ember' || t.type === 'fountain' || t.type === 'hearth') {
+    const r = t.type === 'ember' ? P.fireRadius : t.type === 'hearth' ? P.draughtRadius : P.floodRadius;
     const { ranges, pts } = roadNear(p, r);
     out.road = pts;
-    areaSplit((e) => onRanges(e, ranges), (e) => { const q = predicted(e, flight + (t.type === 'ember' ? P.fireDuration : P.floodDuration) * 0.5); return ranges.some((rg) => rg.lane === e.lane) && dist(q, p) <= r; });
+    areaSplit((e) => onRanges(e, ranges), (e) => { const q = predicted(e, flight + (t.type === 'fountain' ? P.floodDuration : P.fireDuration) * 0.5); return ranges.some((rg) => rg.lane === e.lane) && dist(q, p) <= r; });
     out.summary = `${name} · ${out.now.length ? `${enemies(out.now.length)} on that road now` : 'no enemies on that road now'}${out.later.length ? ` · ${out.later.length} more walking into it` : ''} · ink lands in ${fl}`;
-  } else if (t.type === 'mangonel') {
-    const near = foes.filter((e) => dist(enemyPos(e), p) <= P.barrageRadius);
-    let centre: Vec | null = null, most = -1;
-    for (const e of near) { const ep = enemyPos(e); const n = near.filter((o) => dist(enemyPos(o), ep) <= P.barrageSplash).length; if (n > most) { most = n; centre = ep; } }
-    out.radius = P.barrageRadius;
+  } else if (t.type === 'mangonel' || t.type === 'chandelier') {
+    const reach = t.type === 'chandelier' ? P.fallRadius : P.barrageRadius;
+    const splash = t.type === 'chandelier' ? P.fallSplash : P.barrageSplash + 34;
+    const centre = crowdCentre(s, p, reach, t.type === 'chandelier' ? P.fallSplash : P.barrageSplash);
+    out.radius = reach;
     if (centre) {
-      out.crowd = { at: centre, r: P.barrageSplash + 34 };
-      areaSplit((e) => dist(enemyPos(e), centre!) <= P.barrageSplash + 34, (e) => dist(predicted(e, flight + 1.2), centre!) <= P.barrageSplash + 34);
+      out.crowd = { at: centre, r: splash };
+      areaSplit((e) => dist(enemyPos(e), centre) <= splash, (e) => dist(predicted(e, flight + (t.type === 'chandelier' ? 0.7 : 1.2)), centre) <= splash);
     }
     out.summary = centre ? `${name} · aims at the thickest crowd when the ink lands (${fl}); ${enemies(out.now.length)} there now` : `${name} · no enemies in reach now`;
   } else if (t.type === 'banner') {
@@ -644,10 +675,10 @@ export function pulsePreview(s: GameState, towerId: string): PulsePreview | null
     out.towers = s.towers.filter((o) => dist(posOf(o), p) <= P.rallyRadius).map((o) => o.id);
     out.summary = `${name} · ${plural(out.towers.length, 'tower', 'towers')} would shoot twice as fast for ${P.rallyDuration} s`;
   } else {
-    const r = t.type === 'bell' ? P.tollRadius : t.type === 'verdigris' ? P.tarnishRadius : P.gazeRadius;
+    const r = t.type === 'bell' ? P.tollRadius : t.type === 'verdigris' ? P.tarnishRadius : t.type === 'books' ? P.stormRadius : P.gazeRadius;
     out.radius = r;
     areaSplit((e) => dist(enemyPos(e), p) <= r, (e) => dist(predicted(e, flight), p) <= r);
-    const verb = t.type === 'bell' ? 'knocked back' : t.type === 'verdigris' ? 'tarnished' : 'turned to stone';
+    const verb = t.type === 'bell' ? 'knocked back' : t.type === 'verdigris' ? 'tarnished' : t.type === 'books' ? 'blinded and slowed' : 'turned to stone';
     out.summary = `${name} · ${out.now.length ? `${enemies(out.now.length)} in reach now` : 'no enemies in reach now'}${out.later.length ? ` · ${out.later.length} more by the time the ink lands (${fl})` : ` · ink lands in ${fl}`} · they would be ${verb}`;
   }
   return out;
@@ -904,14 +935,14 @@ export function step(s: GameState, dtRaw: number) {
       const ep = enemyPos(target);
       let tx = ep.x, ty = ep.y;
       const flight = dist(p, ep) / st.projectileSpeed;
-      if ((t.type === 'ember' || t.type === 'mangonel') && target.stun <= 0) {
+      if ((t.type === 'ember' || t.type === 'mangonel' || t.type === 'hearth' || t.type === 'chandelier') && target.stun <= 0) {
         const fut = enemyPos({ ...target, s: target.s + BALANCE.enemies[target.type].speed * flight * 0.8 });
         tx = fut.x; ty = fut.y;
       }
       s.projectiles.push({
         kind: t.type, x: p.x, y: p.y - 30, sx: p.x, sy: p.y - 30, tx, ty,
         targetId: st.splash > 0 ? null : target.id, speed: st.projectileSpeed, damage: dmg, splash: st.splash, shred: st.shred, slow: st.slow,
-        arc: t.type === 'mangonel' ? 80 : t.type === 'ember' ? 60 : 0,
+        arc: t.type === 'mangonel' ? 80 : t.type === 'ember' || t.type === 'hearth' ? 60 : t.type === 'chandelier' ? 30 : 0,
         t: 0, dur: Math.max(0.12, flight),
       });
     }
@@ -944,7 +975,7 @@ export function step(s: GameState, dtRaw: number) {
     pr.y = pr.sy + (pr.ty - pr.sy) * k;
     if (k >= 1) {
       if (pr.splash > 0) {
-        s.rings.push({ x: pr.tx, y: pr.ty, r: pr.splash, t: 0, dur: 0.35, kind: pr.kind === 'mangonel' ? 'thud' : 'splash' });
+        s.rings.push({ x: pr.tx, y: pr.ty, r: pr.splash, t: 0, dur: 0.35, kind: pr.kind === 'mangonel' || pr.kind === 'chandelier' ? 'thud' : 'splash' });
         const v = pr.volley !== undefined ? s.volleys.find((x) => x.id === pr.volley) : undefined;
         for (const e of s.enemies) if (e.hp > 0 && dist(enemyPos(e), { x: pr.tx, y: pr.ty }) <= pr.splash) {
           if (v && !v.hit.includes(e.id)) v.hit.push(e.id);
@@ -952,7 +983,9 @@ export function step(s: GameState, dtRaw: number) {
         }
         if (v && --v.left <= 0) {
           const t = towerById(s, v.towerId);
-          if (t) result(s, t, v.hit.length ? `Boulders struck ${plural(v.hit.length, 'enemy', 'enemies')}` : 'The boulders hit nothing', v.shared);
+          if (t) result(s, t, v.what === 'chandelier'
+            ? (v.hit.length ? `The chandelier crushed ${plural(v.hit.length, 'enemy', 'enemies')}` : 'The chandelier crashed onto empty boards')
+            : (v.hit.length ? `Boulders struck ${plural(v.hit.length, 'enemy', 'enemies')}` : 'The boulders hit nothing'), v.shared);
           s.volleys = s.volleys.filter((x) => x !== v);
         }
       } else {

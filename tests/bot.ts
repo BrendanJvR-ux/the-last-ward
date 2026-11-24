@@ -82,6 +82,10 @@ function botPulse(s: GameState) {
     if (t.type === 'mangonel') fire = near(BALANCE.pulses.barrageRadius).length >= 7;
     if (t.type === 'fountain') fire = near(BALANCE.pulses.floodRadius).length >= 5;
     if (t.type === 'banner') fire = near(BALANCE.pulses.rallyRadius).length >= 8;
+    if (t.type === 'armour') fire = near(170).length >= 5;
+    if (t.type === 'books') fire = near(BALANCE.pulses.stormRadius).length >= 5;
+    if (t.type === 'chandelier') fire = near(BALANCE.pulses.fallRadius).length >= 6;
+    if (t.type === 'hearth') fire = near(BALANCE.pulses.draughtRadius).length >= 5;
     if (fire) pulseTower(s, t.id);
   }
 }

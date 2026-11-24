@@ -293,6 +293,18 @@ export function towerInk(ctx: C, type: TowerType, x: number, y: number, m: 'trac
   } else if (type === 'banner') {
     courtBanner(ctx, x, y, time, R);
     mark(ctx, x, y - 128, m);
+  } else if (type === 'armour') {
+    keepArmour(ctx, x, y, time, R);
+    mark(ctx, x, y - 118, m);
+  } else if (type === 'books') {
+    keepBooks(ctx, x, y, time, R);
+    mark(ctx, x, y - 118, m);
+  } else if (type === 'chandelier') {
+    keepChandelier(ctx, x, y, time, R);
+    mark(ctx, x, y - 120, m);
+  } else if (type === 'hearth') {
+    keepHearth(ctx, x, y, time, R);
+    mark(ctx, x, y - 112, m);
   } else {
     // the eye-flower: a crooked stalk carrying a great watching eye in a crown of filaments
     ctx.lineCap = 'round';
@@ -1372,4 +1384,125 @@ export function rareInk(ctx: C, type: 'moth' | 'heron' | 'tortoise' | 'snail' | 
     ctx.beginPath(); ctx.moveTo(-10 + t * 26, -18); ctx.lineTo(-7 + t * 26, -12); ctx.stroke();
   }
   ctx.restore();
+}
+
+
+// ── Keep towers ─────────────────────────────────────────────────────────────
+
+/** A suit of armour on its stand: plumed helm, crescent shield and a tall halberd. */
+function keepArmour(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 28, 7, 0.35);
+  // plinth
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  ctx.fillRect(x - 18, y - 8, 36, 8); ctx.strokeRect(x - 18, y - 8, 36, 8);
+  // greaves and sabatons
+  const leg = (lx: number) => { ctx.beginPath(); ctx.moveTo(lx - 4, y - 8); ctx.lineTo(lx - 5, y - 36); ctx.lineTo(lx + 5, y - 36); ctx.lineTo(lx + 4, y - 8); ctx.closePath(); };
+  for (const lx of [-7, 7]) { ctx.fillStyle = PAPER; leg(x + lx); ctx.fill(); hatch(ctx, () => leg(x + lx), [x + lx - 6, y - 38, 12, 30], 0, 2.2, 0.4); ctx.lineWidth = 1; leg(x + lx); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x + lx, y - 24, 4, 2, 0, 0, Math.PI * 2); ctx.stroke(); }
+  // tassets and breastplate
+  const chest = () => { ctx.beginPath(); ctx.moveTo(x - 14, y - 36); ctx.lineTo(x - 15, y - 62); ctx.quadraticCurveTo(x, y - 70, x + 15, y - 62); ctx.lineTo(x + 14, y - 36); ctx.quadraticCurveTo(x, y - 32, x - 14, y - 36); ctx.closePath(); };
+  ctx.fillStyle = PAPER; chest(); ctx.fill();
+  ctx.save(); chest(); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.6; ctx.beginPath();
+  for (let k = -12; k <= 12; k += 2.4) { ctx.moveTo(x + k, y - 70); ctx.quadraticCurveTo(x + k * 0.6, y - 52, x + k, y - 34); }
+  ctx.stroke(); ctx.fillStyle = sepia(0.3); ctx.fillRect(x + 4, y - 72, 14, 40); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; chest(); ctx.stroke();
+  ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x, y - 66); ctx.lineTo(x, y - 38); ctx.stroke();
+  // pauldrons
+  for (const sx of [-1, 1]) { ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(x + sx * 15, y - 62, 7, 5, sx * 0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  // helm with visor slits and a plume that stirs
+  const helm = () => { ctx.beginPath(); ctx.moveTo(x - 8, y - 66); ctx.lineTo(x - 9, y - 80); ctx.quadraticCurveTo(x, y - 92, x + 9, y - 80); ctx.lineTo(x + 8, y - 66); ctx.closePath(); };
+  ctx.fillStyle = PAPER; helm(); ctx.fill(); hatch(ctx, helm, [x - 10, y - 92, 20, 26], -0.4, 2, 0.4); ctx.lineWidth = 1.2; helm(); ctx.stroke();
+  ctx.fillStyle = INK; for (const vy of [-78, -75]) ctx.fillRect(x - 6, y + vy, 12, 1.4);
+  const sway = Math.sin(time * 1.4) * 3;
+  ctx.lineWidth = 0.7; ctx.beginPath();
+  for (let i = 0; i < 8; i++) { ctx.moveTo(x, y - 90); ctx.quadraticCurveTo(x - 6 - i + sway, y - 104 - i, x - 16 - i * 1.4 + sway, y - 96 + i * 1.2); }
+  ctx.stroke();
+  // halberd in the right gauntlet
+  ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x + 22, y - 4); ctx.lineTo(x + 22, y - 108); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 22, y - 108); ctx.lineTo(x + 32, y - 96); ctx.quadraticCurveTo(x + 34, y - 88, x + 22, y - 86); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 22, y - 116); ctx.lineTo(x + 25, y - 108); ctx.lineTo(x + 19, y - 108); ctx.closePath(); ctx.fillStyle = INK; ctx.fill();
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.ellipse(x + 20, y - 56, 4, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // kite shield with a crescent, on the left arm
+  const shield = () => { ctx.beginPath(); ctx.moveTo(x - 30, y - 62); ctx.lineTo(x - 12, y - 62); ctx.quadraticCurveTo(x - 12, y - 32, x - 21, y - 20); ctx.quadraticCurveTo(x - 30, y - 32, x - 30, y - 62); ctx.closePath(); };
+  ctx.fillStyle = PAPER; shield(); ctx.fill(); hatch(ctx, shield, [x - 31, y - 63, 20, 44], 0.9, 2.2, 0.4, INK, R); ctx.lineWidth = 1.2; shield(); ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(x - 21, y - 46, 6, 0.6, Math.PI * 2 - 0.6); ctx.arc(x - 19, y - 47, 5, Math.PI * 2 - 0.6, 0.6, true); ctx.closePath(); ctx.fill(); ctx.lineWidth = 0.6; ctx.stroke();
+}
+
+/** A tall bookcase whose books keep flapping up off the shelves like birds. */
+function keepBooks(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 30, 7, 0.35);
+  const w = 42, h = 82, L = x - w / 2, top = y - h;
+  ctx.fillStyle = PAPER; ctx.fillRect(L, top, w, h);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.strokeRect(L, top, w, h);
+  ctx.beginPath(); ctx.moveTo(L - 3, top); ctx.lineTo(L + w + 3, top); ctx.lineTo(L + w, top - 5); ctx.lineTo(L, top - 5); ctx.closePath(); ctx.fillStyle = PAPER; ctx.fill(); ctx.stroke();
+  for (let i = 0; i < 4; i++) {
+    const sy = top + 4 + i * 19;
+    ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, sy + 16); ctx.lineTo(L + w, sy + 16); ctx.stroke();
+    let bx = L + 2;
+    while (bx < L + w - 4) {
+      const bw = 2.5 + R() * 3, bh = 9 + R() * 6;
+      ctx.fillStyle = R() < 0.3 ? 'rgba(122,40,38,0.45)' : R() < 0.55 ? sepia(0.4) : PAPER;
+      ctx.fillRect(bx, sy + 16 - bh, bw, bh); ctx.lineWidth = 0.45; ctx.strokeRect(bx, sy + 16 - bh, bw, bh);
+      bx += bw + 0.4;
+    }
+  }
+  hatch(ctx, () => { ctx.beginPath(); ctx.rect(L + w - 8, top, 8, h); }, [L + w - 8, top, 8, h], -0.3, 1.8, 0.45);
+  // books in flight, wings beating
+  for (let k = 0; k < 4; k++) {
+    const ph = time * 0.5 + k * 0.27, t = ph % 1;
+    const bx = x - 22 + k * 15 + Math.sin(ph * 6 + k) * 8, by = top - 10 - t * 40 - k * 4;
+    const flap = Math.sin(time * 9 + k * 2) * 0.7;
+    ctx.save(); ctx.translate(bx, by); ctx.globalAlpha = Math.min(1, (1 - t) * 1.6);
+    ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 0.9;
+    for (const side of [-1, 1]) { ctx.save(); ctx.scale(side, 1); ctx.rotate(-0.4 - flap * 0.6); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(9, -2); ctx.lineTo(9, 4); ctx.lineTo(0, 5); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.lineWidth = 0.4; ctx.beginPath(); for (let l = 1; l < 4; l++) { ctx.moveTo(2, l * 1.2); ctx.lineTo(8, l * 1.2 - 1); } ctx.stroke(); ctx.lineWidth = 0.9; ctx.restore(); }
+    ctx.fillStyle = 'rgba(122,40,38,0.7)'; ctx.fillRect(-1, -1, 2, 6);
+    ctx.restore();
+  }
+}
+
+/** A great iron wheel of candles hung from a gibbet post, dripping wax. */
+function keepChandelier(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 30, 7, 0.35);
+  limbs(ctx, [{ x1: x - 14, y1: y, x2: x - 14, y2: y - 112, w: 5 }, { x1: x - 18, y1: y - 108, x2: x + 26, y2: y - 108, w: 4 }, { x1: x - 14, y1: y - 90, x2: x + 2, y2: y - 106, w: 2.6 }], R, false);
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillRect(x - 26, y - 8, 26, 8); ctx.strokeRect(x - 26, y - 8, 26, 8);
+  // chain swinging gently
+  const sw = Math.sin(time * 0.9) * 2.5;
+  const cx = x + 18 + sw, cy = y - 54;
+  ctx.lineWidth = 0.8;
+  for (let k = 0; k < 9; k++) { const t = k / 9; ctx.beginPath(); ctx.ellipse(x + 20 + sw * t, y - 106 + t * 46, 1.6, 3, 0, 0, Math.PI * 2); ctx.stroke(); }
+  // the wheel and its spokes
+  ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(cx, cy, 26, 7, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.lineWidth = 0.7; ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; ctx.moveTo(cx, cy - 6); ctx.lineTo(cx + Math.cos(a) * 26, cy + Math.sin(a) * 7); } ctx.stroke();
+  // candles with flickering flames and drips
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2, px = cx + Math.cos(a) * 26, py = cy + Math.sin(a) * 7;
+    ctx.fillStyle = PAPER; ctx.fillRect(px - 2, py - 10, 4, 10); ctx.strokeRect(px - 2, py - 10, 4, 10);
+    const f = Math.sin(time * 11 + i * 1.7);
+    ctx.fillStyle = 'rgba(240,190,90,0.9)'; ctx.beginPath(); ctx.moveTo(px - 1.8, py - 10); ctx.quadraticCurveTo(px - 1, py - 15 - f, px, py - 18 - f * 1.5); ctx.quadraticCurveTo(px + 1, py - 15, px + 1.8, py - 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = INK; ctx.lineWidth = 0.5; ctx.stroke(); ctx.lineWidth = 0.7;
+    if (i % 3 === 0) { const d = (time * 0.7 + i * 0.3) % 1; ctx.fillStyle = 'rgba(239,233,218,0.95)'; ctx.beginPath(); ctx.ellipse(px, py + 2 + d * 30, 1, 1.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  }
+}
+
+/** A stone fireplace with a hooded chimney, fire roaring between the firedogs. */
+function keepHearth(ctx: C, x: number, y: number, time: number, R: R) {
+  groundWash(ctx, x + 4, y + 2, 34, 8, 0.4);
+  const body = () => { ctx.beginPath(); ctx.moveTo(x - 30, y); ctx.lineTo(x - 30, y - 50); ctx.lineTo(x - 34, y - 50); ctx.lineTo(x - 34, y - 58); ctx.lineTo(x - 16, y - 66); ctx.lineTo(x - 12, y - 104); ctx.lineTo(x + 12, y - 104); ctx.lineTo(x + 16, y - 66); ctx.lineTo(x + 34, y - 58); ctx.lineTo(x + 34, y - 50); ctx.lineTo(x + 30, y - 50); ctx.lineTo(x + 30, y); ctx.closePath(); };
+  ctx.fillStyle = PAPER; body(); ctx.fill();
+  ctx.save(); body(); ctx.clip(); ctx.strokeStyle = INK2; ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let yy = y - 6; yy > y - 104; yy -= 7) for (let xx = x - 34 + ((yy / 7) % 2 ? 0 : 6) + R() * 2; xx < x + 34; xx += 12) { ctx.moveTo(xx, yy); ctx.lineTo(xx + 9, yy); ctx.moveTo(xx + 10, yy); ctx.lineTo(xx + 10, yy + 7); }
+  ctx.stroke(); ctx.fillStyle = sepia(0.3); ctx.fillRect(x + 12, y - 106, 24, 106); ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4; body(); ctx.stroke();
+  // the firebox
+  const box = () => { ctx.beginPath(); ctx.moveTo(x - 22, y); ctx.lineTo(x - 22, y - 34); ctx.quadraticCurveTo(x, y - 46, x + 22, y - 34); ctx.lineTo(x + 22, y); ctx.closePath(); };
+  ctx.fillStyle = 'rgba(29,25,21,0.88)'; box(); ctx.fill();
+  const g = ctx.createRadialGradient(x, y - 8, 2, x, y - 8, 26); g.addColorStop(0, `rgba(250,200,100,${0.85 + 0.1 * Math.sin(time * 8)})`); g.addColorStop(1, 'rgba(200,90,40,0)');
+  ctx.fillStyle = g; box(); ctx.fill();
+  for (let i = 0; i < 4; i++) { const fx = x - 12 + i * 8, f = Math.sin(time * 10 + i * 1.9); inkFlame(ctx, fx, y - 2, 14 + f * 4 + (i % 2) * 4, f * 0.3); }
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; box(); ctx.stroke();
+  // firedogs and a log
+  ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x - 16, y); ctx.lineTo(x - 16, y - 10); ctx.moveTo(x + 16, y); ctx.lineTo(x + 16, y - 10); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y - 5, 16, 3.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // sparks rising from the chimney
+  ctx.fillStyle = 'rgba(214,130,58,0.9)';
+  for (let k = 0; k < 4; k++) { const t = (time * 0.8 + k * 0.25) % 1; ctx.beginPath(); ctx.arc(x - 4 + Math.sin(t * 7 + k) * 6, y - 108 - t * 30, 1.4 * (1 - t) + 0.4, 0, Math.PI * 2); ctx.fill(); }
 }

@@ -2,7 +2,7 @@
 // Roads, the river and its spring, gnarled trees and fynbos, the mill, the windmill, the castle
 // and the inkwell are drawn once; everything that moves is drawn live in render.ts.
 import {
-  MAP_W, MAP_H, GUTTER_X, LANES, LANE_IDS, RIVER, POND, MILL, BRIDGE, INKWELL, CASTLE, LEVEL,
+  KEEP_FLOORS, MAP_W, MAP_H, GUTTER_X, LANES, LANE_IDS, RIVER, POND, MILL, BRIDGE, INKWELL, CASTLE, LEVEL,
   LEY_EDGES, NODE, FOUNDATION_IDS, pointAt, type Vec,
 } from './map';
 import {
@@ -129,6 +129,7 @@ function drawMill(ctx: CanvasRenderingContext2D) {
 
 export function buildStatic(scale = 2): HTMLCanvasElement {
   if (LEVEL === 'courtyard') return buildCourtyard(scale);
+  if (LEVEL === 'keep') return buildKeep(scale);
   const cv = document.createElement('canvas');
   cv.width = MAP_W * scale; cv.height = MAP_H * scale;
   const ctx = cv.getContext('2d')!;
@@ -193,19 +194,20 @@ export function buildStatic(scale = 2): HTMLCanvasElement {
 }
 
 /** Folds, browning, the title plate and the ruled border: the same on every sheet. */
-function finishSheet(ctx: CanvasRenderingContext2D, R: () => number, title: string, subtitle: string) {
+function finishSheet(ctx: CanvasRenderingContext2D, R: () => number, title: string, subtitle: string, plateY = 880) {
   // the sheet was folded once across and once down
   foldCrease(ctx, true, MAP_H * 0.54, R);
   foldCrease(ctx, false, GUTTER_X, R);
   paperVignette(ctx);
   // Title plate, ruled in ink
-  ctx.fillStyle = 'rgba(228,211,182,0.92)'; roundRect(ctx, 40, 880, 350, 78, 4); ctx.fill();
+  const py = plateY;
+  ctx.fillStyle = 'rgba(228,211,182,0.92)'; roundRect(ctx, 40, py, 350, 78, 4); ctx.fill();
   ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.stroke();
-  ctx.lineWidth = 0.6; roundRect(ctx, 45, 885, 340, 68, 3); ctx.stroke();
+  ctx.lineWidth = 0.6; roundRect(ctx, 45, py + 5, 340, 68, 3); ctx.stroke();
   ctx.font = `italic 600 23px ${SERIF}`; ctx.textAlign = 'left'; ctx.fillStyle = INK;
-  ctx.fillText(title, 56, 918);
+  ctx.fillText(title, 56, py + 38);
   ctx.font = `italic 14px ${SERIF}`; ctx.fillStyle = 'rgba(58,34,18,0.7)';
-  ctx.fillText(subtitle, 58, 942);
+  ctx.fillText(subtitle, 58, py + 62);
   // sheet border
   ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(14, 14, MAP_W - 28, MAP_H - 28);
   ctx.lineWidth = 0.6; ctx.strokeRect(19, 19, MAP_W - 38, MAP_H - 38);
@@ -703,4 +705,229 @@ function buildCourtyard(scale: number): HTMLCanvasElement {
 
   finishSheet(ctx, R, 'The Castle Courtyard', 'Defence of Goosebridge Castle · Level 2');
   return cv;
+}
+
+// ── Level 3: the keep, in cut-away ──────────────────────────────────────────
+
+/** A flight of stairs seen side-on along a segment of a way: treads and risers above a hatched stringer. */
+function stairFlight(ctx: Ctx, a: Vec, b: Vec, R: () => number) {
+  const up = b.y < a.y;
+  const lo = up ? a : b, hi = up ? b : a;
+  const n = Math.max(3, Math.round((lo.y - hi.y) / 14));
+  const dx = (hi.x - lo.x) / n, dy = (hi.y - lo.y) / n;
+  // the stair body: from the step profile down to a parallel stringer
+  const body = () => {
+    ctx.beginPath(); ctx.moveTo(lo.x - dx * 0.5, lo.y + 20);
+    for (let i = 0; i < n; i++) { const x = lo.x + dx * i, y = lo.y + 20 + dy * i; ctx.lineTo(x, y + dy); ctx.lineTo(x + dx, y + dy); }
+    ctx.lineTo(hi.x + dx * 0.5, hi.y + 20); ctx.lineTo(hi.x + dx * 0.5, hi.y + 44); ctx.lineTo(lo.x - dx * 0.5 + (dx > 0 ? 18 : -18), lo.y + 44); ctx.closePath();
+  };
+  ctx.fillStyle = PAPER; body(); ctx.fill();
+  hatch(ctx, body, [Math.min(lo.x, hi.x) - 30, hi.y, Math.abs(hi.x - lo.x) + 60, lo.y - hi.y + 50], dx > 0 ? -0.6 : 0.6, 2.2, 0.45, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.3; body(); ctx.stroke();
+  // a handrail on turned posts
+  ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(lo.x, lo.y - 18); ctx.lineTo(hi.x, hi.y - 18); ctx.stroke();
+  ctx.lineWidth = 0.8; ctx.beginPath();
+  for (let i = 0; i <= n; i += 2) { const x = lo.x + dx * i, y = lo.y + dy * i; ctx.moveTo(x, y + 20 + dy); ctx.lineTo(x, y - 18); }
+  ctx.stroke();
+}
+
+/** A runner of carpet along a floor where a way walks across it. */
+function runner(ctx: Ctx, a: Vec, b: Vec) {
+  const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y = a.y + 12;
+  ctx.fillStyle = 'rgba(122,40,38,0.32)'; ctx.fillRect(x0, y, x1 - x0, 8);
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.8; ctx.strokeRect(x0, y, x1 - x0, 8);
+  ctx.lineWidth = 0.5; ctx.beginPath();
+  for (let x = x0 + 6; x < x1 - 4; x += 12) { ctx.moveTo(x, y + 4); ctx.lineTo(x + 3, y + 1); ctx.lineTo(x + 6, y + 4); ctx.lineTo(x + 3, y + 7); ctx.closePath(); }
+  ctx.stroke();
+}
+
+function keepWay(ctx: Ctx, pts: Vec[], R: () => number) {
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    if (Math.abs(b.y - a.y) > 30) stairFlight(ctx, a, b, R);
+    else runner(ctx, a, b);
+  }
+}
+
+function archWindow(ctx: Ctx, x: number, y: number, w: number, h: number) {
+  const win = () => { ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.lineTo(x - w / 2, y - h + w / 2); ctx.arc(x, y - h + w / 2, w / 2, Math.PI, 0); ctx.lineTo(x + w / 2, y); ctx.closePath(); };
+  const g = ctx.createLinearGradient(x, y - h, x, y); g.addColorStop(0, 'rgba(250,240,210,0.9)'); g.addColorStop(1, 'rgba(230,215,180,0.7)');
+  ctx.fillStyle = g; win(); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; win(); ctx.stroke();
+  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); for (let k = y - 12; k > y - h + 6; k -= 12) { ctx.moveTo(x - w / 2, k); ctx.lineTo(x + w / 2, k); } ctx.stroke();
+}
+
+function bookshelf(ctx: Ctx, x: number, base: number, w: number, h: number, R: () => number) {
+  ctx.fillStyle = PAPER; ctx.fillRect(x, base - h, w, h); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(x, base - h, w, h);
+  const shelves = Math.floor(h / 26);
+  for (let i = 0; i < shelves; i++) {
+    const sy = base - h + 4 + i * 26;
+    ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, sy + 22); ctx.lineTo(x + w, sy + 22); ctx.stroke();
+    let bx = x + 3;
+    while (bx < x + w - 6) {
+      const bw = 3 + R() * 4, bh = 12 + R() * 8, lean = R() < 0.1;
+      ctx.fillStyle = R() < 0.25 ? 'rgba(122,40,38,0.45)' : R() < 0.5 ? 'rgba(58,34,18,0.35)' : PAPER;
+      ctx.save(); ctx.translate(bx, sy + 22); if (lean) ctx.rotate(0.25);
+      ctx.fillRect(0, -bh, bw, bh); ctx.lineWidth = 0.5; ctx.strokeRect(0, -bh, bw, bh);
+      ctx.restore();
+      bx += bw + 0.6;
+    }
+  }
+}
+
+function longTable(ctx: Ctx, x: number, base: number, w: number) {
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  ctx.fillRect(x, base - 26, w, 6); ctx.strokeRect(x, base - 26, w, 6);
+  ctx.beginPath(); for (const lx of [x + 10, x + w - 10]) { ctx.moveTo(lx, base - 20); ctx.lineTo(lx - 4, base); ctx.moveTo(lx, base - 20); ctx.lineTo(lx + 4, base); } ctx.stroke();
+  // goblets, a platter and candles
+  for (let i = 0; i < 5; i++) { const gx = x + 20 + i * (w - 40) / 4; ctx.beginPath(); ctx.moveTo(gx - 3, base - 36); ctx.lineTo(gx + 3, base - 36); ctx.lineTo(gx, base - 30); ctx.closePath(); ctx.moveTo(gx, base - 30); ctx.lineTo(gx, base - 26); ctx.stroke(); }
+  ctx.beginPath(); ctx.ellipse(x + w / 2, base - 28, 16, 3, 0, 0, Math.PI * 2); ctx.stroke();
+}
+
+function hangingChandelier(ctx: Ctx, x: number, top: number, drop: number) {
+  ctx.strokeStyle = INK; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, top + drop); ctx.stroke();
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(x, top + drop, 22, 5, 0, 0, Math.PI * 2); ctx.stroke();
+  for (let i = -2; i <= 2; i++) { const cx = x + i * 10; ctx.fillStyle = PAPER; ctx.fillRect(cx - 1.5, top + drop - 10, 3, 8); ctx.strokeRect(cx - 1.5, top + drop - 10, 3, 8); }
+}
+
+function tapestry(ctx: Ctx, x: number, top: number, w: number, h: number, R: () => number) {
+  const t = () => { ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x + w, top); ctx.lineTo(x + w, top + h); for (let i = 0; i < 5; i++) ctx.lineTo(x + w - (i + 0.5) * w / 5, top + h + (i % 2 ? 0 : 6)); ctx.lineTo(x, top + h); ctx.closePath(); };
+  ctx.fillStyle = 'rgba(122,40,38,0.25)'; t(); ctx.fill();
+  hatch(ctx, t, [x, top, w, h + 8], 1.2, 3, 0.4, INK, R);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1; t(); ctx.stroke();
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.arc(x + w / 2, top + h * 0.45, w * 0.22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(x + w / 2, top + h * 0.45, w * 0.12, 0.6, Math.PI * 2 - 0.6); ctx.fill();
+  ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x - 4, top); ctx.lineTo(x + w + 4, top); ctx.stroke();
+}
+
+function cask(ctx: Ctx, x: number, y: number, r: number) {
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 0.6; for (const k of [0.45, 0.8]) { ctx.beginPath(); ctx.ellipse(x, y, r * k, r * 0.9 * k, 0, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI * 2); ctx.fill();
+}
+
+function cauldronHearth(ctx: Ctx, x: number, base: number, R: () => number) {
+  // a deep kitchen fireplace with a cauldron over the fire
+  const fp = () => { ctx.beginPath(); ctx.moveTo(x - 60, base); ctx.lineTo(x - 60, base - 110); ctx.lineTo(x + 60, base - 110); ctx.lineTo(x + 60, base); ctx.lineTo(x + 40, base); ctx.lineTo(x + 40, base - 70); ctx.quadraticCurveTo(x, base - 90, x - 40, base - 70); ctx.lineTo(x - 40, base); ctx.closePath(); };
+  ctx.fillStyle = PAPER; fp(); ctx.fill(); hatch(ctx, fp, [x - 60, base - 110, 120, 110], -0.3, 2.2, 0.45, INK, R); ctx.strokeStyle = INK; ctx.lineWidth = 1.3; fp(); ctx.stroke();
+  ctx.fillStyle = 'rgba(29,25,21,0.85)'; ctx.beginPath(); ctx.moveTo(x - 40, base); ctx.lineTo(x - 40, base - 70); ctx.quadraticCurveTo(x, base - 90, x + 40, base - 70); ctx.lineTo(x + 40, base); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(214,130,58,0.65)'; ctx.beginPath(); ctx.moveTo(x - 22, base); ctx.quadraticCurveTo(x - 10, base - 30, x, base - 18); ctx.quadraticCurveTo(x + 10, base - 34, x + 22, base); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(x, base - 34, 18, 13, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 18, base - 40); ctx.lineTo(x + 18, base - 40); ctx.stroke();
+  ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x, base - 47); ctx.lineTo(x, base - 70); ctx.stroke();
+  // pots on hooks along the mantel
+  for (const px of [x - 48, x + 48]) { ctx.beginPath(); ctx.moveTo(px, base - 110); ctx.lineTo(px, base - 124); ctx.stroke(); ctx.fillStyle = PAPER; ctx.beginPath(); ctx.arc(px, base - 128, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+}
+
+function studyDesk(ctx: Ctx, x: number, base: number, R: () => number) {
+  // the wizard's desk, a globe, a star chart and a candle
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  ctx.fillRect(x - 40, base - 34, 80, 6); ctx.strokeRect(x - 40, base - 34, 80, 6);
+  ctx.beginPath(); ctx.moveTo(x - 34, base - 28); ctx.lineTo(x - 34, base); ctx.moveTo(x + 34, base - 28); ctx.lineTo(x + 34, base); ctx.stroke();
+  ctx.lineWidth = 0.7; for (let i = 0; i < 4; i++) { ctx.strokeRect(x - 30 + i * 2, base - 40 - i * 3, 22, 3); }
+  ctx.beginPath(); ctx.moveTo(x + 14, base - 34); ctx.lineTo(x + 14, base - 48); ctx.stroke();
+  ctx.fillStyle = 'rgba(250,215,120,0.8)'; ctx.beginPath(); ctx.ellipse(x + 14, base - 52, 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // globe on a stand
+  const gx = x - 70;
+  ctx.fillStyle = PAPER; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(gx, base - 40, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  hatch(ctx, () => { ctx.beginPath(); ctx.arc(gx, base - 40, 14, 0.4, 2.2); ctx.lineTo(gx, base - 40); ctx.closePath(); }, [gx - 14, base - 54, 28, 28], 0.9, 2, 0.4, INK, R);
+  ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(gx, base - 40, 14, 5, 0.2, 0, Math.PI * 2); ctx.moveTo(gx, base - 26); ctx.lineTo(gx, base); ctx.moveTo(gx - 8, base); ctx.lineTo(gx + 8, base); ctx.stroke();
+}
+
+function buildKeep(scale: number): HTMLCanvasElement {
+  const cv = document.createElement('canvas');
+  cv.width = MAP_W * scale; cv.height = MAP_H * scale;
+  const ctx = cv.getContext('2d')!;
+  ctx.scale(scale, scale);
+  const R = rng(37);
+  const [GROUND, FIRST, SECOND, TOP] = KEEP_FLOORS;
+
+  // paper, then the dressed stone of the inner walls in faint courses
+  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, MAP_W, MAP_H);
+  for (let i = 0; i < 9000; i++) { ctx.fillStyle = R() < 0.5 ? 'rgba(110,90,60,0.07)' : 'rgba(255,244,222,0.2)'; ctx.fillRect(R() * MAP_W, R() * MAP_H, 1.2, 1.2); }
+  for (let i = 0; i < 12; i++) groundWash(ctx, R() * MAP_W, 100 + R() * 860, 200 + R() * 200, 60 + R() * 60, 0.04 + R() * 0.04);
+  ctx.lineWidth = 0.5;
+  for (let y = 70; y < 990; y += 22) {
+    let x = 60 - R() * 40;
+    while (x < 1540) { const w = 40 + R() * 40; ctx.strokeStyle = `rgba(58,34,18,${0.08 + R() * 0.07})`; ctx.strokeRect(x, y, w, 22); x += w; }
+  }
+  // sky and roofline: battlements, two turrets and their pennants
+  ctx.fillStyle = 'rgba(86,68,52,0.06)'; ctx.fillRect(0, 0, MAP_W, 62);
+  ctx.fillStyle = PAPER; ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  ctx.fillRect(20, 52, 1560, 14); ctx.strokeRect(20, 52, 1560, 14);
+  for (let x = 30; x < 1570; x += 22) { ctx.fillRect(x, 40, 12, 12); ctx.strokeRect(x, 40, 12, 12); }
+  for (const tx of [110, 1490]) turret(ctx, tx, 66, 70, 40, 46, tx < 800 ? 'crescent' : 'orb', true, R);
+  // outer walls, thick, with the two ways in: the broken west door and the east cellar postern
+  for (const [x0, x1] of [[20, 62], [1538, 1580]] as [number, number][]) {
+    ctx.fillStyle = PAPER; ctx.fillRect(x0, 66, x1 - x0, 924);
+    hatch(ctx, () => { ctx.beginPath(); ctx.rect(x0, 66, x1 - x0, 924); }, [x0, 66, x1 - x0, 924], 0.8, 2.6, 0.45, INK, R);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.strokeRect(x0, 66, x1 - x0, 924);
+  }
+  ctx.fillStyle = PAPER; ctx.fillRect(18, GROUND - 74, 46, 74); ctx.fillRect(1536, GROUND - 74, 46, 74);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(18, GROUND - 74); ctx.lineTo(64, GROUND - 74); ctx.moveTo(1536, GROUND - 74); ctx.lineTo(1582, GROUND - 74); ctx.stroke();
+  // the splintered west door hangs off its hinge
+  ctx.save(); ctx.translate(64, GROUND - 2); ctx.rotate(-0.55);
+  ctx.fillStyle = PAPER; ctx.fillRect(0, -70, 12, 68); ctx.strokeRect(0, -70, 12, 68);
+  ctx.lineWidth = 0.6; ctx.beginPath(); for (let k = -64; k < 0; k += 8) { ctx.moveTo(0, k); ctx.lineTo(12, k); } ctx.stroke(); ctx.restore();
+  // cellars below the ground floor: vaults and casks
+  ctx.fillStyle = 'rgba(58,34,18,0.08)'; ctx.fillRect(62, GROUND + 18, 1476, 972 - GROUND - 18);
+  ctx.strokeStyle = INK; ctx.lineWidth = 1;
+  for (let x = 62; x < 1538; x += 120) { ctx.beginPath(); ctx.moveTo(x, 990); ctx.lineTo(x, GROUND + 50); ctx.quadraticCurveTo(x + 60, GROUND + 22, x + 120, GROUND + 50); ctx.stroke(); }
+  for (const cx of [180, 230, 205, 1250, 1300, 1350, 1275, 1325]) cask(ctx, cx, cx === 205 || cx === 1275 || cx === 1325 ? 950 : 972, 14);
+
+  // floors: timber floors on joists, the ground floor flagged
+  for (const fy of KEEP_FLOORS) {
+    ctx.fillStyle = PAPER; ctx.fillRect(62, fy, 1476, 18);
+    hatch(ctx, () => { ctx.beginPath(); ctx.rect(62, fy + 6, 1476, 12); }, [62, fy, 1476, 18], 0, 3, 0.45, INK, R);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(62, fy); ctx.lineTo(1538, fy); ctx.moveTo(62, fy + 18); ctx.lineTo(1538, fy + 18); ctx.stroke();
+    ctx.lineWidth = 0.8; ctx.beginPath(); for (let x = 90; x < 1538; x += 60) { ctx.moveTo(x, fy + 18); ctx.lineTo(x, fy + 26); } ctx.stroke();
+  }
+  // the rooms, floor by floor: windows, tapestries, shelves, hall, kitchen, study
+  for (const [wx, fy] of [[160, GROUND], [1000, GROUND], [600, FIRST], [1440, FIRST], [300, SECOND], [1360, SECOND], [380, TOP], [700, TOP]] as [number, number][]) archWindow(ctx, wx, fy - 70, 30, 90);
+  bookshelf(ctx, 90, FIRST, 160, 150, R);
+  bookshelf(ctx, 1300, TOP, 80, 120, R);
+  tapestry(ctx, 1260, SECOND - 190, 46, 100, R);
+  tapestry(ctx, 160, SECOND - 190, 46, 100, R);
+  tapestry(ctx, 1420, FIRST - 190, 46, 100, R);
+  longTable(ctx, 120, SECOND, 240);
+  hangingChandelier(ctx, 240, TOP + 18, 70);
+  hangingChandelier(ctx, 900, FIRST + 18, 60);
+  cauldronHearth(ctx, 800, GROUND, R);
+  studyDesk(ctx, 1380, TOP, R);
+  // stone ledges and landings for the towers that stand between floors
+  for (const id of ['f_westledge', 'f_eastledge', 'f_studyledge', 'f_bell']) {
+    const n = NODE[id];
+    ctx.fillStyle = PAPER; ctx.fillRect(n.x - 46, n.y + 2, 92, 12);
+    hatch(ctx, () => { ctx.beginPath(); ctx.rect(n.x - 46, n.y + 2, 92, 12); }, [n.x - 46, n.y + 2, 92, 12], 0.5, 2, 0.45, INK, R);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(n.x - 46, n.y + 2, 92, 12);
+    for (const bx of [n.x - 34, n.x + 34]) { ctx.beginPath(); ctx.moveTo(bx - 8, n.y + 14); ctx.quadraticCurveTo(bx, n.y + 40, bx + 2, n.y + 44); ctx.lineTo(bx + 8, n.y + 14); ctx.stroke(); }
+  }
+  // the ways up: carpets along the floors, stairs between them
+  keepWay(ctx, LANES.mill.pts, R);
+  keepWay(ctx, LANES.king.pts.slice(0, LANES.king.pts.indexOf(LANES.king.pts.find((p) => p === LANES.mill.pts[4])!) + 1), R);
+  // the study door, and the study itself
+  const door = LANES.mill.pts.at(-1)!;
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.moveTo(door.x + 14, TOP); ctx.lineTo(door.x + 14, TOP - 64); ctx.arc(door.x + 28, TOP - 64, 14, Math.PI, 0); ctx.lineTo(door.x + 42, TOP); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = PAPER; ctx.lineWidth = 0.8; ctx.beginPath(); for (let y = TOP - 70; y < TOP; y += 9) { ctx.moveTo(door.x + 16, y); ctx.lineTo(door.x + 40, y); } ctx.stroke();
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(door.x + 36, TOP - 32, 2, 0, Math.PI * 2); ctx.fill();
+  st_ley(ctx);
+  inkInkwell(ctx, INKWELL);
+
+  label(ctx, 'the Great Stair', 210, GROUND - 98, 15);
+  label(ctx, 'the Cellar Stair', 1390, GROUND - 98, 15);
+  label(ctx, 'Kitchen', 800, GROUND + 44, 14);
+  label(ctx, 'Library', 170, FIRST - 166, 14);
+  label(ctx, 'Great Hall', 240, SECOND - 120, 15);
+  label(ctx, 'the Study', 1310, TOP - 150, 15);
+  label(ctx, 'Cellars', 760, 980, 13);
+
+  finishSheet(ctx, R, 'The Keep', 'Defence of Goosebridge Castle · Level 3', 70);
+  return cv;
+}
+
+/** Leylines on the keep sheet (the same dotted ink as elsewhere). */
+function st_ley(ctx: Ctx) {
+  inkSurreal.ley(ctx, LEY_EDGES.map((e) => e.pts), Object.values(NODE).filter((n) => !n.foundation && n.id !== 'ink').map((n) => ({ x: n.x, y: n.y })));
 }

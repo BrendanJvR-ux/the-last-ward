@@ -7,8 +7,10 @@
 export type FieldTowerType = 'bramble' | 'ember' | 'bell' | 'verdigris';
 /** The four towers of the castle courtyard (level 2). */
 export type CourtTowerType = 'gargoyle' | 'mangonel' | 'fountain' | 'banner';
-export type TowerType = FieldTowerType | CourtTowerType;
-export type LevelId = 'fields' | 'courtyard';
+/** The four towers of the keep (level 3). */
+export type KeepTowerType = 'armour' | 'books' | 'chandelier' | 'hearth';
+export type TowerType = FieldTowerType | CourtTowerType | KeepTowerType;
+export type LevelId = 'fields' | 'courtyard' | 'keep';
 /** `bearer` is the marked Fen Levy carrying the Cairn-Born's name-stone; it is spawned with every `cairn`. */
 /** The enemies every wave is made of. The art-style studies draw only these. */
 export type FieldEnemyType = 'levy' | 'bearer' | 'hound' | 'cairn';
@@ -154,6 +156,27 @@ export const BALANCE = {
       projectileSpeed: 380, splash: 0, slow: 1.6,
       pulseName: 'Inkflood', pulseText: 'Floods the nearby road with ink: everything wading through it crawls and is slowly stained.',
     },
+    // ── The keep ──
+    armour: {
+      name: 'Suit of Armour', cost: 80, damage: 22, cooldown: 1.1, range: 160,
+      projectileSpeed: 900, splash: 0,
+      pulseName: 'Shield Wall', pulseText: 'The armour clanks down onto the nearest stair and plants its shield: enemies on that way halt behind it.',
+    },
+    books: {
+      name: 'Flapping Library', cost: 70, damage: 7, cooldown: 0.5, range: 195,
+      projectileSpeed: 620, splash: 0,
+      pulseName: 'Paper Storm', pulseText: 'Every book takes flight at once: enemies nearby are blinded by pages and slowed for a while.',
+    },
+    chandelier: {
+      name: 'Chandelier', cost: 100, damage: 14, cooldown: 2.0, range: 210,
+      projectileSpeed: 300, splash: 50,
+      pulseName: 'The Fall', pulseText: 'The chain is cut: the great wheel of candles crashes onto the thickest crowd in reach.',
+    },
+    hearth: {
+      name: 'Great Hearth', cost: 90, damage: 13, cooldown: 1.4, range: 175,
+      projectileSpeed: 340, splash: 40,
+      pulseName: 'Back-draught', pulseText: 'The fire roars out across the nearby floor: everything on it burns for a few seconds. Burning ignores armour.',
+    },
     banner: {
       name: 'Banner Tower', cost: 80, damage: 7, cooldown: 0.8, range: 175,
       projectileSpeed: 560, splash: 0,
@@ -203,6 +226,19 @@ export const BALANCE = {
     rallyRadius: 400,
     rallyDuration: 8,
     rallyRate: 2,
+    /** Suit of Armour pulse: a shield wall across the nearest way (works like a hedge). */
+    shieldDuration: 6,
+    shieldDamage: 14,
+    /** Flapping Library pulse: a storm of pages. */
+    stormRadius: 185,
+    stormSlow: 5,
+    stormDamage: 8,
+    /** Chandelier pulse: one great crash. */
+    fallRadius: 240,
+    fallDamage: 110,
+    fallSplash: 80,
+    /** Great Hearth pulse: the floor nearby burns (as the Ember Kiln's road fire). */
+    draughtRadius: 150,
   },
 
   cairn: {
@@ -398,7 +434,81 @@ const COURTYARD: LevelBalance = {
   ],
 };
 
-export const LEVEL_BALANCE: Record<LevelId, LevelBalance> = { fields: FIELDS, courtyard: COURTYARD };
+/** Level 3: the fight is inside the keep, floor by floor, up to the wizard's study. */
+const KEEP: LevelBalance = {
+  startGold: 70,
+  towerTypes: ['armour', 'books', 'chandelier', 'hearth'],
+  startingTowers: [
+    { foundation: 'f_armoury', type: 'armour' },
+    { foundation: 'f_library', type: 'books' },
+    { foundation: 'f_hall', type: 'hearth' },
+  ],
+  houndWarnText: 'Horns! Dogs on the cellar stair',
+  waves: [
+    {
+      title: 'The Door Gives Way',
+      lesson: 'Boots on the great stair. The keep is not a fortress any more; it is a house under siege.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 5, abreast: 3, start: 1, interval: 1.6 },
+        { type: 'levy', lane: 'king', count: 2, abreast: 2, start: 18, interval: 1.6 },
+      ],
+    },
+    {
+      title: 'Up from the Cellars',
+      lesson: 'Something scrabbles behind the wine casks. Listen for the horn below.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 7, abreast: 3, start: 1, interval: 1.3 },
+        { type: 'hound', lane: 'king', count: 9, start: 14, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'Smoke in the Great Hall',
+      lesson: 'Both stairs at once, and the hall between them.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 8, abreast: 3, start: 1, interval: 1.2 },
+        { type: 'hound', lane: 'king', count: 6, start: 8, interval: 0.4 },
+        { type: 'levy', lane: 'king', count: 5, abreast: 2, start: 12, interval: 1.5 },
+        { type: 'hound', lane: 'king', count: 8, start: 26, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'The Crown Remembers',
+      lesson: 'Gold leaf on the banisters. Bind what you can trust.',
+      groups: [
+        { type: 'levy', lane: 'mill', count: 12, abreast: 3, start: 1, interval: 1.1 },
+        { type: 'levy', lane: 'king', count: 7, abreast: 2, start: 5, interval: 1.3 },
+        { type: 'hound', lane: 'king', count: 10, start: 16, interval: 0.38 },
+        { type: 'hound', lane: 'mill', count: 8, start: 30, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'A Giant on the Stairs',
+      lesson: 'The steps groan under stone. Where will it kneel?',
+      groups: [
+        { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 15, abreast: 3, start: 8, interval: 1.0 },
+        { type: 'hound', lane: 'king', count: 10, start: 14, interval: 0.38 },
+        { type: 'levy', lane: 'king', count: 6, abreast: 2, start: 18, interval: 1.4 },
+        { type: 'hound', lane: 'mill', count: 8, start: 32, interval: 0.4 },
+      ],
+    },
+    {
+      title: 'The Study Door',
+      lesson: 'Behind the last door the wizard writes on. Hold the page.',
+      groups: [
+        { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
+        { type: 'cairn', lane: 'king', count: 1, start: 10, interval: 0 },
+        { type: 'levy', lane: 'mill', count: 15, abreast: 3, start: 7, interval: 1.0 },
+        { type: 'hound', lane: 'king', count: 18, start: 14, interval: 0.32 },
+        { type: 'levy', lane: 'king', count: 9, abreast: 2, start: 24, interval: 1.3 },
+        { type: 'hound', lane: 'king', count: 32, start: 40, interval: 0.25 },
+        { type: 'hound', lane: 'mill', count: 12, start: 46, interval: 0.3 },
+      ],
+    },
+  ],
+};
+
+export const LEVEL_BALANCE: Record<LevelId, LevelBalance> = { fields: FIELDS, courtyard: COURTYARD, keep: KEEP };
 
 /** Swap in a level's towers, waves and purse. Every level has the same number of waves. */
 export function applyBalanceLevel(id: LevelId) {

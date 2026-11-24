@@ -1,6 +1,6 @@
 # Defence of Goosebridge Castle
 
-A two-level fantasy tower defence prototype, drawn as a sheet from an old notebook of studies, after the Renaissance anatomical notebooks: sepia ink on mottled parchment, folded once across and once down, with ink smudges and blocks of mirror-script notes in the margins. The drawing itself has dense hatching, gnarled trees full of knots, fynbos and protea, a turning windmill, butterflies in pen ticks, and a river that wells up from a spring among stones. An old wizard in a patterned robe and crooked hat keeps the inkwell, leaning on a quill as tall as a staff; he raises it while you trace and pulse. The sheet hangs in a thin silver frame on a sage-green wall. The creatures are gentle impossible hybrids: root-walking fynbos spirits, lean war dogs, a goggled wanderer and a walking citadel-fish with a stern human face. Two roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from the wizard's inkwell in the castle garden out to thirteen tower foundations.
+A three-level fantasy tower defence prototype, drawn as a sheet from an old notebook of studies, after the Renaissance anatomical notebooks: sepia ink on mottled parchment, folded once across and once down, with ink smudges and blocks of mirror-script notes in the margins. The drawing itself has dense hatching, gnarled trees full of knots, fynbos and protea, a turning windmill, butterflies in pen ticks, and a river that wells up from a spring among stones. An old wizard in a patterned robe and crooked hat keeps the inkwell, leaning on a quill as tall as a staff; he raises it while you trace and pulse. The sheet hangs in a thin silver frame on a sage-green wall. The creatures are gentle impossible hybrids: root-walking fynbos spirits, lean war dogs, a goggled wanderer and a walking citadel-fish with a stern human face. Two roads lead to Goosebridge Castle; your magic runs in ink along a separate network of leylines, from the wizard's inkwell in the castle garden out to thirteen tower foundations.
 
 **Play it:** https://brendanjvr-ux.github.io/the-last-ward/
 
@@ -12,7 +12,7 @@ A two-level fantasy tower defence prototype, drawn as a sheet from an old notebo
 
 The game opens on a **menu** (the **Menu** button returns to it at any time):
 
-- **Start** chooses a level: **Level 1: Gate Defence** or **Level 2: The Castle Courtyard**, each with a drawn thumbnail, its four towers and your best result.
+- **Start** chooses a level: **Level 1: Gate Defence**, **Level 2: The Castle Courtyard** or **Level 3: The Keep**, each with a drawn thumbnail, its four towers and your best result.
 - **Resume** returns to the game in progress.
 - **Redeem rewards** spends **Wizard's Seals**. You earn 1 seal for every wave held, 5 for winning a level, 5 more the first time you win it, and 3 more for a flawless defence (no castle health lost). Seals buy lasting rewards, kept in this browser:
 
@@ -31,7 +31,9 @@ The game opens on a **menu** (the **Menu** button returns to it at any time):
 1. **Gate Defence**: two roads across the fields to the castle gate (the Fen Levy and the war dogs), with the Bramble, Ember, Bell and Verdigris towers. Everything below describes this level unless it says otherwise.
 2. **The Castle Courtyard**: the outer wall has fallen. The levy pour through the ruined gatehouse in the west wall (the Gatehouse Passage); the war dogs leap the breach in the north wall (the Breach, announced by the horn at the stable yard). Both meet at the gate stair before the east gate, beside its guard tower. Curtain walls enclose the whole yard, and the yard is full of life: a well, chapel, smithy, stables, beehives, a kitchen garden, a market stall, a washing line, archery butts, a weapon rack, a dovecote, a founder's statue, hens, woodpiles, ivy and torches on the walls. Four different towers defend it: the Gargoyle Perch, the Mangonel, the Ink Fountain and the Banner Tower. Same rules, same enemies, six new waves; 60 starting gold.
 
-Winning Gate Defence offers the courtyard straight away. Each level remembers your best result (castle health) in the browser.
+3. **The Keep**: inside the keep itself, drawn in cut-away like an architect's section: four floors from the cellars to the roof. The levy come in at the broken west door and climb the **Great Stair**; the dogs come up from the cellars by the **Cellar Stair** (the horn sounds there). The two stairs meet on the landing of the Great Hall, and one grand stair climbs to the top floor and along it to the **study door**, where the wizard keeps his inkwell. Towers stand on the floors and on stone ledges and landings between them: the Suit of Armour, the Flapping Library, the Chandelier and the Great Hearth. Kitchen, library, Great Hall with its long table, tapestries, chandeliers, cellar casks and the wizard's study fill the rooms. Six new waves; 70 starting gold.
+
+Winning Gate Defence offers the courtyard straight away, and winning the courtyard offers the keep. Each level remembers your best result (castle health) in the browser.
 
 TypeScript, Vite, HTML Canvas for the battlefield and HTML/CSS for the controls. All artwork and sound are made procedurally: no image or audio files, no fonts or services from the internet, no accounts or API keys.
 
@@ -145,11 +147,20 @@ The **Rare creature casebook** in the menu keeps a page for each: a silhouette u
 | **Ink Fountain** (a stone fountain; a striped fish spouts ink) | Gobs of ink that stain and slow the target | **Inkflood**: the nearby road floods with ink for 6 s; everything wading through crawls at a quarter speed and is slowly stained. |
 | **Banner Tower** (a tall pole with a swallow-tailed pennant) | Light arrows. Every tower within a wide reach of a banner always reloads 25% faster | **Rally**: every tower across a broad swathe of the yard shoots twice as fast for 8 s. |
 
+### Keep towers
+
+| Tower | Attack | Pulse |
+|---|---|---|
+| **Suit of Armour** (plumed helm, crescent shield, halberd) | Thrown daggers: short reach, hard hits | **Shield Wall**: the armour plants a wall of shields across the nearest stair for 6 s; enemies on that way halt behind it, and those right at it are struck. |
+| **Flapping Library** (a bookcase whose books fly off like birds) | Fast, light flying books | **Paper Storm**: a whirl of pages blinds and slows everything nearby for 5 s. |
+| **Chandelier** (an iron wheel of candles on a gibbet post) | Drips of hot wax that splash | **The Fall**: the chain is cut and the chandelier crashes onto the thickest crowd in reach. |
+| **Great Hearth** (a stone fireplace with a hooded chimney) | Embers that splash | **Back-draught**: fire roars across the nearby floor; everything on it burns, ignoring armour. |
+
 ## Tuning
 
 Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its volley, rewards, tower costs and damage, pulse durations and strengths, bind cost, the trace/pulse table, the reinforcement wave, and for each sheet its starting gold, towers and six hand-authored waves (`LEVEL_BALANCE`).
 
-`tests/balance.test.ts` (Gate Defence) and `tests/courtyard.test.ts` (the courtyard) play each sheet headlessly with a scripted player and check that a sensible strategy wins, that the same towers without pulses lose, and that pulses without building lose. The scripted player uses a fixed random seed, so the results repeat exactly. Rerun `npm test` after tuning.
+`tests/balance.test.ts` (Gate Defence), `tests/courtyard.test.ts` (the courtyard) and `tests/keep.test.ts` (the keep) play each level headlessly with a scripted player and check that a sensible strategy wins, that the same towers without pulses lose, and that pulses without building lose. The scripted player uses a fixed random seed, so the results repeat exactly. Rerun `npm test` after tuning.
 
 ## Files
 
@@ -159,7 +170,7 @@ Every number lives in [`src/balance.ts`](src/balance.ts): castle health and its 
 | `src/map.ts` | Each sheet's geometry: roads, river, the inkwell, the leyline tree and its 13 foundations, snapping. `setMapLevel` swaps them. |
 | `src/game.ts` | Game state, the trace / pulse / bind / build rules and the combat simulation (no DOM). |
 | `src/ink.ts` | The pen-and-ink look: hatching, wood grain and wash helpers, every tower, creature and building, the wizard, shared with the art studies. |
-| `src/paint.ts` | The static sheets, drawn once each: the fields (roads, river and spring, trees, mill, windmill, castle) and the courtyard (flagstones, walls all round, fallen gatehouse, breach, east gate and guard tower, and the life of the yard). |
+| `src/paint.ts` | The static sheets, drawn once each: the fields (roads, river and spring, trees, mill, windmill, castle) the courtyard (flagstones, walls all round, fallen gatehouse, breach, east gate and guard tower, and the life of the yard) and the keep in cut-away (floors, stairs, rooms, cellars and the study). |
 | `src/sprites.ts` | Tower and enemy sprites (walk cycles, the kneeling giant, ink spatter on hits) and margin icons. |
 | `src/render.ts` | Live drawing: ink threads, gold leaf, hedges, flames, turning sails, butterflies, the wizard, effects, warnings, inspect highlight, the victory plate. |
 | `src/audio.ts` | The synthesized double horn. |

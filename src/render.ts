@@ -204,6 +204,18 @@ function drawHedge(ctx: CanvasRenderingContext2D, h: GameState['hedges'][number]
   ctx.scale(1, Math.max(0.05, life));
   softShadow(ctx, 4, 4, 36, 12, 0.6);
   const R = seed(h.at.x, h.at.y, 9);
+  if (h.kind === 'shield') {
+    // the armour's shield wall: round shields locked rim to rim, spears over them
+    ctx.strokeStyle = P.ink;
+    for (let i = -2; i <= 2; i++) { ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(i * 12 - 2, 6); ctx.lineTo(i * 12 + 8, -34); ctx.stroke(); ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(i * 12 + 8, -38); ctx.lineTo(i * 12 + 10, -32); ctx.lineTo(i * 12 + 6, -32); ctx.closePath(); ctx.fill(); }
+    for (let i = -2; i <= 2; i++) {
+      const sx = i * 12, sh = () => { ctx.beginPath(); ctx.arc(sx, -10, 9, 0, Math.PI * 2); };
+      ctx.fillStyle = PAPER; sh(); ctx.fill(); hatch(ctx, sh, [sx - 9, -19, 18, 18], 0.9, 2, 0.4); ctx.lineWidth = 1.2; sh(); ctx.stroke();
+      ctx.fillStyle = i % 2 ? P.gold : P.ink; ctx.beginPath(); ctx.arc(sx, -10, 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    return;
+  }
   const segs: Seg[] = [];
   for (let i = -3; i <= 3; i++) {
     const x = i * 9;
@@ -343,7 +355,7 @@ function drawHoundWarnings(ctx: CanvasRenderingContext2D, s: GameState, time: nu
     ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4;
     for (let r = 22; r < 80; r += 18) { ctx.beginPath(); ctx.arc(entry.x, entry.y, r, 0, Math.PI * 2); ctx.stroke(); }
     ctx.globalAlpha = 1;
-    const bx = LEVEL === 'fields' ? 548 : 1060, by = LEVEL === 'fields' ? 722 : 82;
+    const bx = LEVEL === 'fields' ? 548 : LEVEL === 'keep' ? 1100 : 1060, by = LEVEL === 'fields' ? 722 : LEVEL === 'keep' ? 966 : 82;
     ctx.fillStyle = 'rgba(228,211,182,0.96)'; roundRect(ctx, bx, by - 24, 258, 36, 4); ctx.fill();
     ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6; ctx.stroke();
     ctx.lineWidth = 0.6; roundRect(ctx, bx + 3, by - 21, 252, 30, 3); ctx.stroke();
@@ -509,6 +521,34 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
       ctx.fillStyle = P.ink; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(-2, -4.5, 4, -3.5); ctx.arc(4, 0, 3.5, -Math.PI / 2, Math.PI / 2); ctx.quadraticCurveTo(-2, 4.5, -11, 0); ctx.fill();
       ctx.restore();
+    } else if (p.kind === 'armour') {
+      // a thrown dagger, turning end over end
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a + p.t * 14);
+      ctx.fillStyle = P.stone; ctx.strokeStyle = P.ink; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(0, -2); ctx.lineTo(0, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, 4); ctx.moveTo(0, 0); ctx.lineTo(-6, 0); ctx.stroke();
+      ctx.restore();
+    } else if (p.kind === 'books') {
+      // a small book flapping at its target
+      const flap = Math.sin(p.t * 40) * 0.6;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
+      ctx.fillStyle = PAPER; ctx.strokeStyle = P.ink; ctx.lineWidth = 0.8;
+      for (const side of [-1, 1]) { ctx.save(); ctx.scale(1, side); ctx.rotate(-0.3 - flap); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-7, -1); ctx.lineTo(-7, -6); ctx.lineTo(0, -5); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+      ctx.restore();
+    } else if (p.kind === 'chandelier') {
+      const k = Math.min(1, p.t / p.dur);
+      const lift = Math.sin(k * Math.PI) * (p.arc ?? 30);
+      softShadow(ctx, p.x, p.y + 2, p.arc && p.arc > 100 ? 26 : 6, p.arc && p.arc > 100 ? 7 : 2.5, 0.5);
+      if (p.arc && p.arc > 100) {
+        // the whole chandelier falling, candles streaming
+        ctx.save(); ctx.translate(p.x, p.y - lift); ctx.rotate(k * 0.6);
+        ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, 0, 24, 7, 0, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 6; i++) { const b = (i / 6) * Math.PI * 2; const cx = Math.cos(b) * 24, cy = Math.sin(b) * 7; ctx.fillStyle = PAPER; ctx.fillRect(cx - 2, cy - 9, 4, 9); ctx.lineWidth = 0.7; ctx.strokeRect(cx - 2, cy - 9, 4, 9); ctx.fillStyle = 'rgba(240,190,90,0.9)'; ctx.beginPath(); ctx.ellipse(cx, cy - 12, 1.6, 3, 0, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore();
+      } else {
+        ctx.fillStyle = 'rgba(239,233,218,0.95)'; ctx.strokeStyle = P.ink; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y - lift - 6); ctx.quadraticCurveTo(p.x + 4, p.y - lift + 2, p.x, p.y - lift + 3); ctx.quadraticCurveTo(p.x - 4, p.y - lift + 2, p.x, p.y - lift - 6); ctx.fill(); ctx.stroke();
+      }
     } else if (p.kind === 'mangonel') {
       // a boulder lobbed high, its shadow racing along the ground
       const k = Math.min(1, p.t / p.dur);
@@ -558,6 +598,15 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
       ctx.lineWidth = 1; ctx.beginPath();
       for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2; ctx.moveTo(r.x + Math.cos(a) * rr * 0.82, r.y + 60 + Math.sin(a) * rr * 0.82); ctx.lineTo(r.x + Math.cos(a) * rr, r.y + 60 + Math.sin(a) * rr); }
       ctx.stroke();
+    } else if (r.kind === 'pages') {
+      // a whirl of loose pages flying outwards
+      for (let i = 0; i < 18; i++) {
+        const a = i * 0.9 + k * 5, d = r.r * (0.2 + 0.8 * k) * (0.5 + (i % 5) * 0.12);
+        ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(r.x + Math.cos(a) * d, r.y + Math.sin(a) * d * 0.7); ctx.rotate(a * 2 + k * 6);
+        ctx.fillStyle = PAPER; ctx.strokeStyle = 'rgba(29,25,21,0.8)'; ctx.lineWidth = 0.7; ctx.fillRect(-4, -5, 8, 10); ctx.strokeRect(-4, -5, 8, 10);
+        ctx.beginPath(); ctx.moveTo(-2, -2); ctx.lineTo(2, -2); ctx.moveTo(-2, 1); ctx.lineTo(2, 1); ctx.stroke();
+        ctx.restore();
+      }
     } else if (r.kind === 'rally') {
       ctx.strokeStyle = `rgba(195,150,52,${0.9 * (1 - k)})`; ctx.lineWidth = 3; ctx.setLineDash([10, 6]);
       ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (0.3 + 0.7 * k), 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
