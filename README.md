@@ -25,6 +25,7 @@ The game opens on a **menu** (the **Menu** button returns to it at any time):
   | Crimson Ink | 6 | Traced threads run in crimson ink. |
 
   Perks apply from the next level you start; any reward you own can be switched off and on again.
+- **How to play** opens a short guide on a sheet of parchment (it also appears the first time you start a level, and the **?** button beside **Menu** brings it back at any time; close it with **Got it**, **×** or Escape). On the Flooded Fen and the Barrows it adds that level's own rule.
 - **Rare creature casebook** records the very rare creatures you have met (see below).
 - **Exit** closes the book (the game waits on its page until you close the tab).
 

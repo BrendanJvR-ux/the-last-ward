@@ -22,6 +22,7 @@
         <div id="phaseRes" class="phase-res" aria-live="polite"></div>
         <div class="hud-buttons">
           <button id="btnMenu" type="button" title="Main menu: start, resume, rewards, exit">Menu</button>
+          <button id="btnHelp" type="button" title="How to play" aria-label="How to play">?</button>
           <button id="btnPause" type="button" title="Pause (P or Space)">Pause</button>
           <button id="btnSpeed" type="button" title="Game speed">Speed ×1</button>
           <button id="btnRestart" type="button" class="danger" title="Restart from the first wave">Restart</button>
@@ -40,6 +41,7 @@
       </main>
     </div>
     <div id="menu" class="menu" hidden role="dialog" aria-label="Main menu"></div>
+    <div id="tutorial" class="tutorial" hidden role="dialog" aria-modal="true" aria-labelledby="tut-title"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

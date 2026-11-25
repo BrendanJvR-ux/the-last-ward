@@ -355,6 +355,7 @@ function handleAction(e: Event) {
     case 'menu': openMenu(); break;
     case 'closeMenu': closeMenu(); break;
     case 'menuStart': menuView = 'levels'; renderMenu(); return;
+    case 'howToPlay': openTutorial(); return;
     case 'menuRewards': menuView = 'rewards'; renderMenu(); return;
     case 'menuCasebook': menuView = 'casebook'; renderMenu(); return;
     case 'menuExit': menuView = 'exit'; renderMenu(); return;
@@ -456,6 +457,7 @@ function restart() {
 
 window.addEventListener('keydown', (e) => {
   const tag = (e.target as HTMLElement).tagName;
+  if (!tutorialEl.hidden) { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); closeTutorial(); } return; }
   if (menuOpen) {
     if (e.key === 'Escape') { if (menuView !== 'title') { menuView = 'title'; renderMenu(); } else if (menuCanClose()) closeMenu(); }
     return;
@@ -802,6 +804,7 @@ function renderMenu() {
         <button data-act="closeMenu" ${canResume ? '' : 'disabled'}>Resume${canResume ? `<small>${esc(here.sub)}: ${esc(here.name)}, wave ${s.wave}</small>` : '<small>no game in progress</small>'}</button>
         <button data-act="menuCasebook">Rare creature casebook<small>${recordedCount()} of ${RARE_TYPES.length} recorded</small></button>
         <button data-act="menuRewards">Redeem rewards<small>${seals()} Wizard's Seal${seals() === 1 ? '' : 's'}</small></button>
+        <button data-act="howToPlay">How to play<small>a short guide on parchment</small></button>
         <button data-act="menuExit">Exit</button>
       </nav>`;
   } else if (menuView === 'levels') {
@@ -882,10 +885,54 @@ function startLevel(id: LevelId) {
   restart();
   iconCache.clear();
   ribbonSig = ''; overlaySig = '';
+  if (!tutorialSeen()) openTutorial();
   toast(s, ({ fields: 'Level 1: Gate Defence. Hold the roads to the castle gate.', courtyard: 'Level 2: the Castle Courtyard. New towers to raise.', keep: 'Level 3: the Keep. Hold the stairs to the wizard\u2019s study.', fen: 'Level 4: the Flooded Fen. Hold the causeways to the weir house.', barrows: 'Level 5: the Barrows. Hold the Ward Ring until dawn.' } as Record<LevelId, string>)[id], 'info');
 }
 menuEl.addEventListener('click', handleAction);
 $('btnMenu').addEventListener('click', openMenu);
+
+// ── How to play: a short guide on a sheet of parchment ──────────────────────
+const tutorialEl = $('tutorial');
+const TUTORIAL_KEY = 'goosebridge.tutorialSeen';
+let tutorialPaused = false;
+function tutorialSeen(): boolean { try { return localStorage.getItem(TUTORIAL_KEY) === '1'; } catch { return false; } }
+function openTutorial() {
+  const levelRule = s.level === 'fen'
+    ? `<li><b>The Flooded Fen:</b> one road floods each wave. Levy and giants wade it slowly; the dogs swim straight through.</li>`
+    : s.level === 'barrows'
+      ? `<li><b>The Barrows:</b> night falls during each wave and towers see less far, except in the light of a Barrow Beacon.</li>`
+      : '';
+  tutorialEl.innerHTML = `<div class="scroll">
+    <button class="x" data-act="closeTutorial" aria-label="Close">\u00d7</button>
+    <h2 id="tut-title">How to hold the castle</h2>
+    <p class="tut-lede">Enemies walk the roads to your gate. Every tower attacks them on its own; your ink makes them stronger.</p>
+    <ol class="tut-steps">
+      <li><b>Trace.</b> Before each wave, drag from the <b>inkwell</b> along the dotted leylines to a tower. Each wave asks for a set number of traced towers.</li>
+      <li><b>Start the wave</b> when your threads are drawn.</li>
+      <li><b>Pulse.</b> During the wave, <b>double-click</b> a traced tower (double-tap on a touch screen), or press its <b>Pulse</b> button, to send ink down its thread. When it arrives, the tower\u2019s special ability fires. Pulses are few: hover over a tower (or press and hold) to preview first.</li>
+      <li><b>Build.</b> Spend gold on empty foundations between waves. Click a tower to see its stats.</li>
+      <li><b>Bind in gold.</b> Gilded Leaves bind a tower for good: it gets a free pulse every wave, no thread needed.</li>
+      <li><b>Watch for</b> the warning before the war dogs come, and for the Stone-Bearer: where it falls, its giant kneels and blocks the road, then marches on.</li>
+      ${levelRule}
+    </ol>
+    <p class="tut-foot">Threads fade at the end of every wave. Lose all castle health and the page is lost.</p>
+    <div class="tut-actions"><button data-act="closeTutorial" class="primary">Got it</button></div>
+  </div>`;
+  tutorialEl.hidden = false;
+  if (s.phase === 'combat' && !s.paused) { s.paused = true; tutorialPaused = true; }
+  (tutorialEl.querySelector('.tut-actions button') as HTMLButtonElement | null)?.focus({ preventScroll: true });
+}
+function closeTutorial() {
+  if (tutorialEl.hidden) return;
+  tutorialEl.hidden = true;
+  try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch { /* private mode */ }
+  if (tutorialPaused) { s.paused = false; tutorialPaused = false; }
+}
+tutorialEl.addEventListener('click', (e) => {
+  const t = e.target as HTMLElement;
+  if (t === tutorialEl || t.closest('[data-act=closeTutorial]')) closeTutorial();
+});
+$('btnHelp').addEventListener('click', openTutorial);
 
 // ── Main loop ───────────────────────────────────────────────────────────────
 let last = performance.now();
