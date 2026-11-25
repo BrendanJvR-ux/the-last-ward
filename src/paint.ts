@@ -1713,14 +1713,14 @@ function buildFen(scale: number): HTMLCanvasElement {
   // mist lying in bands
   for (let i = 0; i < 7; i++) { const y = 120 + R() * 780; const g = ctx.createLinearGradient(0, y - 30, 0, y + 30); g.addColorStop(0, 'rgba(240,230,210,0)'); g.addColorStop(0.5, 'rgba(240,230,210,0.32)'); g.addColorStop(1, 'rgba(240,230,210,0)'); ctx.fillStyle = g; ctx.fillRect(0, y - 30, MAP_W, 60); }
 
-  sluiceGate(ctx, BRIDGE, R);
+  sluiceGate(ctx, { x: BRIDGE.x - 44, y: BRIDGE.y - 4 }, R);
   weirHouse(ctx, GATE, R);
   inkInkwell(ctx, INKWELL);
   inkSmudge(ctx, MAP_W - 70, MAP_H - 90, 30, 40, R);
 
-  label(ctx, 'the Reed Causeway', 160, 222, 16);
-  label(ctx, 'the Eel Dyke', 140, 832, 16);
-  label(ctx, 'the Sluice', BRIDGE.x - 10, BRIDGE.y + 76, 14);
+  label(ctx, 'the Reed Causeway', 110, 150, 16);
+  label(ctx, 'the Eel Dyke', 440, 826, 16);
+  label(ctx, 'the Sluice', BRIDGE.x - 64, BRIDGE.y + 88, 14);
   label(ctx, 'the Weir House', GATE.x + 76, GATE.y - 196, 15);
   label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);
 
@@ -1802,7 +1802,7 @@ function buildBarrows(scale: number): HTMLCanvasElement {
   const ctx = cv.getContext('2d')!;
   ctx.scale(scale, scale);
   const R = rng(53);
-  const plate: [number, number, number, number] = [1210, 900, 350, 78];
+  const plate: [number, number, number, number] = [1210, 40, 350, 78];
   paperGround(ctx, R, 60);
 
   // the downs: long contour lines of chalk hills
@@ -1858,8 +1858,8 @@ function buildBarrows(scale: number): HTMLCanvasElement {
   dusk.addColorStop(0, 'rgba(60,40,30,0.16)'); dusk.addColorStop(0.4, 'rgba(60,40,30,0.04)'); dusk.addColorStop(1, 'rgba(60,40,30,0.1)');
   ctx.fillStyle = dusk; ctx.fillRect(0, 0, MAP_W, MAP_H);
 
-  label(ctx, 'the Corpse Road', 150, 252, 16);
-  label(ctx, 'the Hollow Way', 600, 940, 16);
+  label(ctx, 'the Corpse Road', 90, 568, 16);
+  label(ctx, 'the Hollow Way', 1090, 824, 16);
   label(ctx, 'the Kennel Barrow', BRIDGE.x + 150, BRIDGE.y + 64, 13);
   label(ctx, 'the Ward Ring', GATE.x + 80, GATE.y - 74, 15);
   label(ctx, 'the Inkwell', INKWELL.x, INKWELL.y + 54, 14);

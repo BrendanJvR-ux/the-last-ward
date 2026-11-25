@@ -1,9 +1,9 @@
 import './style.css';
 import { BALANCE, TOTAL_WAVES, LEVEL_BALANCE, phaseRule, type TowerType, type EnemyType, type LevelId, type RareType } from './balance';
 import {
-  type GameState, newGame, step, rule, traceTower, untraceTower, undoTrace, clearTraces, canStartWave, startWave,
+  type GameState, type Tower, newGame, step, rule, traceTower, untraceTower, undoTrace, clearTraces, canStartWave, startWave,
   pulseTower, pulseCheck, enemyPos, effectiveArmour, buildTower, buildCheck, placeGrant, bindTower, bindCheck, towerAt, towerById, emptyFoundations,
-  towerDamage, fireRate, toast, traceCheck, setLevel, RARE_TYPES,
+  towerDamage, fireRate, towerRange, toast, traceCheck, setLevel, RARE_TYPES,
 } from './game';
 import {
   MAP_W, MAP_H, NODE, FOUNDATION_IDS, INKWELL, snapToNetwork,
@@ -104,7 +104,7 @@ function cancelGesture(reason?: string) {
 }
 
 // ── Touch: press and hold to preview a pulse ────────────────────────────────
-// A quick tap still does what it always did (pulse in battle, open a tower between waves).
+// A quick tap still does what it always did (a double-tap pulses in battle; a tap opens a tower between waves).
 // Holding a finger on a tower, or on its Pulse button, previews its pulse instead and fires nothing.
 const HOLD_MS = 420;
 const HOLD_LINGER_MS = 2600;
@@ -134,6 +134,22 @@ function endHold(linger: boolean) {
 }
 const isTouch = (e: PointerEvent) => e.pointerType === 'touch' || e.pointerType === 'pen';
 
+// ── On the map a pulse takes a double-click (or double-tap), so a stray click spends nothing ──
+const DOUBLE_MS = 450;
+let lastTowerTap: { id: string; t: number } | null = null;
+let doubleHints = 0;
+function towerTap(t: Tower) {
+  const now = performance.now();
+  if (lastTowerTap && lastTowerTap.id === t.id && now - lastTowerTap.t < DOUBLE_MS) {
+    lastTowerTap = null;
+    pulseTower(s, t.id);
+    return;
+  }
+  if (!pulseCheck(s, t.id).ok) { lastTowerTap = null; pulseTower(s, t.id); return; } // the rules explain why not
+  lastTowerTap = { id: t.id, t: now };
+  if (doubleHints < 2) { doubleHints++; toast(s, `Double-${view.touch ? 'tap' : 'click'} the ${tname(t.type)} to send its pulse.`, 'info'); }
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   const p = toMap(e);
   closePopover();
@@ -151,10 +167,10 @@ canvas.addEventListener('pointerdown', (e) => {
     const f = hitFoundation(p, view.touch ? 14 : 4);
     const t = f ? towerAt(s, f) : undefined;
     // A tower that can pulse wins; otherwise a click on an enemy inspects it.
-    if (t && pulseCheck(s, t.id).ok) { pulseTower(s, t.id); return; }
+    if (t && pulseCheck(s, t.id).ok) { towerTap(t); return; }
     const foe = hitEnemy(p, view.touch ? 34 : 24);
     if (foe) { view.inspectId = foe.id; return; }
-    if (t) pulseTower(s, t.id);
+    if (t) towerTap(t);
     else view.inspectId = null;
     return;
   }
@@ -211,8 +227,7 @@ canvas.addEventListener('pointerup', (e) => {
     // a tap: exactly what a tap did before
     if (s.phase === 'combat') {
       const t = towerById(s, h.towerId);
-      if (t && pulseCheck(s, t.id).ok) pulseTower(s, t.id);
-      else if (t) pulseTower(s, t.id); // lets the rules explain why not
+      if (t) towerTap(t);
     } else if (s.phase === 'prep') {
       const f = towerById(s, h.towerId)?.foundation;
       if (f) { view.selectedFoundation = f; openPopover(f); }
@@ -259,7 +274,7 @@ function openPopover(f: string) {
 function closePopover() { popover.hidden = true; popoverFor = null; view.selectedFoundation = null; }
 
 /** A tower's numbers for its card: attack, speed, reach, how it hits, and what else it does. */
-function towerStats(type: TowerType, damage: number, rate = 1): string {
+function towerStats(type: TowerType, damage: number, rate = 1, range?: number): string {
   const st = BALANCE.towers[type];
   const cd = st.cooldown / rate;
   const n = (v: number) => (Math.round(v * 10) / 10).toString();
@@ -269,7 +284,7 @@ function towerStats(type: TowerType, damage: number, rate = 1): string {
       <div><dt>Attack</dt><dd>${n(damage)}${damage !== st.damage ? ` <small>(${st.damage} base)</small>` : ''}</dd></div>
       <div><dt>Reload</dt><dd>${Math.round(cd * 100) / 100}s${rate !== 1 ? ' <small>quickened</small>' : ''}</dd></div>
       <div><dt>Dmg / s</dt><dd>${n(damage / cd)}</dd></div>
-      <div><dt>Range</dt><dd>${st.range}</dd></div>
+      <div><dt>Range</dt><dd>${Math.round(range ?? st.range)}${range !== undefined && Math.round(range) < st.range ? ` <small>night (${st.range})</small>` : ''}</dd></div>
       <div><dt>Hits</dt><dd class="word">${hits}</dd></div>
       <div><dt>Cost</dt><dd>${st.cost}</dd></div>
     </dl>${extra ? `<p class="sub">${extra}.</p>` : ''}<p class="sub">Towers are never attacked, so they have no health or armour. Enemy armour is taken off every hit.</p>`;
@@ -283,7 +298,7 @@ function fillPopover() {
   let html = `<button class="x" data-act="close" aria-label="Close">×</button><h3>${esc(fname(f))}</h3>${bound ? '<p class="sub"><b class="giltxt">Bound in gold · a free pulse every wave</b></p>' : ''}`;
   if (t) {
     const st = BALANCE.towers[t.type];
-    html += `<p><b>${esc(st.name)}</b>${t.royal ? ' (royal)' : ''}</p>${towerStats(t.type, towerDamage(s, t), fireRate(s, t))}
+    html += `<p><b>${esc(st.name)}</b>${t.royal ? ' (royal)' : ''}</p>${towerStats(t.type, towerDamage(s, t), fireRate(s, t), towerRange(s, t))}
       <p class="pulse"><b>Pulse — ${esc(st.pulseName)}:</b> ${esc(st.pulseText)}</p>`;
     if (s.phase === 'prep' && !t.bound) {
       html += t.traced
@@ -520,12 +535,27 @@ let foldWave = -1;
 /** Towers that can be pulsed this wave, gilded first: the order the number keys use. */
 function pulseable() { return [...s.towers.filter((t) => t.bound), ...s.towers.filter((t) => t.traced)]; }
 
+/** Each open-country level has a rule of its own: say what it is doing this wave. */
+function levelNotice(): string {
+  if (s.flood) {
+    const road = LANES[s.flood.lane].name, pct = Math.round(BALANCE.fen.wade * 100);
+    return `<div class="notice level-rule"><b>The flood is over the ${esc(road)}${s.phase === 'prep' ? ' this wave' : ''}.</b> The levy, bearers and giants wade it at ${pct}% speed; the war dogs swim through. The flood moves to the other road each wave.</div>`;
+  }
+  if (s.level === 'barrows') {
+    const N = BALANCE.night, lost = Math.round(N.rangeLoss * 100);
+    const now = s.phase === 'combat' ? ` <b>Night: ${Math.round(s.night * 100)}%</b>, towers reach ${Math.round(100 - lost * s.night)}% as far.` : '';
+    return `<div class="notice level-rule"><b>Night falls as each wave goes on.</b> By full night every tower reaches ${lost}% less far, except within the light of a Barrow Beacon.${now}</div>`;
+  }
+  return '';
+}
+
 function renderMargin() {
   const r = rule(s);
   const def = BALANCE.waves[s.wave - 1];
   let h = '';
   if (s.phase === 'prep') {
     h += `<h2><small>Preparation</small>Wave ${s.wave}: ${esc(def.title)}</h2>`;
+    h += levelNotice();
     if (s.resetBanner > 0 && !s.traces.length) {
       h += `<div class="notice fade">The ink has faded. Every thread from the last wave is gone, and unspent pulses with it. <b>0 of ${r.traces} traced.</b></div>`;
     }
@@ -571,11 +601,11 @@ function renderMargin() {
     const c = canStartWave(s);
     h += `<div class="start"><button data-act="start" class="primary" ${c.ok ? '' : 'disabled'}>Start wave ${s.wave}</button><p class="sub">${c.ok ? 'Building, tracing and binding lock once the wave begins.' : esc(c.reason)}</p></div>`;
   } else if (s.phase === 'combat') {
-    h += `<h2><small>In battle</small>Wave ${s.wave}: ${esc(def.title)}</h2>
+    h += `<h2><small>In battle</small>Wave ${s.wave}: ${esc(def.title)}</h2>${levelNotice()}
       <section class="card pulses"><h3>Pulses <span class="need">${s.pulsesLeft} of ${r.pulses}</span></h3>
       <div class="beads" aria-hidden="true">${Array.from({ length: r.pulses }, (_, i) => `<i class="${i < s.pulsesLeft ? 'on' : ''}"></i>`).join('')}</div>
       ${sharedNote()}
-      <p class="hint" id="pulse-help">Hover or focus a Pulse button (or the tower on the map), or press and hold on a touch screen, to preview what it would do; nothing is spent until you click or tap. Click a tower with a wet ink drop, or press its number, to send the pulse. Shared charges never recharge and vanish at wave end. Gilded towers fire their own free pulse. Every tower keeps attacking on its own.</p>
+      <p class="hint" id="pulse-help">Hover or focus a Pulse button (or the tower on the map), or press and hold on a touch screen, to preview what it would do; nothing is spent until you act. Double-click (or double-tap) a tower with a wet ink drop, press its Pulse button, or press its number, to send the pulse. Shared charges never recharge and vanish at wave end. Gilded towers fire their own free pulse. Every tower keeps attacking on its own.</p>
       <ul class="towers">${pulseable().map((t, i) => towerRow(t, 'combat').replace('<span class="ico"', `<kbd>${i + 1}</kbd><span class="ico"`)).join('')}</ul></section>
       <section class="card"><h3>Unthreaded towers</h3><ul class="towers dim">${s.towers.filter((t) => !t.traced && !t.bound).map((t) => `<li class="tower-row"><span class="ico" data-tower="${t.type}"></span><span class="tw"><b>${esc(tname(t.type))}</b><small>${esc(fname(t.foundation))} · attacking</small></span></li>`).join('') || '<li class="sub">None</li>'}</ul></section>`;
   }

@@ -95,6 +95,9 @@ export interface PulseFlight { towerId: string; path: Vec[]; length: number; s: 
 /** War Dogs: a marker at the bridge shortly before the pack arrives there. */
 export interface Warning { lane: LaneId; type: EnemyType; from: number; to: number; count: number }
 export interface FadingThread { path: Vec[]; t: number; dur: number }
+/** A flooded stretch of one road on the fen. */
+export interface Flood { lane: LaneId; s0: number; s1: number; pts: Vec[] }
+
 export interface Toast { text: string; kind: 'info' | 'good' | 'bad' | 'gold'; t: number }
 
 export interface Spawn { type: EnemyType; lane: LaneId; at: number; side?: number }
@@ -142,6 +145,10 @@ export interface GameState {
   pulseResults: PulseResult[];
   volleys: Volley[];
   sharedSpend: SharedSpend | null;
+  /** The fen: the stretch of road under the flood this wave (walkers wade slowly; dogs swim). */
+  flood: Flood | null;
+  /** The barrows: how dark it has grown this wave, 0 (dusk) to 1 (full night). */
+  night: number;
   waveTime: number;
   time: number;
   nextId: number;
@@ -187,10 +194,33 @@ export function newGame(level: LevelId = 'fields', perks: Perks = {}, rares = fa
     castleHp: castle, castleMax: castle, gold: BALANCE.startGold + (perks.gold ?? 0), leaves: BALANCE.startLeaves + (perks.leaves ?? 0),
     towers: [], traces: [], pulsesLeft: 0, pendingGrant: false, castleCd: 0,
     enemies: [], projectiles: [], hedges: [], fires: [], pools: [], rallies: [], rings: [], flights: [], spawns: [],
-    warnings: [], stones: [], fallen: [], fading: [], toasts: [], pulseResults: [], volleys: [], sharedSpend: null, waveTime: 0, time: 0, nextId: 1, kills: 0, leaked: 0, leakLog: [], resetBanner: 0,
+    warnings: [], stones: [], fallen: [], fading: [], toasts: [], pulseResults: [], volleys: [], sharedSpend: null, flood: null, night: 0, waveTime: 0, time: 0, nextId: 1, kills: 0, leaked: 0, leakLog: [], resetBanner: 0,
   };
   for (const t of BALANCE.startingTowers) addTower(s, t.foundation, t.type);
+  s.flood = floodFor(s, 1);
   return s;
+}
+
+/** The fen floods one road each wave, turn and turn about: the Eel Dyke on odd waves, the Reed Causeway on even. */
+export function floodFor(s: GameState, wave: number): Flood | null {
+  if (s.level !== 'fen') return null;
+  const lane: LaneId = wave % 2 ? 'king' : 'mill';
+  const L = LANES[lane], F = BALANCE.fen;
+  const s0 = L.junctionS * F.floodFrom, s1 = L.junctionS * F.floodTo;
+  const pts: Vec[] = [];
+  for (let x = s0; x <= s1; x += 8) pts.push(pointAt(L, x));
+  return { lane, s0, s1, pts };
+}
+
+/** How far a tower reaches: on the barrows, night shortens it unless a beacon burns nearby. */
+export function towerRange(s: GameState, t: Tower): number {
+  const r = BALANCE.towers[t.type].range;
+  if (s.level !== 'barrows' || s.night <= 0) return r;
+  if (litByBeacon(s, posOf(t))) return r;
+  return r * (1 - BALANCE.night.rangeLoss * s.night);
+}
+export function litByBeacon(s: GameState, p: Vec): boolean {
+  return s.towers.some((o) => o.type === 'beacon' && dist(posOf(o), p) <= BALANCE.night.lightRadius);
 }
 
 function addTower(s: GameState, foundation: string, type: TowerType, royal = false): Tower {
@@ -865,6 +895,7 @@ export function step(s: GameState, dtRaw: number) {
   if (s.phase !== 'combat') return;
 
   s.waveTime += dt;
+  if (s.level === 'barrows') s.night = Math.min(1, s.waveTime / BALANCE.night.fullAfter);
 
   // Spawns
   while (s.spawns.length && s.spawns[0].at <= s.waveTime) spawnEnemy(s, s.spawns.shift()!);
@@ -911,6 +942,7 @@ export function step(s: GameState, dtRaw: number) {
     let k = 1;
     if (e.slowT) k = Math.min(k, BALANCE.pulses.inkSlow);
     if (s.pools.some((pl) => pl.ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1))) k = Math.min(k, BALANCE.pulses.floodSlow);
+    if (s.flood && e.type !== 'hound' && e.lane === s.flood.lane && e.s >= s.flood.s0 && e.s <= s.flood.s1) k *= BALANCE.fen.wade;
     let ns = e.s + st.speed * k * dt;
     for (const h of s.hedges) {
       for (const stop of h.stops) {
@@ -957,13 +989,14 @@ export function step(s: GameState, dtRaw: number) {
     if (t.cd > 0) continue;
     const st = BALANCE.towers[t.type];
     const p = posOf(t);
-    const target = pickTarget(s, p, st.range);
+    const reach = towerRange(s, t);
+    const target = pickTarget(s, p, reach);
     if (!target) continue;
     t.cd = st.cooldown;
     const dmg = towerDamage(s, t);
     if (t.type === 'bell' || t.type === 'chimes') {
-      s.rings.push({ x: p.x, y: p.y, r: st.range, t: 0, dur: 0.55, kind: 'bell' });
-      for (const e of s.enemies) if (e.hp > 0 && e.s > 0 && dist(enemyPos(e), p) <= st.range) hurt(s, e, dmg);
+      s.rings.push({ x: p.x, y: p.y, r: reach, t: 0, dur: 0.55, kind: 'bell' });
+      for (const e of s.enemies) if (e.hp > 0 && e.s > 0 && dist(enemyPos(e), p) <= reach) hurt(s, e, dmg);
     } else {
       const ep = enemyPos(target);
       let tx = ep.x, ty = ep.y;
@@ -1086,11 +1119,13 @@ function endWave(s: GameState) {
   s.rallies = [];
   s.volleys = [];
   s.sharedSpend = null;
+  s.night = 0;
   s.projectiles = [];
   s.warnings = [];
   s.stones = [];
   if (survived >= TOTAL_WAVES) { s.phase = 'victory'; return; }
   s.wave = survived + 1;
+  s.flood = floodFor(s, s.wave);
   s.phase = 'prep';
   s.resetBanner = 6;
   toast(s, `Wave ${survived} held! +${gold} gold, +${BALANCE.leavesPerWave} Gilded Leaf.`, 'gold');

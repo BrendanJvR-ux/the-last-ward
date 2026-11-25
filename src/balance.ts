@@ -317,6 +317,25 @@ export const BALANCE = {
     kneelSeconds: 7,
   },
 
+  /** The flooded fen: one road floods each wave (the Eel Dyke on odd waves, the Reed Causeway on even). */
+  fen: {
+    /** The flooded stretch, as fractions of the road's length to the junction. */
+    floodFrom: 0.2,
+    floodTo: 0.85,
+    /** Speed of the levy, bearers and giants wading through it. War dogs swim at full speed. */
+    wade: 0.6,
+  },
+
+  /** The barrows: night falls over each wave and shortens every tower's reach, except near a beacon. */
+  night: {
+    /** Seconds into a wave until it is full night. */
+    fullAfter: 35,
+    /** Share of a tower's range lost at full night. */
+    rangeLoss: 0.25,
+    /** Towers within this distance of a Barrow Beacon keep their full range. */
+    lightRadius: 260,
+  },
+
   /** War Dogs: the bridge warning shows this many seconds before they reach the bridge. */
   houndWarning: 3.5,
 
@@ -578,8 +597,8 @@ const FEN: LevelBalance = {
   startGold: 75,
   towerTypes: ['wheel', 'heron', 'eeltrap', 'lantern'],
   startingTowers: [
-    { foundation: 'f_weir', type: 'wheel' },
-    { foundation: 'f_withy', type: 'heron' },
+    { foundation: 'f_withy', type: 'wheel' },
+    { foundation: 'f_heronry', type: 'heron' },
     { foundation: 'f_island', type: 'eeltrap' },
   ],
   houndWarnText: 'Dogs at the sluice!',
@@ -596,28 +615,28 @@ const FEN: LevelBalance = {
       title: 'Dogs on the Dyke',
       lesson: 'Paws on the planking. Watch for the warning at the sluice.',
       groups: [
-        { type: 'levy', lane: 'mill', count: 8, abreast: 3, start: 1, interval: 1.3 },
-        { type: 'hound', lane: 'king', count: 10, start: 12, interval: 0.4 },
+        { type: 'levy', lane: 'mill', count: 11, abreast: 3, start: 1, interval: 1.3 },
+        { type: 'hound', lane: 'king', count: 14, start: 12, interval: 0.4 },
       ],
     },
     {
       title: 'Mist on the Meadows',
       lesson: 'You hear them before you see them.',
       groups: [
-        { type: 'levy', lane: 'mill', count: 9, abreast: 3, start: 1, interval: 1.2 },
-        { type: 'hound', lane: 'king', count: 9, start: 8, interval: 0.4 },
-        { type: 'levy', lane: 'king', count: 6, abreast: 2, start: 14, interval: 1.4 },
-        { type: 'hound', lane: 'mill', count: 8, start: 28, interval: 0.4 },
+        { type: 'levy', lane: 'mill', count: 13, abreast: 3, start: 1, interval: 1.2 },
+        { type: 'hound', lane: 'king', count: 13, start: 8, interval: 0.4 },
+        { type: 'levy', lane: 'king', count: 9, abreast: 2, start: 14, interval: 1.4 },
+        { type: 'hound', lane: 'mill', count: 13, start: 28, interval: 0.4 },
       ],
     },
     {
       title: 'The Eel Moon',
       lesson: 'Gold on the water. Bind what you can trust.',
       groups: [
-        { type: 'levy', lane: 'mill', count: 22, abreast: 3, start: 1, interval: 0.95 },
-        { type: 'levy', lane: 'king', count: 14, abreast: 2, start: 5, interval: 1.1 },
-        { type: 'hound', lane: 'king', count: 24, start: 16, interval: 0.3 },
-        { type: 'hound', lane: 'mill', count: 19, start: 30, interval: 0.32 },
+        { type: 'levy', lane: 'mill', count: 48, abreast: 3, start: 1, interval: 0.95 },
+        { type: 'levy', lane: 'king', count: 30, abreast: 2, start: 5, interval: 1.1 },
+        { type: 'hound', lane: 'king', count: 51, start: 16, interval: 0.3 },
+        { type: 'hound', lane: 'mill', count: 42, start: 30, interval: 0.32 },
       ],
     },
     {
@@ -625,11 +644,11 @@ const FEN: LevelBalance = {
       lesson: 'Something huge is wading the dyke. Where will it kneel?',
       groups: [
         { type: 'cairn', lane: 'king', count: 1, start: 1, interval: 0 },
-        { type: 'levy', lane: 'mill', count: 23, abreast: 3, start: 6, interval: 0.9 },
-        { type: 'hound', lane: 'king', count: 22, start: 14, interval: 0.3 },
-        { type: 'levy', lane: 'king', count: 13, abreast: 2, start: 20, interval: 1.1 },
+        { type: 'levy', lane: 'mill', count: 50, abreast: 3, start: 6, interval: 0.9 },
+        { type: 'hound', lane: 'king', count: 48, start: 14, interval: 0.3 },
+        { type: 'levy', lane: 'king', count: 29, abreast: 2, start: 20, interval: 1.1 },
         { type: 'cairn', lane: 'mill', count: 1, start: 26, interval: 0 },
-        { type: 'hound', lane: 'mill', count: 22, start: 34, interval: 0.3 },
+        { type: 'hound', lane: 'mill', count: 48, start: 34, interval: 0.3 },
       ],
     },
     {
@@ -638,12 +657,12 @@ const FEN: LevelBalance = {
       groups: [
         { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
         { type: 'cairn', lane: 'king', count: 1, start: 10, interval: 0 },
-        { type: 'levy', lane: 'mill', count: 26, abreast: 3, start: 6, interval: 0.85 },
-        { type: 'hound', lane: 'king', count: 31, start: 14, interval: 0.26 },
-        { type: 'levy', lane: 'king', count: 16, abreast: 2, start: 22, interval: 1.0 },
+        { type: 'levy', lane: 'mill', count: 45, abreast: 3, start: 6, interval: 0.85 },
+        { type: 'hound', lane: 'king', count: 54, start: 14, interval: 0.26 },
+        { type: 'levy', lane: 'king', count: 28, abreast: 2, start: 22, interval: 1.0 },
         { type: 'cairn', lane: 'king', count: 1, start: 30, interval: 0 },
-        { type: 'hound', lane: 'king', count: 43, start: 40, interval: 0.22 },
-        { type: 'hound', lane: 'mill', count: 28, start: 46, interval: 0.26 },
+        { type: 'hound', lane: 'king', count: 74, start: 40, interval: 0.22 },
+        { type: 'hound', lane: 'mill', count: 49, start: 46, interval: 0.26 },
       ],
     },
   ],
@@ -651,12 +670,12 @@ const FEN: LevelBalance = {
 
 /** Level 5: the barrows on the downs, where the dogs are kennelled and the giants sleep. The last stand. */
 const BARROWS: LevelBalance = {
-  startGold: 70,
+  startGold: 100,
   towerTypes: ['menhir', 'chimes', 'beacon', 'warden'],
   startingTowers: [
-    { foundation: 'f_kingstone', type: 'menhir' },
-    { foundation: 'f_longbarrow', type: 'chimes' },
-    { foundation: 'f_ring', type: 'beacon' },
+    { foundation: 'f_dolmen', type: 'menhir' },
+    { foundation: 'f_hillfort', type: 'chimes' },
+    { foundation: 'f_longbarrow', type: 'beacon' },
   ],
   houndWarnText: 'Dogs from the mound door!',
   waves: [
@@ -664,7 +683,7 @@ const BARROWS: LevelBalance = {
       title: 'Dusk on the Downs',
       lesson: 'The old road to the barrows. Nobody walks it after dark, except tonight.',
       groups: [
-        { type: 'levy', lane: 'mill', count: 5, abreast: 3, start: 1, interval: 1.6 },
+        { type: 'levy', lane: 'mill', count: 4, abreast: 3, start: 1, interval: 1.6 },
         { type: 'levy', lane: 'king', count: 3, abreast: 2, start: 16, interval: 1.6 },
       ],
     },
@@ -672,18 +691,18 @@ const BARROWS: LevelBalance = {
       title: 'The Kennels Open',
       lesson: 'Scratching under the turf. Watch for the warning at the mound door.',
       groups: [
-        { type: 'levy', lane: 'mill', count: 9, abreast: 3, start: 1, interval: 1.2 },
-        { type: 'hound', lane: 'king', count: 16, start: 10, interval: 0.34 },
+        { type: 'levy', lane: 'mill', count: 5, abreast: 3, start: 1, interval: 1.2 },
+        { type: 'hound', lane: 'king', count: 9, start: 10, interval: 0.34 },
       ],
     },
     {
       title: 'Owl Light',
       lesson: 'Both ways at once, and the stones listening.',
       groups: [
-        { type: 'levy', lane: 'mill', count: 14, abreast: 3, start: 1, interval: 1.0 },
-        { type: 'hound', lane: 'king', count: 16, start: 7, interval: 0.32 },
-        { type: 'levy', lane: 'king', count: 10, abreast: 2, start: 13, interval: 1.2 },
-        { type: 'hound', lane: 'mill', count: 16, start: 26, interval: 0.32 },
+        { type: 'levy', lane: 'mill', count: 7, abreast: 3, start: 1, interval: 1.0 },
+        { type: 'hound', lane: 'king', count: 8, start: 7, interval: 0.32 },
+        { type: 'levy', lane: 'king', count: 5, abreast: 2, start: 13, interval: 1.2 },
+        { type: 'hound', lane: 'mill', count: 8, start: 26, interval: 0.32 },
       ],
     },
     {
@@ -691,10 +710,10 @@ const BARROWS: LevelBalance = {
       lesson: 'Gold in the barrows. Bind what you can trust.',
       groups: [
         { type: 'cairn', lane: 'king', count: 1, start: 1, interval: 0 },
-        { type: 'levy', lane: 'mill', count: 34, abreast: 3, start: 1, interval: 0.9 },
-        { type: 'levy', lane: 'king', count: 23, abreast: 2, start: 5, interval: 1.0 },
-        { type: 'hound', lane: 'king', count: 40, start: 14, interval: 0.28 },
-        { type: 'hound', lane: 'mill', count: 34, start: 28, interval: 0.3 },
+        { type: 'levy', lane: 'mill', count: 12, abreast: 3, start: 1, interval: 1.0 },
+        { type: 'levy', lane: 'king', count: 8, abreast: 2, start: 5, interval: 1.1 },
+        { type: 'hound', lane: 'king', count: 14, start: 14, interval: 0.32 },
+        { type: 'hound', lane: 'mill', count: 10, start: 28, interval: 0.34 },
       ],
     },
     {
@@ -702,12 +721,10 @@ const BARROWS: LevelBalance = {
       lesson: 'The long barrow cracks open. The giants walk.',
       groups: [
         { type: 'cairn', lane: 'king', count: 1, start: 1, interval: 0 },
-        { type: 'cairn', lane: 'mill', count: 1, start: 8, interval: 0 },
-        { type: 'levy', lane: 'mill', count: 50, abreast: 3, start: 6, interval: 0.85 },
-        { type: 'hound', lane: 'king', count: 50, start: 12, interval: 0.28 },
-        { type: 'levy', lane: 'king', count: 32, abreast: 2, start: 20, interval: 1.0 },
-        { type: 'cairn', lane: 'king', count: 1, start: 28, interval: 0 },
-        { type: 'hound', lane: 'mill', count: 50, start: 34, interval: 0.28 },
+        { type: 'levy', lane: 'mill', count: 15, abreast: 3, start: 6, interval: 0.9 },
+        { type: 'hound', lane: 'king', count: 15, start: 12, interval: 0.3 },
+        { type: 'levy', lane: 'king', count: 9, abreast: 2, start: 20, interval: 1.0 },
+        { type: 'hound', lane: 'mill', count: 14, start: 34, interval: 0.3 },
       ],
     },
     {
@@ -716,12 +733,12 @@ const BARROWS: LevelBalance = {
       groups: [
         { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
         { type: 'cairn', lane: 'king', count: 1, start: 8, interval: 0 },
-        { type: 'levy', lane: 'mill', count: 59, abreast: 3, start: 5, interval: 0.8 },
-        { type: 'hound', lane: 'king', count: 69, start: 12, interval: 0.24 },
-        { type: 'levy', lane: 'king', count: 38, abreast: 2, start: 20, interval: 0.95 },
+        { type: 'levy', lane: 'mill', count: 15, abreast: 3, start: 5, interval: 0.85 },
+        { type: 'hound', lane: 'king', count: 16, start: 12, interval: 0.26 },
+        { type: 'levy', lane: 'king', count: 10, abreast: 2, start: 20, interval: 0.95 },
         { type: 'cairn', lane: 'mill', count: 1, start: 26, interval: 0 },
-        { type: 'hound', lane: 'king', count: 92, start: 40, interval: 0.2 },
-        { type: 'hound', lane: 'mill', count: 64, start: 46, interval: 0.24 },
+        { type: 'hound', lane: 'king', count: 21, start: 40, interval: 0.22 },
+        { type: 'hound', lane: 'mill', count: 14, start: 46, interval: 0.26 },
       ],
     },
   ],

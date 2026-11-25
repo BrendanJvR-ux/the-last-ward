@@ -1,7 +1,7 @@
 // Live drawing on top of the ink sheet.
 import { BALANCE, phaseRule } from './balance';
 import { MAP_W, MAP_H, LANES, BRIDGE, INKWELL, NODE, FOUNDATION_IDS, RIVER, LEVEL, routePolyline, pointAt, type Vec } from './map';
-import { type GameState, type Tower, enemyPos, posOf, towerAt, towerById, flightPoint, isRare, pulsePreview, type PulsePreview } from './game';
+import { type GameState, type Tower, type Flood, towerRange, enemyPos, posOf, towerAt, towerById, flightPoint, isRare, pulsePreview, type PulsePreview } from './game';
 import type { LevelId } from './balance';
 import { owl } from './rewards';
 import { buildStatic, stroke, roundRect, drawGoose, SERIF, WINDMILL } from './paint';
@@ -296,6 +296,57 @@ function drawPool(ctx: CanvasRenderingContext2D, pl: GameState['pools'][number],
   ctx.restore();
 }
 
+/** The fen's flood lying over a stretch of road: grey water with rings drifting on it. */
+function drawFlood(ctx: CanvasRenderingContext2D, f: Flood, time: number) {
+  if (f.pts.length < 2) return;
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(70,92,104,0.32)'; ctx.lineWidth = 52;
+  ctx.beginPath(); f.pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke();
+  ctx.strokeStyle = 'rgba(58,34,18,0.35)'; ctx.lineWidth = 0.7;
+  for (let i = 0; i < f.pts.length; i += 3) {
+    const p = f.pts[i], k = (time * 0.35 + i * 0.07) % 1, o = ((i * 37) % 30) - 15;
+    ctx.globalAlpha = 1 - k;
+    ctx.beginPath(); ctx.ellipse(p.x + o * 0.4, p.y + o * 0.3, 4 + k * 14, 1.5 + k * 4, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // ripple lines along the edges, where the water laps the bank
+  ctx.strokeStyle = 'rgba(58,34,18,0.45)'; ctx.lineWidth = 0.6;
+  for (let i = 1; i < f.pts.length; i += 2) {
+    const a = f.pts[i - 1], b = f.pts[i], ang = Math.atan2(b.y - a.y, b.x - a.x), nx = -Math.sin(ang), ny = Math.cos(ang);
+    for (const sd of [-1, 1]) { const w = Math.sin(time * 2 + i) * 2; ctx.beginPath(); ctx.moveTo(a.x + nx * sd * (24 + w), a.y + ny * sd * (24 + w)); ctx.lineTo(b.x + nx * sd * (24 - w), b.y + ny * sd * (24 - w)); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+
+/** Nightfall on the barrows: the sheet darkens, except in pools of light round the beacons and the inkwell. */
+let nightCanvas: HTMLCanvasElement | null = null;
+function drawNight(ctx: CanvasRenderingContext2D, s: GameState, time: number) {
+  const dark = 0.12 + 0.4 * s.night;
+  if (!nightCanvas) { nightCanvas = document.createElement('canvas'); nightCanvas.width = MAP_W / 2; nightCanvas.height = MAP_H / 2; }
+  const n = nightCanvas.getContext('2d')!;
+  n.setTransform(0.5, 0, 0, 0.5, 0, 0);
+  n.globalCompositeOperation = 'source-over';
+  n.clearRect(0, 0, MAP_W, MAP_H);
+  n.fillStyle = `rgba(22,16,30,${dark})`; n.fillRect(0, 0, MAP_W, MAP_H);
+  n.globalCompositeOperation = 'destination-out';
+  const light = (x: number, y: number, r: number, a: number) => {
+    const g = n.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(0.75, `rgba(0,0,0,${a * 0.85})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    n.fillStyle = g; n.beginPath(); n.arc(x, y, r, 0, Math.PI * 2); n.fill();
+  };
+  const R = BALANCE.night.lightRadius;
+  for (const t of s.towers) if (t.type === 'beacon') { const p = posOf(t); light(p.x, p.y, R * (1 + 0.02 * Math.sin(time * 6 + p.x)), 1); }
+  light(INKWELL.x, INKWELL.y, 110, 0.9);
+  ctx.drawImage(nightCanvas, 0, 0, MAP_W, MAP_H);
+  // a warm rim where each beacon's light ends
+  if (s.night > 0.05) {
+    ctx.save(); ctx.setLineDash([3, 9]); ctx.strokeStyle = `rgba(214,150,70,${0.35 * s.night})`; ctx.lineWidth = 1.2;
+    for (const t of s.towers) if (t.type === 'beacon') { const p = posOf(t); ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+
 /** A defeated enemy toppling and fading where it fell; the giant crumbles to a cairn. */
 function drawFallen(ctx: CanvasRenderingContext2D, f: GameState['fallen'][number], time: number) {
   const k = f.t / 1.6;
@@ -373,7 +424,7 @@ function drawHoundWarnings(ctx: CanvasRenderingContext2D, s: GameState, time: nu
     ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 4;
     for (let r = 22; r < 80; r += 18) { ctx.beginPath(); ctx.arc(entry.x, entry.y, r, 0, Math.PI * 2); ctx.stroke(); }
     ctx.globalAlpha = 1;
-    const [bx, by] = ({ fields: [548, 722], courtyard: [1060, 82], keep: [1100, 966], fen: [1000, 966], barrows: [560, 966] } as Record<LevelId, [number, number]>)[LEVEL];
+    const [bx, by] = ({ fields: [548, 722], courtyard: [1060, 82], keep: [1100, 966], fen: [1000, 966], barrows: [40, 966] } as Record<LevelId, [number, number]>)[LEVEL];
     ctx.fillStyle = 'rgba(228,211,182,0.96)'; roundRect(ctx, bx, by - 24, 258, 36, 4); ctx.fill();
     ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6; ctx.stroke();
     ctx.lineWidth = 0.6; roundRect(ctx, bx + 3, by - 21, 252, 30, 3); ctx.stroke();
@@ -422,6 +473,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
     ctx.beginPath(); ctx.arc(INKWELL.x, INKWELL.y - 4, 56 + k * 6, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
 
+  if (s.flood) drawFlood(ctx, s.flood, time);
   for (const f of s.fires) drawFire(ctx, f, time);
   for (const pl of s.pools) drawPool(ctx, pl, time);
   for (const st of s.stones) { const p = pointAt(LANES[st.lane], st.s); drawNameStone(ctx, p.x + 14, p.y + 4, time); }
@@ -436,7 +488,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
   if (ht) {
     const p = posOf(ht);
     ctx.save(); ctx.strokeStyle = 'rgba(58,34,18,0.45)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 1.3;
-    ctx.beginPath(); ctx.arc(p.x, p.y, BALANCE.towers[ht.type].range, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    ctx.beginPath(); ctx.arc(p.x, p.y, towerRange(s, ht), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
 
   type Sprite = { y: number; draw: () => void };
@@ -727,6 +779,8 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
     }
     ctx.restore();
   }
+
+  if (s.level === 'barrows') drawNight(ctx, s, time);
 
   for (const f of s.flights) {
     const p = flightPoint(f);
