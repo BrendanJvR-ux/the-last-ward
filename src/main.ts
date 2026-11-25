@@ -3,7 +3,7 @@ import { BALANCE, TOTAL_WAVES, LEVEL_BALANCE, phaseRule, type TowerType, type En
 import {
   type GameState, newGame, step, rule, traceTower, untraceTower, undoTrace, clearTraces, canStartWave, startWave,
   pulseTower, pulseCheck, enemyPos, effectiveArmour, buildTower, buildCheck, placeGrant, bindTower, bindCheck, towerAt, towerById, emptyFoundations,
-  towerDamage, toast, traceCheck, setLevel, RARE_TYPES,
+  towerDamage, fireRate, toast, traceCheck, setLevel, RARE_TYPES,
 } from './game';
 import {
   MAP_W, MAP_H, NODE, FOUNDATION_IDS, INKWELL, snapToNetwork,
@@ -259,6 +259,23 @@ function openPopover(f: string) {
 }
 function closePopover() { popover.hidden = true; popoverFor = null; view.selectedFoundation = null; }
 
+/** A tower's numbers for its card: attack, speed, reach, how it hits, and what else it does. */
+function towerStats(type: TowerType, damage: number, rate = 1): string {
+  const st = BALANCE.towers[type];
+  const cd = st.cooldown / rate;
+  const n = (v: number) => (Math.round(v * 10) / 10).toString();
+  const hits = type === 'bell' || type === 'chimes' ? 'Everything in range' : st.splash > 0 ? `Splash ${st.splash}` : 'Single target';
+  const extra = st.slow ? `Slows ${st.slow}s per hit` : st.shred ? `Strips ${st.shred} armour per hit` : type === 'banner' || type === 'warden' ? `Towers nearby fire ${Math.round(BALANCE.pulses.bannerAura * 100)}% faster` : '';
+  return `<dl class="ins-stats tw-stats">
+      <div><dt>Attack</dt><dd>${n(damage)}${damage !== st.damage ? ` <small>(${st.damage} base)</small>` : ''}</dd></div>
+      <div><dt>Reload</dt><dd>${Math.round(cd * 100) / 100}s${rate !== 1 ? ' <small>quickened</small>' : ''}</dd></div>
+      <div><dt>Dmg / s</dt><dd>${n(damage / cd)}</dd></div>
+      <div><dt>Range</dt><dd>${st.range}</dd></div>
+      <div><dt>Hits</dt><dd class="word">${hits}</dd></div>
+      <div><dt>Cost</dt><dd>${st.cost}</dd></div>
+    </dl>${extra ? `<p class="sub">${extra}.</p>` : ''}<p class="sub">Towers are never attacked, so they have no health or armour. Enemy armour is taken off every hit.</p>`;
+}
+
 function fillPopover() {
   const f = popoverFor;
   if (!f) return;
@@ -267,7 +284,7 @@ function fillPopover() {
   let html = `<button class="x" data-act="close" aria-label="Close">×</button><h3>${esc(fname(f))}</h3>${bound ? '<p class="sub"><b class="giltxt">Bound in gold · a free pulse every wave</b></p>' : ''}`;
   if (t) {
     const st = BALANCE.towers[t.type];
-    html += `<p><b>${esc(st.name)}</b>${t.royal ? ' (royal)' : ''} · ${towerDamage(s, t).toFixed(1).replace('.0', '')} dmg / ${st.cooldown}s · range ${st.range}</p>
+    html += `<p><b>${esc(st.name)}</b>${t.royal ? ' (royal)' : ''}</p>${towerStats(t.type, towerDamage(s, t), fireRate(s, t))}
       <p class="pulse"><b>Pulse — ${esc(st.pulseName)}:</b> ${esc(st.pulseText)}</p>`;
     if (s.phase === 'prep' && !t.bound) {
       html += t.traced
@@ -284,7 +301,7 @@ function fillPopover() {
     html += `<div class="choices">`;
     for (const ty of BALANCE.towerTypes) {
       const c = buildCheck(s, f, ty);
-      html += `<button data-act="build" data-f="${f}" data-type="${ty}" class="choice" ${c.ok ? '' : 'disabled'} title="${esc(c.reason || BALANCE.towers[ty].pulseText)}"><span class="ico" data-tower="${ty}"></span><span>${esc(tname(ty))}<small>${BALANCE.towers[ty].cost} gold</small></span></button>`;
+      html += `<button data-act="build" data-f="${f}" data-type="${ty}" class="choice" ${c.ok ? '' : 'disabled'} title="${esc(c.reason || BALANCE.towers[ty].pulseText)}"><span class="ico" data-tower="${ty}"></span><span>${esc(tname(ty))}<small>${BALANCE.towers[ty].cost} gold · ${BALANCE.towers[ty].damage} dmg / ${BALANCE.towers[ty].cooldown}s · range ${BALANCE.towers[ty].range}</small></span></button>`;
     }
     html += `</div>`;
   }
@@ -662,6 +679,8 @@ function renderInspect() {
       <div><dt>Health</dt><dd>${hp} / ${st.hp}<span class="bar"><i style="width:${(100 * hp) / st.hp}%"></i></span></dd></div>
       <div><dt>Armour</dt><dd>${arm}${arm !== st.armour ? ` <small>(${st.armour} base, ${e.vulnT > 0 ? 'tarnished' : 'corroded'})</small>` : ''}</dd></div>
       <div><dt>Speed</dt><dd>${st.speed} <small>${speedWord}</small></dd></div>
+      <div><dt>Castle damage</dt><dd>${st.castleDamage}</dd></div>
+      <div><dt>Bounty</dt><dd>${st.bounty} <small>gold</small></dd></div>
     </dl>${status ? `<p class="status">${esc(status)}</p>` : ''}`;
   hydrateIcons(inspectEl);
 }

@@ -239,10 +239,10 @@ export const BALANCE = {
     /** Road within this distance of the kiln catches fire. */
     fireRadius: 135,
     /** Bell knockback. */
-    tollRadius: 175,
-    tollKnockback: 170,
-    tollDamage: 12,
-    tollStun: 1.0,
+    tollRadius: 150,
+    tollKnockback: 110,
+    tollDamage: 8,
+    tollStun: 0.6,
     /** Verdigris corrosion from normal hits. */
     shredMax: 6,
     shredDuration: 4,
@@ -262,10 +262,10 @@ export const BALANCE = {
     barrageSplash: 68,
     /** Ink Fountain hits: speed multiplier while stained. Inkflood: a slowing pool on the road. */
     inkSlow: 0.6,
-    floodRadius: 155,
-    floodDuration: 6,
-    floodSlow: 0.25,
-    floodDps: 12,
+    floodRadius: 135,
+    floodDuration: 4,
+    floodSlow: 0.45,
+    floodDps: 7,
     /** Banner: towers within this range of a banner shoot this much faster; Rally doubles it. */
     bannerAuraRadius: 260,
     bannerAura: 0.25,

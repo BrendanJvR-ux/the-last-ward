@@ -135,7 +135,7 @@ The **Rare creature casebook** in the menu keeps a page for each: a silhouette u
 |---|---|---|
 | **Bramble Tower** (a gnarled trunk; something watches from the knothole) | Thorns, single target | **Hedge**: a hedge grows across the nearest road; enemies on that lane halt and bunch up. On the shared stretch by the gate it blocks both lanes. |
 | **Ember Kiln** (a hollow stump breathing smoke) | Lobbed coals, splash | **Firebrand**: the road near the kiln burns for several seconds. Burning ignores armour. The kiln at the Crossroads covers both roads. |
-| **Bell Spire** (a striped spire with a crescent finial) | Periodic ring around it | **Great Toll**: knocks nearby enemies back along their own road and dazes them (not the Cairn-Born). |
+| **Bell Spire** (a striped spire with a crescent finial) | Periodic ring around it | **Great Toll**: knocks nearby enemies a short way back along their own road and dazes them briefly (not the Cairn-Born). |
 | **Verdigris Font** (the eye-flower) | Copper spray that strips 2 armour per hit (up to 6, wears off after 4 s) | **Tarnish**: a green mist removes all armour from enemies nearby and makes them take 30% more damage for 6 s. |
 
 
@@ -145,7 +145,7 @@ The **Rare creature casebook** in the menu keeps a page for each: a silhouette u
 |---|---|---|
 | **Gargoyle Perch** (a winged stone gargoyle on a fluted pillar) | Long-range stone shards, single target, heavy and slow | **Stone Gaze**: everything nearby is turned to stone (stunned) for 4 s and chipped. The Cairn-Born only stiffens briefly. |
 | **Mangonel** (a throwing engine on a stone platform) | Lobbed boulders, splash, very long range, slow | **Boulder Barrage**: seven boulders land one after another on the thickest crowd in reach. |
-| **Ink Fountain** (a stone fountain; a striped fish spouts ink) | Gobs of ink that stain and slow the target | **Inkflood**: the nearby road floods with ink for 6 s; everything wading through crawls at a quarter speed and is slowly stained. |
+| **Ink Fountain** (a stone fountain; a striped fish spouts ink) | Gobs of ink that stain and slow the target | **Inkflood**: the nearby road floods with ink for 4 s; everything wading through slows to a little under half speed and is slowly stained. |
 | **Banner Tower** (a tall pole with a swallow-tailed pennant) | Light arrows. Every tower within a wide reach of a banner always reloads 25% faster | **Rally**: every tower across a broad swathe of the yard shoots twice as fast for 8 s. |
 
 ### Keep towers
