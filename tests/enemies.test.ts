@@ -51,7 +51,7 @@ describe('new enemies', () => {
     expect(w.from).toBeGreaterThan(20); // after they set out, before the bridge
   });
 
-  it('the giant follows its bearer, kneels where the bearer falls, blocks the road behind, then leaves', () => {
+  it('the giant follows its bearer, kneels where the bearer falls, blocks the road behind, then marches on', () => {
     const s = begin(5);
     run(s, 12);
     const bearer = s.enemies.find((e) => e.type === 'bearer')!;
@@ -74,9 +74,13 @@ describe('new enemies', () => {
     expect(behind.length).toBeGreaterThan(0);
     for (const e of behind) expect(e.s).toBeLessThan(giant.s);
     expect(Math.max(...behind.map((e) => e.s))).toBeGreaterThan(giant.s - 40); // queued right up against it
-    run(s, 0.5 + BALANCE.cairn.leaveSeconds + 0.1);
-    expect(s.enemies.some((e) => e.type === 'cairn')).toBe(false);
+    run(s, 0.6);
+    // it rises, takes up its stone and marches on: it does not leave the field
+    expect(s.enemies.includes(giant)).toBe(true);
+    expect(giant.mode).toBe('march');
+    const rose = giant.s;
     run(s, 3);
+    expect(giant.s).toBeGreaterThan(rose);
     expect(Math.max(...s.enemies.filter((e) => behindIds.has(e.id)).map((e) => e.s))).toBeGreaterThan(fallAt); // released
   });
 
@@ -95,12 +99,13 @@ describe('new enemies', () => {
     const s = begin(5);
     run(s, 8);
     const giant = s.enemies.find((e) => e.type === 'cairn')!;
-    expect(effectiveArmour(giant)).toBe(8);
-    giant.shred = 6; giant.shredT = 1;
-    expect(effectiveArmour(giant)).toBe(2);
+    const base = BALANCE.enemies.cairn.armour;
+    expect(effectiveArmour(giant)).toBe(base);
+    giant.shred = base - 1; giant.shredT = 1;
+    expect(effectiveArmour(giant)).toBe(1);
     giant.vulnT = 2;
     expect(effectiveArmour(giant)).toBe(0);
     run(s, 2.1);
-    expect(effectiveArmour(giant)).toBe(8);
+    expect(effectiveArmour(giant)).toBe(base);
   });
 });

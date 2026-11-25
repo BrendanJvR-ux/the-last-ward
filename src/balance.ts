@@ -315,10 +315,6 @@ export const BALANCE = {
     followGap: 95,
     /** Seconds the giant kneels at its fallen name-stone, blocking the road behind it. */
     kneelSeconds: 7,
-    /** Seconds it takes to walk off the field afterwards (it does not reach the gate). */
-    leaveSeconds: 1.6,
-    /** Gold paid when the giant leaves (it is not killed). */
-    leaveBounty: 20,
   },
 
   /** War Dogs: the bridge warning shows this many seconds before they reach the bridge. */
@@ -328,7 +324,7 @@ export const BALANCE = {
     levy: { name: 'Fen Levy', plural: 'Fen Levy', hp: 36, speed: 40, armour: 2, bounty: 2, castleDamage: 1, note: 'Fynbos root-walkers with protea heads and a single eye. March in tight files.' },
     bearer: { name: 'Stone-Bearer', plural: 'Stone-Bearers', hp: 130, speed: 26, armour: 0, bounty: 8, castleDamage: 1, note: 'A goggled wanderer carrying the Cairn-Born\u2019s stolen name-stone. Where it falls, the giant kneels.' },
     hound: { name: 'War Dog', plural: 'War Dogs', hp: 24, speed: 108, armour: 0, bounty: 2, castleDamage: 1, note: 'Lean war dogs in studded collars, loosed by the hunt-master\u2019s horn. Hunt in packs.' },
-    cairn: { name: 'Cairn-Born', plural: 'Cairn-Born', hp: 700, speed: 24, armour: 8, bounty: 45, castleDamage: 6, note: 'A walking citadel-fish with a stern face and an empty socket. Follows its name-stone; cannot be knocked back.' },
+    cairn: { name: 'Cairn-Born', plural: 'Cairn-Born', hp: 360, speed: 24, armour: 4, bounty: 45, castleDamage: 3, note: 'A walking citadel-fish with a stern face and an empty socket. Follows its name-stone; cannot be knocked back.' },
     // ── Rare creatures: never part of a wave, never harm the castle ──
     moth: { name: 'Lantern Moth', plural: 'Lantern Moths', hp: 70, speed: 58, armour: 0, bounty: 12, castleDamage: 0, note: 'A great moth with eyes on its wings, carrying a little lantern through the battle. Rare.' },
     heron: { name: 'Clockwork Heron', plural: 'Clockwork Herons', hp: 110, speed: 74, armour: 3, bounty: 18, castleDamage: 0, note: 'A heron of brass gears and ink, stepping delicately between the fighting. Rare.' },
@@ -494,10 +490,10 @@ const COURTYARD: LevelBalance = {
       groups: [
         { type: 'cairn', lane: 'mill', count: 1, start: 1, interval: 0 },
         { type: 'cairn', lane: 'king', count: 1, start: 10, interval: 0 },
-        { type: 'levy', lane: 'mill', count: 12, abreast: 3, start: 7, interval: 1.1 },
-        { type: 'hound', lane: 'king', count: 14, start: 14, interval: 0.36 },
-        { type: 'levy', lane: 'king', count: 8, abreast: 2, start: 24, interval: 1.4 },
-        { type: 'hound', lane: 'king', count: 24, start: 40, interval: 0.28 },
+        { type: 'levy', lane: 'mill', count: 11, abreast: 3, start: 7, interval: 1.1 },
+        { type: 'hound', lane: 'king', count: 13, start: 14, interval: 0.36 },
+        { type: 'levy', lane: 'king', count: 7, abreast: 2, start: 24, interval: 1.4 },
+        { type: 'hound', lane: 'king', count: 22, start: 40, interval: 0.28 },
       ],
     },
   ],
@@ -724,7 +720,6 @@ const BARROWS: LevelBalance = {
         { type: 'hound', lane: 'king', count: 69, start: 12, interval: 0.24 },
         { type: 'levy', lane: 'king', count: 38, abreast: 2, start: 20, interval: 0.95 },
         { type: 'cairn', lane: 'mill', count: 1, start: 26, interval: 0 },
-        { type: 'cairn', lane: 'king', count: 1, start: 34, interval: 0 },
         { type: 'hound', lane: 'king', count: 92, start: 40, interval: 0.2 },
         { type: 'hound', lane: 'mill', count: 64, start: 46, interval: 0.24 },
       ],

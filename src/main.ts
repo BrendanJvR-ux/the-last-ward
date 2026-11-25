@@ -85,7 +85,6 @@ function hitEnemy(p: Vec, r: number) {
   let best: GameState['enemies'][number] | null = null;
   let bd = Infinity;
   for (const e of s.enemies) {
-    if (e.mode === 'leave') continue;
     const q = enemyPos(e);
     const h = e.type === 'cairn' ? 52 : 22;
     const d = Math.hypot(p.x - q.x, (p.y - (q.y - h)) * (e.type === 'cairn' ? 0.6 : 1));
@@ -667,6 +666,7 @@ function renderInspect() {
   const status = e.mode === 'kneel' ? `Kneeling at its stone \u2014 blocking the road behind (${Math.ceil(e.modeT ?? 0)}s)`
     : e.mode === 'seek' ? 'Walking to its fallen name-stone'
       : e.mode === 'follow' ? 'Following its Stone-Bearer'
+      : e.type === 'cairn' && e.mode === 'march' ? 'Marching on the gate with its stone'
         : e.stun > 0 ? 'Dazed' : '';
   const speedWord = st.speed >= 90 ? 'fast' : st.speed >= 35 ? 'steady' : 'slow';
   const sig = [e.id, hp, arm, e.vulnT > 0, status].join('|');

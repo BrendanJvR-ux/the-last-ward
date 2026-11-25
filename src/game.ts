@@ -46,12 +46,10 @@ export interface Enemy {
   /** Turned to stone by a Gargoyle's gaze (visual; the stun does the work). */
   petrifyT?: number;
   /** Cairn-Born behaviour. */
-  mode?: 'follow' | 'march' | 'seek' | 'kneel' | 'leave';
+  mode?: 'follow' | 'march' | 'seek' | 'kneel';
   modeT?: number;
   bearerId?: number;
   stone?: { lane: LaneId; s: number };
-  /** Fades out while leaving the field. */
-  fade?: number;
 }
 
 /** A defeated enemy, toppling and fading where it fell (visual only). */
@@ -447,7 +445,7 @@ function roadNear(p: Vec, radius: number): { ranges: Fire['ranges']; pts: Vec[] 
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const alive = (e: Enemy) => e.hp > 0 && e.s > 0 && e.mode !== 'leave';
+const alive = (e: Enemy) => e.hp > 0 && e.s > 0;
 const onRanges = (e: Enemy, ranges: Fire['ranges']) => ranges.some((r) => r.lane === e.lane && e.s >= r.s0 && e.s <= r.s1);
 
 /** Where a Bramble's hedge would grow: the nearest road point; on the shared stretch it blocks both lanes. */
@@ -746,7 +744,7 @@ export function effectiveArmour(e: Enemy): number {
 }
 
 export function hurt(s: GameState, e: Enemy, raw: number, ignoreArmour = false) {
-  if (e.hp <= 0 || e.mode === 'leave') return;
+  if (e.hp <= 0) return;
   const armour = ignoreArmour ? 0 : effectiveArmour(e);
   const mult = e.vulnT > 0 ? 1 + BALANCE.pulses.tarnishVulnerability : 1;
   e.hp -= Math.max(1, raw - armour) * mult;
@@ -811,7 +809,7 @@ function pickTarget(s: GameState, from: Vec, range: number): Enemy | null {
   let best: Enemy | null = null;
   let bestLeft = Infinity;
   for (const e of s.enemies) {
-    if (e.hp <= 0 || e.s <= 0 || e.mode === 'leave') continue;
+    if (e.hp <= 0 || e.s <= 0) continue;
     if (dist(enemyPos(e), from) > range) continue;
     const left = LANES[e.lane].length - e.s;
     if (left < bestLeft) { bestLeft = left; best = e; }
@@ -819,7 +817,7 @@ function pickTarget(s: GameState, from: Vec, range: number): Enemy | null {
   return best;
 }
 
-/** Seek / kneel / leave. Returns true when the giant's movement is fully handled here. */
+/** Seek / kneel. Returns true when the giant's movement is fully handled here. */
 function moveGiant(s: GameState, g: Enemy, dt: number): boolean {
   const C = BALANCE.cairn;
   if (g.mode === 'seek' && g.stone) {
@@ -837,16 +835,12 @@ function moveGiant(s: GameState, g: Enemy, dt: number): boolean {
   if (g.mode === 'kneel') {
     g.modeT = (g.modeT ?? 0) - dt;
     if (g.modeT <= 0) {
-      g.mode = 'leave';
-      g.modeT = C.leaveSeconds;
+      // it takes up its stone again and marches on towards the gate: it has to be brought down
+      g.mode = 'march';
+      g.modeT = 0;
       s.stones = s.stones.filter((st) => st.giantId !== g.id);
-      toast(s, 'The Cairn-Born rises with its stone and leaves the field. The road is open again.', 'info');
+      toast(s, 'The Cairn-Born rises with its stone and marches on. The road behind it is open again.', 'bad');
     }
-    return true;
-  }
-  if (g.mode === 'leave') {
-    g.modeT = (g.modeT ?? 0) - dt;
-    g.fade = Math.max(0, (g.modeT ?? 0) / C.leaveSeconds);
     return true;
   }
   return false;
@@ -936,14 +930,6 @@ export function step(s: GameState, dtRaw: number) {
     }
     e.s = ns;
     e.bob += dt * st.speed * 0.15;
-  }
-  // Giants that left the field
-  for (const e of s.enemies) {
-    if (e.mode === 'leave' && (e.modeT ?? 0) <= 0) {
-      e.hp = 0;
-      s.gold += BALANCE.cairn.leaveBounty;
-      s.stones = s.stones.filter((st) => st.giantId !== e.id);
-    }
   }
 
   // Burning road

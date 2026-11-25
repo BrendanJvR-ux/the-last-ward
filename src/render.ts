@@ -456,7 +456,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
             ctx.beginPath(); ctx.ellipse(q.x, q.y - 4, 12 + i * 3, 5 + i, p.angle, 0, Math.PI * 2); ctx.fill();
           }
         }
-        drawEnemy(ctx, e.type, p.x, p.y, dir, e.bob, e.hit, k, { kneel: e.mode === 'kneel', alpha: e.mode === 'leave' ? e.fade ?? 1 : 1 });
+        drawEnemy(ctx, e.type, p.x, p.y, dir, e.bob, e.hit, k, { kneel: e.mode === 'kneel' });
         if ((e.petrifyT ?? 0) > 0) {
           // turned to stone: a grey wash and a few cracks over the figure
           const hgt = e.type === 'cairn' ? 100 : e.type === 'hound' ? 40 : 52, wid = e.type === 'cairn' ? 70 : 20;
@@ -486,7 +486,7 @@ export function render(ctx: CanvasRenderingContext2D, s: GameState, v: ViewState
           ctx.fillStyle = P.goldLight;
           for (let i = 0; i < 3; i++) { const a = time * 6 + i * 2.1; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * 10, p.y - top + 4 + Math.sin(a) * 3, 2.2, 0, Math.PI * 2); ctx.fill(); }
         }
-        if (e.hp < e.maxHp && e.mode !== 'leave') {
+        if (e.hp < e.maxHp) {
           const w = e.type === 'cairn' ? 64 : 34;
           ctx.fillStyle = PAPER; ctx.fillRect(p.x - w / 2, p.y - top - 6, w, 5);
           ctx.fillStyle = '#9a2e28'; ctx.fillRect(p.x - w / 2, p.y - top - 6, w * Math.max(0, e.hp / e.maxHp), 5);
