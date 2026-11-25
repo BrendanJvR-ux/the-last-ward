@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#93a59c" />
+    <title>Defence of Goosebridge Castle</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M10 30 L12 10 L8 10 L16 2 L24 10 L20 10 L22 30Z' fill='%237a2026' stroke='%232a1f17' stroke-width='1.5'/%3E%3C/svg%3E" />
+    <script type="module" crossorigin src="./assets/main-C8UIsrsX.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/ink-ijwE0V4D.js">
+    <link rel="stylesheet" crossorigin href="./assets/main-DDvBpCdC.css">
+  </head>
+  <body>
+    <div id="app">
+      <header id="hud" aria-label="Status">
+        <div class="brand">
+          <h1>Defence of Goosebridge Castle</h1>
+        </div>
+        <dl class="stats">
+          <div class="stat" id="stat-hp"><dt>Castle</dt><dd><span id="hp"></span><span class="hpbar"><i id="hpbar"></i></span></dd></div>
+          <div class="stat"><dt>Wave</dt><dd id="wave"></dd></div>
+          <div class="stat"><dt>Gold</dt><dd id="gold"></dd></div>
+          <div class="stat" id="stat-leaves"><dt>Gilded Leaves</dt><dd id="leaves"></dd></div>
+        </dl>
+        <div id="phaseRes" class="phase-res" aria-live="polite"></div>
+        <div class="hud-buttons">
+          <button id="btnMenu" type="button" title="Main menu: start, resume, rewards, exit">Menu</button>
+          <button id="btnHelp" type="button" title="How to play" aria-label="How to play">?</button>
+          <button id="btnPause" type="button" title="Pause (P or Space)">Pause</button>
+          <button id="btnSpeed" type="button" title="Double speed (F)" aria-pressed="false">Speed ×1</button>
+          <button id="btnRestart" type="button" class="danger" title="Restart from the first wave">Restart</button>
+        </div>
+      </header>
+      <main id="spread">
+        <aside id="margin" aria-label="Page margin: controls"></aside>
+        <section id="book" aria-label="Goosebridge Castle battlefield">
+          <canvas id="board" aria-label="Battlefield map. Trace by dragging from the inkwell along a leyline to a tower."></canvas>
+          <div id="ribbon" class="ribbon"></div>
+          <div id="popover" class="popover" hidden></div>
+          <div id="toasts" aria-live="polite"></div>
+          <div id="inspect" class="inspect" hidden aria-live="polite"></div>
+          <div id="overlay" hidden></div>
+        </section>
+      </main>
+    </div>
+    <div id="menu" class="menu" hidden role="dialog" aria-label="Main menu"></div>
+    <div id="tutorial" class="tutorial" hidden role="dialog" aria-modal="true" aria-labelledby="tut-title"></div>
+  </body>
+</html>

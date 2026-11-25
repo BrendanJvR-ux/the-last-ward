@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Art Style Studies</title>
+    <style>
+      :root { --bg: #15120e; --panel: #221c15; --text: #efe6d2; --muted: rgba(239, 230, 210, 0.65); --gold: #e3bf6a; --line: rgba(227, 191, 106, 0.25); }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font-family: Palatino, 'Palatino Linotype', Georgia, serif; }
+      header { max-width: 1500px; margin: 0 auto; padding: 28px 16px 8px; }
+      h1 { margin: 0 0 6px; font-size: 30px; color: var(--gold); font-weight: 600; }
+      header p { margin: 0 0 10px; max-width: 820px; line-height: 1.45; color: var(--muted); }
+      header a { color: var(--gold); }
+      .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--muted); margin-top: 8px; }
+      .legend b { color: var(--text); font-weight: 600; }
+      main { max-width: 1500px; margin: 0 auto; padding: 12px 16px 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 640px), 1fr)); gap: 18px; }
+      figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+      canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; cursor: zoom-in; background: #000; }
+      figcaption { padding: 12px 14px 14px; }
+      figcaption h2 { margin: 0 0 4px; font-size: 20px; }
+      figcaption h2 small { font-size: 13px; color: var(--gold); font-weight: 400; margin-left: 6px; }
+      figcaption p { margin: 0 0 6px; font-size: 15px; line-height: 1.4; color: var(--muted); }
+      figcaption .unity { font-size: 14px; color: var(--text); border-left: 3px solid var(--gold); padding-left: 8px; }
+      figure.featured { grid-column: 1 / -1; border-color: var(--gold); }
+      #zoom { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92); display: none; place-items: center; z-index: 10; cursor: zoom-out; padding: 16px; }
+      #zoom.on { display: grid; }
+      #zoom canvas { max-width: 100%; max-height: 100%; width: auto; aspect-ratio: 16 / 10; cursor: zoom-out; }
+    </style>
+    <script type="module" crossorigin src="./assets/styles-BRMDxT2x.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/ink-ijwE0V4D.js">
+  </head>
+  <body>
+    <header>
+      <h1>Art style studies</h1>
+      <p>The same moment of the Siege of Goosebridge drawn several ways. First, the pen-and-ink drawing the game now uses; then the other studies (an anatomy-atlas plate, animated 3D feature, coloured manga in three settings, pastoral anime, after Van Gogh, the Renaissance panel and the candlelit tabletop); below them, the six original ones. The map, mechanics and positions are identical in every card, taken straight from the game: only the art changes. Click any picture to see it full size. Play the pen-and-ink version in <a href="./">the game itself</a>.</p>
+      <div class="legend">
+        <span><b>Frozen moment:</b> wave 6</span>
+        <span><b>Traced</b> (temporary): Bramble at Mill Yard, Verdigris at Upper Field</span>
+        <span><b>Bound</b> (permanent): Ember at the Crossroads, its fire on the road</span>
+        <span><b>Pulse</b> in flight to the Bramble</span>
+        <span><b>Enemies:</b> levy in files, the Stone-Bearer and Cairn-Born, a pack of war dogs on the bridge</span>
+      </div>
+    </header>
+    <main id="grid"></main>
+    <div id="zoom"></div>
+  </body>
+</html>
