@@ -442,3 +442,6 @@ body[data-menu] #app { filter: saturate(0.85); }
 .tutorial .x { position: absolute; top: 14px; right: 16px; min-height: 28px; padding: 0 8px; background: transparent; border: none; box-shadow: none; color: var(--ink); font-size: 22px; z-index: 1; }
 #btnHelp { min-width: 34px; font-weight: 700; }
 @media (max-width: 600px) { .tutorial .scroll { padding: 26px 20px 18px; } .tutorial h2 { font-size: 22px; } }
+
+/* double speed: the button is lit while it is on */
+#btnSpeed.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }

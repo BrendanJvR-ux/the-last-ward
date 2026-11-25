@@ -97,7 +97,7 @@ Then open http://localhost:5173/ (the game) or http://localhost:5173/styles.html
 | Start wave | **Start wave** (active once the exact number of threads is drawn) | `Enter` |
 | Pulse | Double-click / double-tap a tower with a wet ink drop or a gold seal, or press its **Pulse** button in the margin. Hover (or press and hold on touch) to preview first | `1`–`9` pulse ready towers in margin order (gilded first); focus a Pulse button to preview |
 | Pause | **Pause** | `P` or `Space` |
-| Speed | **Speed ×1 / ×2** | |
+| Speed | **Speed ×1 / ×2** in the top bar runs the battle at double speed (lit while on; remembered in this browser) | `F` |
 | Inspect an enemy | Click / tap it during a wave | |
 | Restart | **Restart** (immediate) | |
 | Wave preview | The ▴/▾ on the bookmark folds it (it folds itself during battle) | |

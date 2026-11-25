@@ -19,6 +19,7 @@ import { REWARDS, EARN, seals, sealsEarned, owns, isActive, redeem, toggle, acti
 let currentLevel: LevelId = 'fields';
 let menuOpen = true;
 let s: GameState = newGame(currentLevel, activePerks(), true);
+try { if (localStorage.getItem('goosebridge.speed') === '2') s.speed = 2; } catch { /* private mode */ }
 /** Waves already paid out in seals this game, and whether the win has been. */
 let paidWaves = 0;
 let paidWin = false;
@@ -430,7 +431,13 @@ function previewable(t: GameState['towers'][number] | undefined) {
 }
 
 $('btnPause').addEventListener('click', togglePause);
-$('btnSpeed').addEventListener('click', () => { s.speed = s.speed === 1 ? 2 : 1; });
+/** Double speed: the simulation runs two steps per frame. The choice is remembered in this browser. */
+const SPEED_KEY = 'goosebridge.speed';
+function toggleSpeed() {
+  s.speed = s.speed === 1 ? 2 : 1;
+  try { localStorage.setItem(SPEED_KEY, String(s.speed)); } catch { /* private mode */ }
+}
+$('btnSpeed').addEventListener('click', toggleSpeed);
 $('btnRestart').addEventListener('click', restart);
 
 function togglePause() {
@@ -465,6 +472,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { closePopover(); cancelGesture(); bindConfirm = null; view.bindPreview = null; lastSig = ''; return; }
   if (e.key === 'p' || e.key === 'P' || (e.key === ' ' && tag !== 'BUTTON')) { e.preventDefault(); togglePause(); return; }
   if ((e.key === 'u' || e.key === 'U') && s.phase === 'prep') { undoTrace(s); return; }
+  if (e.key === 'f' || e.key === 'F') { toggleSpeed(); return; }
   if (e.key === 'Enter' && tag !== 'BUTTON' && s.phase === 'prep') { startWave(s); return; }
   if (s.phase === 'combat' && /^[1-9]$/.test(e.key)) {
     const prepared = pulseable();
@@ -679,7 +687,10 @@ function renderHud() {
   }
   $('btnPause').textContent = s.paused ? 'Resume' : 'Pause';
   ($('btnPause') as HTMLButtonElement).disabled = s.phase === 'victory' || s.phase === 'defeat';
-  $('btnSpeed').textContent = `Speed ×${s.speed}`;
+  const fast = s.speed === 2;
+  $('btnSpeed').textContent = fast ? '\u25B6\u25B6 Speed \u00d72' : '\u25B6 Speed \u00d71';
+  $('btnSpeed').classList.toggle('on', fast);
+  $('btnSpeed').setAttribute('aria-pressed', String(fast));
   document.body.dataset.phase = s.phase;
 }
 
@@ -915,7 +926,7 @@ function openTutorial() {
       <li><b>Watch for</b> the warning before the war dogs come, and for the Stone-Bearer: where it falls, its giant kneels and blocks the road, then marches on.</li>
       ${levelRule}
     </ol>
-    <p class="tut-foot">Threads fade at the end of every wave. Lose all castle health and the page is lost.</p>
+    <p class="tut-foot">Threads fade at the end of every wave. Lose all castle health and the page is lost. Too slow? <b>Speed \u00d72</b> in the top bar (or the F key) runs the battle at double speed.</p>
     <div class="tut-actions"><button data-act="closeTutorial" class="primary">Got it</button></div>
   </div>`;
   tutorialEl.hidden = false;
